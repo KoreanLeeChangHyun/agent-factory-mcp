@@ -1,5 +1,6 @@
 """Complete model import surface used by Alembic autogeneration."""
 
+from app.modules.admin.models import FeatureFlag
 from app.modules.agent.models import (
     AgentDefinition,
     AgentDocumentLink,
@@ -64,6 +65,7 @@ __all__ = [
     "DocumentRevision",
     "EmbeddingProfile",
     "ExternalIdentity",
+    "FeatureFlag",
     "IntegrationConnection",
     "IntegrationOAuthState",
     "IntegrationProvider",

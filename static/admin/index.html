@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Agent Factory Admin</title>
+    <link rel="stylesheet" href="/admin/styles.css">
+  </head>
+  <body>
+    <aside>
+      <div class="brand"><span>AF</span><strong>Agent Factory</strong></div>
+      <p class="eyebrow">Platform administration</p>
+      <nav aria-label="관리자 메뉴">
+        <button class="active" data-view="dashboard">Overview</button>
+        <button data-view="users">Users</button>
+        <button data-view="organizations">Organizations</button>
+        <button data-view="workspaces">Workspaces</button>
+        <button data-view="jobs">Jobs</button>
+        <button data-view="integrations">Integrations</button>
+        <button data-view="feature-flags">Feature flags</button>
+        <button data-view="runtime">Runtime</button>
+      </nav>
+      <a href="/workspace/" class="back">← Workspace</a>
+    </aside>
+    <main>
+      <header>
+        <div><p class="eyebrow">Control plane</p><h1 id="title">Overview</h1></div>
+        <span id="status" role="status">Loading…</span>
+      </header>
+      <section id="content" aria-live="polite"></section>
+    </main>
+    <script src="/admin/app.js" defer></script>
+  </body>
+</html>
