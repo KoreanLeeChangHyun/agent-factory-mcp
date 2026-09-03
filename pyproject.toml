@@ -62,7 +62,4 @@ ignore_missing_imports = true
 check_untyped_defs = true
 warn_unused_ignores = false
 disable_error_code = ["arg-type", "attr-defined", "return-value", "union-attr", "valid-type"]
-exclude = ["app/db/migrations", "app/infrastructure/workspace/runtime.py"]
-
-[tool.ruff.lint.per-file-ignores]
-"tests/test_workspace_runtime.py" = ["FLY002", "SIM117"]
+exclude = ["app/db/migrations"]

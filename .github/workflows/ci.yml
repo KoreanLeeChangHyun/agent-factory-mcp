@@ -19,8 +19,8 @@ jobs:
       - run: ruff format --check app tests
       - run: ruff check app tests
       - run: mypy app
-      - run: pytest --cov=app --cov-report=term-missing --cov-fail-under=50
-      - run: bandit -q -r app -x app/db/migrations,app/infrastructure/workspace/runtime.py
+      - run: pytest --cov=app --cov-report=term-missing --cov-fail-under=60
+      - run: bandit -q -r app -x app/db/migrations
       - run: pip-audit
 
   migrations:

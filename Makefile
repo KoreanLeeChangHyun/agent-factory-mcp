@@ -26,10 +26,10 @@ typecheck:
 	.venv/bin/mypy app
 
 test:
-	.venv/bin/python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+	.venv/bin/python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=60 -q
 
 security:
-	.venv/bin/bandit -q -r app -x app/db/migrations,app/infrastructure/workspace/runtime.py
+	.venv/bin/bandit -q -r app -x app/db/migrations
 	.venv/bin/pip-audit
 
 check: lint typecheck test

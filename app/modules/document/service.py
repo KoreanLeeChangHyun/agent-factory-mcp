@@ -25,6 +25,7 @@ from app.modules.document.repository import DocumentRepository
 ALLOWED_MEDIA_TYPES = {
     "application/json",
     "application/pdf",
+    "application/zip",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "text/csv",
     "text/markdown",
