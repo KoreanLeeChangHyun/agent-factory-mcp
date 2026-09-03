@@ -32,7 +32,7 @@ def build_oauth(settings: Settings) -> OAuth:
             name="github",
             client_id=settings.github_client_id,
             client_secret=settings.github_client_secret.get_secret_value(),
-            access_token_url="https://github.com/login/oauth/access_token",
+            access_token_url="https://github.com/login/oauth/access_token",  # nosec B106
             authorize_url="https://github.com/login/oauth/authorize",
             api_base_url="https://api.github.com/",
             client_kwargs={"scope": "read:user user:email", "code_challenge_method": "S256"},

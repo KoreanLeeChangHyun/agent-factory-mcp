@@ -85,7 +85,7 @@ class Settings(BaseSettings):
                 raise ValueError(f"{name} OAuth client ID and secret must be configured together")
         if self.environment in {"staging", "production"}:
             secret = self.auth_token_secret.get_secret_value()
-            if secret == "local-development-secret-change-me" or len(secret) < 32:
+            if secret == "local-development-secret-change-me" or len(secret) < 32:  # nosec B105
                 raise ValueError(
                     "a unique authentication secret of at least 32 characters is required"
                 )

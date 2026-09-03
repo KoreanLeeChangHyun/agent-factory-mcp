@@ -84,7 +84,8 @@ class AdminService:
         if current.status not in {JobStatus.FAILED, JobStatus.DEAD, JobStatus.CANCELLED}:
             raise ConflictError("job_not_retryable", "Job is not retryable")
         job = await self.repository.requeue_job(job_id)
-        assert job is not None
+        if job is None:
+            raise NotFoundError("job_not_found", "Job not found")
         await self.repository.commit()
         return job
 
