@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     database_url: str = (
         "postgresql+asyncpg://agent_factory:agent_factory@localhost:5432/agent_factory"
     )
+    database_pool_size: int = 10
+    database_max_overflow: int = 20
+    database_pool_recycle_seconds: int = 1800
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"

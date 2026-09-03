@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
 from app.core.paths import ensure_runtime_directories
+from app.db.session import dispose_engine
 from app.mcp.server import mcp_server
 from app.router import api_router
 
@@ -20,7 +21,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
     ensure_runtime_directories()
     async with mcp_server.session_manager.run():
-        yield
+        try:
+            yield
+        finally:
+            await dispose_engine()
 
 
 configure_logging(settings.log_level)

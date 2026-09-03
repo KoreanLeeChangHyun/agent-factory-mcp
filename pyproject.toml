@@ -33,6 +33,9 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "integration: requires explicitly configured infrastructure",
+]
 
 [tool.ruff]
 line-length = 100

@@ -5,6 +5,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db.session import get_session
 from app.main import app
 
 
@@ -34,6 +35,24 @@ def test_invalid_client_request_id_is_replaced(client: TestClient) -> None:
 
     assert response.headers["x-request-id"] != "not-a-uuid"
     assert str(response.headers["x-request-id"])
+
+
+def test_readiness_checks_database(client: TestClient) -> None:
+    class ReadySession:
+        async def execute(self, _: object) -> None:
+            return None
+
+    async def ready_session() -> object:
+        yield ReadySession()
+
+    app.dependency_overrides[get_session] = ready_session
+    try:
+        response = client.get("/ready")
+    finally:
+        app.dependency_overrides.pop(get_session, None)
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ready"}
 
 
 def test_root_redirects_to_workspace(client: TestClient) -> None:
