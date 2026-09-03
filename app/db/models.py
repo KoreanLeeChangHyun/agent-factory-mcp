@@ -8,6 +8,7 @@ from app.modules.auth.models import (
     OneTimeToken,
     UserCredential,
 )
+from app.modules.document.models import Document, DocumentProvenance, DocumentRevision
 from app.modules.identity.models import User
 from app.modules.organization.models import (
     Organization,
@@ -27,6 +28,9 @@ __all__ = [
     "ApiToken",
     "AuthFactor",
     "AuthSession",
+    "Document",
+    "DocumentProvenance",
+    "DocumentRevision",
     "ExternalIdentity",
     "OneTimeToken",
     "Organization",

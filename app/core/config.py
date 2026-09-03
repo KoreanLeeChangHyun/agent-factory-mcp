@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     s3_access_key: str = "agent_factory"
     s3_secret_key: str = "local-development-only"
     s3_bucket: str = "agent-factory"
+    s3_region: str = "us-east-1"
+    document_max_upload_bytes: int = 25 * 1024 * 1024
     auth_token_secret: SecretStr = SecretStr("local-development-secret-change-me")
     auth_session_ttl_hours: int = 24 * 7
     auth_max_failed_attempts: int = 5
