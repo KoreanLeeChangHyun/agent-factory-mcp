@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     s3_bucket: str = "agent-factory"
     s3_region: str = "us-east-1"
     document_max_upload_bytes: int = 25 * 1024 * 1024
+    embedding_provider: str = "disabled"
+    embedding_base_url: str = "https://api.openai.com/v1"
+    embedding_api_key: SecretStr | None = None
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimensions: int = 1536
+    document_chunk_characters: int = 2400
+    document_chunk_overlap: int = 240
     auth_token_secret: SecretStr = SecretStr("local-development-secret-change-me")
     auth_session_ttl_hours: int = 24 * 7
     auth_max_failed_attempts: int = 5
@@ -54,6 +61,8 @@ class Settings(BaseSettings):
     def validate_security_configuration(self) -> "Settings":
         """Reject partial providers and unsafe production cookie secrets."""
 
+        if self.embedding_dimensions != 1536:
+            raise ValueError("this deployment currently requires 1536 embedding dimensions")
         provider_pairs = (
             ("google", self.google_client_id, self.google_client_secret),
             ("github", self.github_client_id, self.github_client_secret),

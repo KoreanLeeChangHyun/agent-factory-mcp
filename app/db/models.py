@@ -8,7 +8,13 @@ from app.modules.auth.models import (
     OneTimeToken,
     UserCredential,
 )
-from app.modules.document.models import Document, DocumentProvenance, DocumentRevision
+from app.modules.document.models import (
+    Document,
+    DocumentChunk,
+    DocumentProvenance,
+    DocumentRevision,
+    EmbeddingProfile,
+)
 from app.modules.identity.models import User
 from app.modules.organization.models import (
     Organization,
@@ -29,8 +35,10 @@ __all__ = [
     "AuthFactor",
     "AuthSession",
     "Document",
+    "DocumentChunk",
     "DocumentProvenance",
     "DocumentRevision",
+    "EmbeddingProfile",
     "ExternalIdentity",
     "OneTimeToken",
     "Organization",

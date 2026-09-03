@@ -17,6 +17,7 @@ dependencies = [
     "celery[redis]",
     "email-validator",
     "fastapi",
+    "httpx",
     "itsdangerous",
     "mcp>=2,<3",
     "pgvector",
@@ -29,7 +30,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "httpx",
     "pytest",
     "pytest-asyncio",
     "ruff",

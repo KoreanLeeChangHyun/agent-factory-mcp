@@ -112,9 +112,7 @@ async def test_failed_database_write_removes_uploaded_object() -> None:
     service = DocumentService(repository, storage, build_settings())  # type: ignore[arg-type]
 
     with pytest.raises(RuntimeError, match="database unavailable"):
-        await service.add_revision(
-            context(), DOCUMENT_ID, "notes.md", "text/markdown", b"hello"
-        )
+        await service.add_revision(context(), DOCUMENT_ID, "notes.md", "text/markdown", b"hello")
 
     assert storage.objects == {}
     assert len(storage.deleted) == 1
@@ -132,9 +130,7 @@ async def test_upload_size_and_media_type_are_validated_before_storage() -> None
             context(), DOCUMENT_ID, "payload.exe", "application/octet-stream", b"payload"
         )
     with pytest.raises(ApplicationError, match="upload limit"):
-        await service.add_revision(
-            context(), DOCUMENT_ID, "large.txt", "text/plain", b"x" * 33
-        )
+        await service.add_revision(context(), DOCUMENT_ID, "large.txt", "text/plain", b"x" * 33)
 
     assert storage.objects == {}
 
