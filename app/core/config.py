@@ -1,6 +1,5 @@
 """Environment-backed application settings."""
 
-from pathlib import Path
 from typing import Literal
 
 from pydantic import SecretStr, model_validator
@@ -48,7 +47,6 @@ class Settings(BaseSettings):
     smtp_port: int = 1025
     smtp_from_address: str = "no-reply@agent-factory.local"
     smtp_use_tls: bool = False
-    project_root: Path | None = None
 
     @model_validator(mode="after")
     def validate_security_configuration(self) -> "Settings":

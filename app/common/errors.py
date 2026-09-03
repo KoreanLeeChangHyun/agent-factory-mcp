@@ -21,6 +21,13 @@ class NotFoundError(ApplicationError):
         super().__init__(code=code, message=message, status_code=404)
 
 
+class ConflictError(ApplicationError):
+    """The requested mutation conflicts with current authoritative state."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(code=code, message=message, status_code=409)
+
+
 class PermissionDeniedError(ApplicationError):
     """The authenticated principal lacks the required permission."""
 

@@ -16,7 +16,12 @@ from app.modules.organization.models import (
     Role,
     RolePermission,
 )
-from app.modules.workspace.models import Workspace, WorkspaceMembership, WorkspaceRepository
+from app.modules.workspace.models import (
+    Workspace,
+    WorkspaceMembership,
+    WorkspaceRepository,
+    WorkspaceVisit,
+)
 
 __all__ = [
     "ApiToken",
@@ -34,4 +39,5 @@ __all__ = [
     "Workspace",
     "WorkspaceMembership",
     "WorkspaceRepository",
+    "WorkspaceVisit",
 ]

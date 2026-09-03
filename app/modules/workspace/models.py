@@ -1,11 +1,18 @@
 """Tenant Workspace and source repository persistence."""
 
+from datetime import datetime
+from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import JSON, ForeignKey, String, UniqueConstraint
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, RevisionMixin, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
+
+
+class WorkspaceStatus(StrEnum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
 
 
 class Workspace(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, RevisionMixin, Base):
@@ -17,6 +24,16 @@ class Workspace(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, RevisionMi
     )
     name: Mapped[str] = mapped_column(String(200))
     slug: Mapped[str] = mapped_column(String(100))
+    status: Mapped[WorkspaceStatus] = mapped_column(
+        Enum(
+            WorkspaceStatus,
+            name="workspace_status",
+            native_enum=False,
+            create_constraint=True,
+            values_callable=lambda members: [member.value for member in members],
+        ),
+        default=WorkspaceStatus.ACTIVE,
+    )
 
 
 class WorkspaceMembership(UUIDPrimaryKeyMixin, TimestampMixin, Base):
@@ -42,3 +59,16 @@ class WorkspaceRepository(
     canonical_location: Mapped[str] = mapped_column(String(2048))
     remote_url: Mapped[str | None] = mapped_column(String(2048))
     repository_metadata: Mapped[dict[str, object]] = mapped_column(JSON, default=dict)
+
+
+class WorkspaceVisit(TimestampMixin, Base):
+    __tablename__ = "workspace_visits"
+
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    workspace_id: Mapped[UUID] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), primary_key=True
+    )
+    last_opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    is_favorite: Mapped[bool] = mapped_column(default=False)
