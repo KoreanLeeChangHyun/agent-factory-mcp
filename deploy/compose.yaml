@@ -114,7 +114,16 @@ services:
 
   worker:
     <<: *app
-    command: ["celery", "-A", "app.worker.celery_app:celery_app", "worker", "--loglevel=INFO"]
+    command:
+      [
+        "celery",
+        "-A",
+        "app.worker.celery_app:celery_app",
+        "worker",
+        "--loglevel=INFO",
+        "-Q",
+        "default,agents,documents,integrations,control",
+      ]
     volumes:
       - ../app:/srv/agent-factory/app
 

@@ -39,6 +39,7 @@ from app.modules.organization.models import (
     Role,
     RolePermission,
 )
+from app.modules.schedule.models import Job, JobEvent, Schedule
 from app.modules.workspace.models import (
     Workspace,
     WorkspaceMembership,
@@ -66,12 +67,15 @@ __all__ = [
     "IntegrationConnection",
     "IntegrationOAuthState",
     "IntegrationProvider",
+    "Job",
+    "JobEvent",
     "OneTimeToken",
     "Organization",
     "OrganizationMembership",
     "Permission",
     "Role",
     "RolePermission",
+    "Schedule",
     "User",
     "UserCredential",
     "WebhookDelivery",

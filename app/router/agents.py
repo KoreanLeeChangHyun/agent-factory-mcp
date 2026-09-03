@@ -6,7 +6,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.session import get_session
+from app.infrastructure.job_queue import CeleryJobPublisher
 from app.modules.agent.repository import AgentRepository
 from app.modules.agent.schemas import (
     AgentDefinitionCreate,
@@ -22,6 +24,8 @@ from app.modules.agent.service import AgentService
 from app.modules.auth.authorization import AuthorizedContext
 from app.modules.auth.authorization_dependencies import require_permission
 from app.modules.auth.dependencies import require_csrf
+from app.modules.schedule.repository import ScheduleRepository
+from app.modules.schedule.service import ScheduleService
 
 router = APIRouter(
     prefix="/api/organizations/{organization_id}/workspaces/{workspace_id}/agents",
@@ -144,16 +148,24 @@ async def create_run(
     payload: AgentRunCreate,
     context: Annotated[AuthorizedContext, Depends(require_permission("agent.execute"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
+    session: Annotated[AsyncSession, Depends(get_session)],
 ) -> AgentRunResponse:
-    return _run_response(
-        await service.create_run(
-            context,
-            definition_id,
-            payload.agent_version_id,
-            payload.idempotency_key,
-            payload.input,
-        )
+    run = await service.create_run(
+        context,
+        definition_id,
+        payload.agent_version_id,
+        payload.idempotency_key,
+        payload.input,
     )
+    scheduler = ScheduleService(ScheduleRepository(session), CeleryJobPublisher(), settings)
+    await scheduler.enqueue(
+        context,
+        "agent.run",
+        "agents",
+        {"agent_run_id": str(run.id)},
+        f"agent-run:{run.id}",
+    )
+    return _run_response(run)
 
 
 @router.get("/runs/{run_id}", response_model=AgentRunResponse)

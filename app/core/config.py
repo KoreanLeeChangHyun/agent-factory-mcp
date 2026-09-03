@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
+    job_max_attempts: int = 5
+    job_retry_base_seconds: int = 30
+    job_retry_max_seconds: int = 3600
+    worker_soft_time_limit_seconds: int = 900
+    worker_time_limit_seconds: int = 960
     s3_endpoint_url: str = "http://localhost:9000"
     s3_access_key: str = "agent_factory"
     s3_secret_key: str = "local-development-only"

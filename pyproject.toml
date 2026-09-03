@@ -15,6 +15,7 @@ dependencies = [
     "authlib",
     "boto3",
     "celery[redis]",
+    "croniter",
     "email-validator",
     "fastapi",
     "httpx",
