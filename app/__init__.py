@@ -1,0 +1,1 @@
+"""Agent Factory MCP application."""

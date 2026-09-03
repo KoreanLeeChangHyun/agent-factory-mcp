@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-factory-mcp"
+version = "0.1.0"
+description = "Agent Factory Workspace and MCP server"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic",
+    "asyncpg",
+    "celery[redis]",
+    "fastapi",
+    "mcp>=2,<3",
+    "pgvector",
+    "pydantic-settings",
+    "sqlalchemy[asyncio]>=2,<3",
+    "uvicorn[standard]",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx",
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/test_workspace_runtime.py" = ["FLY002", "SIM117"]
