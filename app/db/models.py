@@ -1,5 +1,14 @@
 """Complete model import surface used by Alembic autogeneration."""
 
+from app.modules.agent.models import (
+    AgentDefinition,
+    AgentDocumentLink,
+    AgentRun,
+    AgentRunArtifact,
+    AgentRunEvent,
+    AgentRunToolCall,
+    AgentVersion,
+)
 from app.modules.auth.models import (
     ApiToken,
     AuthFactor,
@@ -31,6 +40,13 @@ from app.modules.workspace.models import (
 )
 
 __all__ = [
+    "AgentDefinition",
+    "AgentDocumentLink",
+    "AgentRun",
+    "AgentRunArtifact",
+    "AgentRunEvent",
+    "AgentRunToolCall",
+    "AgentVersion",
     "ApiToken",
     "AuthFactor",
     "AuthSession",
