@@ -18,6 +18,7 @@ from app.modules.admin.schemas import (
     AdminOrganizationResponse,
     AdminUserResponse,
     AdminWorkspaceResponse,
+    AuditEventResponse,
     DashboardResponse,
     FeatureFlagResponse,
     FeatureFlagUpdate,
@@ -237,3 +238,13 @@ async def runtime_info(
     service: Annotated[AdminService, Depends(get_admin_service)],
 ) -> RuntimeInfoResponse:
     return RuntimeInfoResponse(**await service.runtime_info())
+
+
+@router.get("/api/admin/audit", response_model=list[AuditEventResponse])
+async def audit_events(
+    service: Annotated[AdminService, Depends(get_admin_service)],
+) -> list[AuditEventResponse]:
+    return [
+        AuditEventResponse.model_validate(record, from_attributes=True)
+        for record in await service.audit_events()
+    ]

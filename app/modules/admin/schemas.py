@@ -95,3 +95,18 @@ class RuntimeInfoResponse(BaseModel):
     environment: str
     debug: bool
     embedding_provider: str
+
+
+class AuditEventResponse(BaseModel):
+    id: UUID
+    occurred_at: datetime
+    actor_user_id: UUID | None
+    organization_id: UUID | None
+    workspace_id: UUID | None
+    action: str
+    target_type: str | None
+    target_id: str | None
+    outcome: str
+    request_id: str | None
+    source: str
+    event_metadata: dict[str, object]

@@ -1,7 +1,7 @@
 const titles = {
   dashboard: "Overview", users: "Users", organizations: "Organizations",
   workspaces: "Workspaces", jobs: "Jobs", integrations: "Integrations",
-  "feature-flags": "Feature flags", runtime: "Runtime"
+  audit: "Audit", "feature-flags": "Feature flags", runtime: "Runtime"
 };
 const content = document.querySelector("#content");
 const status = document.querySelector("#status");

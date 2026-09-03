@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import Cookie, Depends, Header
+from fastapi import Cookie, Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.errors import PermissionDeniedError
@@ -22,10 +22,13 @@ def get_email_sender() -> EmailSender:
 
 
 async def get_current_principal(
+    request: Request,
     service: Annotated[AuthService, Depends(get_auth_service)],
     session_token: Annotated[str | None, Cookie(alias=settings.session_cookie_name)] = None,
 ) -> Principal:
-    return await service.authenticate_session(session_token)
+    principal = await service.authenticate_session(session_token)
+    request.state.principal = principal
+    return principal
 
 
 def require_csrf(

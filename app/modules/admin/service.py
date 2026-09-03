@@ -7,6 +7,7 @@ from app.common.errors import ConflictError, NotFoundError
 from app.core.config import Settings
 from app.modules.admin.models import FeatureFlag
 from app.modules.admin.repository import AdminRepository
+from app.modules.audit.repository import AuditRepository
 from app.modules.auth.service import Principal
 from app.modules.identity.models import User, UserStatus
 from app.modules.organization.models import Organization
@@ -121,3 +122,6 @@ class AdminService:
             "debug": self.settings.debug,
             "embedding_provider": self.settings.embedding_provider,
         }
+
+    async def audit_events(self) -> list[object]:
+        return await AuditRepository(self.repository.session).list()

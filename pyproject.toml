@@ -21,10 +21,12 @@ dependencies = [
     "httpx",
     "itsdangerous",
     "mcp>=2,<3",
+    "opentelemetry-sdk",
     "pgvector",
     "pydantic-settings",
     "python-multipart",
     "pwdlib[argon2]",
+    "prometheus-client",
     "sqlalchemy[asyncio]>=2,<3",
     "uvicorn[standard]",
 ]

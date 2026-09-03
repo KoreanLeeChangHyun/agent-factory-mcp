@@ -2,9 +2,11 @@
 
 from fastapi import APIRouter
 
+from app.core.observability import router as observability_router
 from app.router.account import router as account_router
 from app.router.admin import router as admin_router
 from app.router.agents import router as agents_router
+from app.router.audit import router as audit_router
 from app.router.auth import router as auth_router
 from app.router.documents import router as documents_router
 from app.router.health import router as health_router
@@ -20,10 +22,12 @@ api_router.include_router(account_router)
 api_router.include_router(admin_router)
 api_router.include_router(agents_router)
 api_router.include_router(auth_router)
+api_router.include_router(audit_router)
 api_router.include_router(documents_router)
 api_router.include_router(search_router)
 api_router.include_router(health_router)
 api_router.include_router(integrations_router)
+api_router.include_router(observability_router)
 api_router.include_router(readiness_router)
 api_router.include_router(scheduling_router)
 api_router.include_router(workspace_router)

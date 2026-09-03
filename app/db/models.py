@@ -10,6 +10,7 @@ from app.modules.agent.models import (
     AgentRunToolCall,
     AgentVersion,
 )
+from app.modules.audit.models import AuditEvent
 from app.modules.auth.models import (
     ApiToken,
     AuthFactor,
@@ -57,6 +58,7 @@ __all__ = [
     "AgentRunToolCall",
     "AgentVersion",
     "ApiToken",
+    "AuditEvent",
     "AuthFactor",
     "AuthSession",
     "Document",

@@ -10,6 +10,7 @@ from app.api.errors import install_exception_handlers
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
+from app.core.observability import ObservabilityMiddleware, configure_tracing
 from app.core.paths import ensure_runtime_directories
 from app.db.session import dispose_engine
 from app.mcp.server import create_mcp_server
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
                 await dispose_engine()
 
     configure_logging(settings.log_level)
+    configure_tracing("agent-factory-mcp")
     application = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
     application.add_middleware(
         SessionMiddleware,
@@ -40,6 +42,7 @@ def create_app() -> FastAPI:
         https_only=settings.session_cookie_secure,
     )
     application.add_middleware(RequestContextMiddleware)
+    application.add_middleware(ObservabilityMiddleware)
     install_exception_handlers(application)
     application.include_router(api_router)
     application.mount(
