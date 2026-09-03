@@ -4,7 +4,9 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.errors import install_exception_handlers
 from app.core.config import settings
@@ -12,6 +14,7 @@ from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
 from app.core.observability import ObservabilityMiddleware, configure_tracing
 from app.core.paths import ensure_runtime_directories
+from app.core.security import RateLimitMiddleware, SecurityHeadersMiddleware
 from app.db.session import dispose_engine
 from app.mcp.server import create_mcp_server
 from app.router import api_router
@@ -43,6 +46,24 @@ def create_app() -> FastAPI:
     )
     application.add_middleware(RequestContextMiddleware)
     application.add_middleware(ObservabilityMiddleware)
+    application.add_middleware(SecurityHeadersMiddleware)
+    application.add_middleware(RateLimitMiddleware, settings=settings)
+    application.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
+    if settings.cors_allowed_origins:
+        application.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_allowed_origins,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            allow_headers=[
+                "Authorization",
+                "Content-Type",
+                "X-CSRF-Token",
+                "X-Organization-ID",
+                "X-Request-ID",
+                "X-Workspace-ID",
+            ],
+        )
     install_exception_handlers(application)
     application.include_router(api_router)
     application.mount(

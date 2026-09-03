@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     environment: Literal["local", "test", "staging", "production"] = "local"
     debug: bool = False
     log_level: str = "INFO"
+    cors_allowed_origins: list[str] = []
+    trusted_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
+    rate_limit_enabled: bool = True
+    rate_limit_requests: int = 30
+    rate_limit_window_seconds: int = 60
     database_url: str = (
         "postgresql+asyncpg://agent_factory:agent_factory@localhost:5432/agent_factory"
     )
@@ -97,6 +102,8 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "a unique integration encryption key of at least 32 characters is required"
                 )
+            if "*" in self.cors_allowed_origins or "*" in self.trusted_hosts:
+                raise ValueError("wildcard CORS origins and trusted hosts are forbidden")
         return self
 
 
