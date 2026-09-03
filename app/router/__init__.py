@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.router.account import router as account_router
 from app.router.admin import router as admin_router
 from app.router.agents import router as agents_router
 from app.router.auth import router as auth_router
@@ -15,6 +16,7 @@ from app.router.workspace import router as workspace_router
 from app.router.workspace_management import router as workspace_management_router
 
 api_router = APIRouter()
+api_router.include_router(account_router)
 api_router.include_router(admin_router)
 api_router.include_router(agents_router)
 api_router.include_router(auth_router)

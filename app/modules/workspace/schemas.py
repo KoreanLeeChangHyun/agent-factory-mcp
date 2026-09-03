@@ -8,6 +8,12 @@ from pydantic import BaseModel, EmailStr, Field, HttpUrl, field_validator
 from app.modules.workspace.models import WorkspaceStatus
 
 
+class OrganizationSummary(BaseModel):
+    id: UUID
+    name: str
+    slug: str
+
+
 class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=100)
