@@ -28,5 +28,15 @@ python -m venv .venv
 .venv/bin/uvicorn app.main:app --reload
 ```
 
+For the complete local service stack:
+
+```bash
+cp .env.example .env
+make dev-up
+```
+
+The development stack binds the API, MinIO console, and Mailpit UI to loopback.
+PostgreSQL, Redis, and the MinIO API remain on the internal Compose network.
+
 The HTTP health check is available at `/health`, and Streamable HTTP MCP is
 mounted at `/mcp`.
