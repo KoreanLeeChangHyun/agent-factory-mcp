@@ -10,12 +10,17 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "alembic",
+    "aiosmtplib",
     "asyncpg",
+    "authlib",
     "celery[redis]",
+    "email-validator",
     "fastapi",
+    "itsdangerous",
     "mcp>=2,<3",
     "pgvector",
     "pydantic-settings",
+    "pwdlib[argon2]",
     "sqlalchemy[asyncio]>=2,<3",
     "uvicorn[standard]",
 ]

@@ -1,5 +1,13 @@
 """Complete model import surface used by Alembic autogeneration."""
 
+from app.modules.auth.models import (
+    ApiToken,
+    AuthFactor,
+    AuthSession,
+    ExternalIdentity,
+    OneTimeToken,
+    UserCredential,
+)
 from app.modules.identity.models import User
 from app.modules.organization.models import (
     Organization,
@@ -11,12 +19,18 @@ from app.modules.organization.models import (
 from app.modules.workspace.models import Workspace, WorkspaceMembership, WorkspaceRepository
 
 __all__ = [
+    "ApiToken",
+    "AuthFactor",
+    "AuthSession",
+    "ExternalIdentity",
+    "OneTimeToken",
     "Organization",
     "OrganizationMembership",
     "Permission",
     "Role",
     "RolePermission",
     "User",
+    "UserCredential",
     "Workspace",
     "WorkspaceMembership",
     "WorkspaceRepository",

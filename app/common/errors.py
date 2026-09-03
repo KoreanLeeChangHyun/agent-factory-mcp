@@ -26,3 +26,10 @@ class PermissionDeniedError(ApplicationError):
 
     def __init__(self, code: str, message: str = "Permission denied") -> None:
         super().__init__(code=code, message=message, status_code=403)
+
+
+class AuthenticationError(ApplicationError):
+    """Authentication did not establish an active principal."""
+
+    def __init__(self, code: str, message: str = "Authentication failed") -> None:
+        super().__init__(code=code, message=message, status_code=401)

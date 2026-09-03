@@ -2,4 +2,8 @@
 
 from mcp.server import MCPServer
 
-mcp_server = MCPServer("agent-factory")
+
+def create_mcp_server() -> MCPServer:
+    """Create an isolated server because its session manager is single-use."""
+
+    return MCPServer("agent-factory")

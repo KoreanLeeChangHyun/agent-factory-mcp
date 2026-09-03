@@ -1,4 +1,4 @@
-.PHONY: dev-up dev-down dev-logs db-upgrade db-downgrade lint test check
+.PHONY: dev-up dev-down dev-logs db-upgrade db-downgrade admin-bootstrap lint test check
 
 dev-up:
 	docker compose --env-file .env -f deploy/compose.yaml up --build -d
@@ -14,6 +14,9 @@ db-upgrade:
 
 db-downgrade:
 	.venv/bin/alembic -c config/alembic.ini downgrade -1
+
+admin-bootstrap:
+	.venv/bin/python -m app.modules.auth.bootstrap --email "$(EMAIL)" --display-name "$(NAME)"
 
 lint:
 	.venv/bin/ruff check app tests

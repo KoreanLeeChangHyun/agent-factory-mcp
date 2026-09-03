@@ -40,3 +40,10 @@ PostgreSQL, Redis, and the MinIO API remain on the internal Compose network.
 
 The HTTP health check is available at `/health`, and Streamable HTTP MCP is
 mounted at `/mcp`.
+
+After applying migrations, create the first platform administrator without
+placing a password in shell history:
+
+```bash
+make admin-bootstrap EMAIL=owner@example.com NAME="Owner"
+```

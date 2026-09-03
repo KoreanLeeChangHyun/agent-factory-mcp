@@ -6,12 +6,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.db.session import get_session
-from app.main import app
+from app.main import create_app
 
 
 @pytest.fixture(scope="module")
 def client() -> Iterator[TestClient]:
-    with TestClient(app) as test_client:
+    application = create_app()
+    with TestClient(application) as test_client:
         yield test_client
 
 
@@ -45,11 +46,11 @@ def test_readiness_checks_database(client: TestClient) -> None:
     async def ready_session() -> object:
         yield ReadySession()
 
-    app.dependency_overrides[get_session] = ready_session
+    client.app.dependency_overrides[get_session] = ready_session
     try:
         response = client.get("/ready")
     finally:
-        app.dependency_overrides.pop(get_session, None)
+        client.app.dependency_overrides.pop(get_session, None)
 
     assert response.status_code == 200
     assert response.json() == {"status": "ready"}
