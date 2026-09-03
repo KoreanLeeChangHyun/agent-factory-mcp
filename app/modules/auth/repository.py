@@ -29,6 +29,12 @@ class PasswordLoginRecord:
     credential: UserCredential
 
 
+@dataclass(slots=True)
+class ApiTokenRecord:
+    user: User
+    token: ApiToken
+
+
 class AuthRepository:
     """Persistence operations that keep privileged identity lookup internal."""
 
@@ -240,6 +246,26 @@ class AuthRepository:
             select(ApiToken).where(ApiToken.user_id == user_id).order_by(ApiToken.created_at.desc())
         )
         return list(result)
+
+    async def resolve_api_token(self, digest: bytes, now: datetime) -> ApiTokenRecord | None:
+        await self._enable_identity_lookup()
+        row = (
+            await self.session.execute(
+                select(User, ApiToken)
+                .join(ApiToken, ApiToken.user_id == User.id)
+                .where(
+                    ApiToken.token_digest == digest,
+                    ApiToken.revoked_at.is_(None),
+                    (ApiToken.expires_at.is_(None) | (ApiToken.expires_at > now)),
+                    User.deleted_at.is_(None),
+                )
+            )
+        ).one_or_none()
+        if row is None:
+            return None
+        row[1].last_used_at = now
+        await self.session.commit()
+        return ApiTokenRecord(row[0], row[1])
 
     async def revoke_api_token(self, user_id: UUID, token_id: UUID, now: datetime) -> None:
         await self.session.execute(
