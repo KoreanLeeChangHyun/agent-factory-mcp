@@ -21,6 +21,7 @@ RUN python -m pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
 WORKDIR /srv/agent-factory
 COPY --chown=agent-factory:agent-factory app ./app
+COPY --chown=agent-factory:agent-factory config ./config
 COPY --chown=agent-factory:agent-factory static ./static
 COPY --chown=agent-factory:agent-factory template ./template
 

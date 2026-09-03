@@ -1,0 +1,9 @@
+{$AGENT_FACTORY_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy api:8000 {
+    health_uri /ready
+    health_interval 10s
+  }
+  request_body { max_size 30MB }
+  log { output stdout; format json }
+}

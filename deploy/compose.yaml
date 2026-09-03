@@ -5,7 +5,7 @@ x-app: &app
     context: ..
     dockerfile: Dockerfile
   env_file:
-    - ../.env
+    - ${AGENT_FACTORY_ENV_FILE:-../.env}
   restart: unless-stopped
   depends_on:
     postgres:
