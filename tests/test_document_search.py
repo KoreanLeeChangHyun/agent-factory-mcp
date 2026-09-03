@@ -48,6 +48,7 @@ async def test_deterministic_provider_is_for_local_or_test_only() -> None:
         environment="production",
         embedding_provider="deterministic",
         auth_token_secret=SecretStr("a" * 32),
+        integration_encryption_key=SecretStr("b" * 32),
         session_cookie_secure=True,
         public_base_url="https://example.com",
     )

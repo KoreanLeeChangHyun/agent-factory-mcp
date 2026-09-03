@@ -25,6 +25,13 @@ from app.modules.document.models import (
     EmbeddingProfile,
 )
 from app.modules.identity.models import User
+from app.modules.integration.models import (
+    IntegrationConnection,
+    IntegrationOAuthState,
+    IntegrationProvider,
+    WebhookDelivery,
+    WebhookEndpoint,
+)
 from app.modules.organization.models import (
     Organization,
     OrganizationMembership,
@@ -56,6 +63,9 @@ __all__ = [
     "DocumentRevision",
     "EmbeddingProfile",
     "ExternalIdentity",
+    "IntegrationConnection",
+    "IntegrationOAuthState",
+    "IntegrationProvider",
     "OneTimeToken",
     "Organization",
     "OrganizationMembership",
@@ -64,6 +74,8 @@ __all__ = [
     "RolePermission",
     "User",
     "UserCredential",
+    "WebhookDelivery",
+    "WebhookEndpoint",
     "Workspace",
     "WorkspaceMembership",
     "WorkspaceRepository",

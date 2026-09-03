@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1536
     document_chunk_characters: int = 2400
     document_chunk_overlap: int = 240
+    integration_encryption_key: SecretStr = SecretStr("local-integration-key-change-me")
+    integration_encryption_key_version: int = 1
+    webhook_max_payload_bytes: int = 1024 * 1024
     auth_token_secret: SecretStr = SecretStr("local-development-secret-change-me")
     auth_session_ttl_hours: int = 24 * 7
     auth_max_failed_attempts: int = 5
@@ -83,6 +86,11 @@ class Settings(BaseSettings):
             if not self.public_base_url.startswith("https://"):
                 raise ValueError(
                     "the public base URL must use HTTPS outside local and test environments"
+                )
+            integration_key = self.integration_encryption_key.get_secret_value()
+            if integration_key == "local-integration-key-change-me" or len(integration_key) < 32:
+                raise ValueError(
+                    "a unique integration encryption key of at least 32 characters is required"
                 )
         return self
 
