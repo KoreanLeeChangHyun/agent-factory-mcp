@@ -1,7 +1,7 @@
 {$AGENT_FACTORY_DOMAIN} {
   encode zstd gzip
   redir /factory /factory/ 308
-  handle_path /factory/* {
+  handle /factory/* {
     reverse_proxy api:8000 {
       health_uri /ready
       health_interval 10s

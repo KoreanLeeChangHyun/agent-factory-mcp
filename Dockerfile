@@ -4,7 +4,7 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1
 
 WORKDIR /build
-COPY pyproject.toml README.md setup.cfg ./
+COPY pyproject.toml README.md ./
 COPY app ./app
 RUN python -m pip wheel --wheel-dir /wheels .
 
@@ -24,6 +24,8 @@ COPY --chown=agent-factory:agent-factory app ./app
 COPY --chown=agent-factory:agent-factory config ./config
 COPY --chown=agent-factory:agent-factory static ./static
 COPY --chown=agent-factory:agent-factory template ./template
+RUN mkdir -p .backup uploads feedback exports \
+    && chown -R agent-factory:agent-factory /srv/agent-factory
 
 USER agent-factory
 EXPOSE 8000

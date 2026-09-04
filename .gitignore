@@ -9,6 +9,7 @@ dist/
 htmlcov/
 .venv/
 .env
+.env.production
 /.cache/
 
 /.backup/
