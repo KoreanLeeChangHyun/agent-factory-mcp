@@ -17,6 +17,7 @@ from app.modules.auth.oauth import external_profile
 from app.modules.auth.repository import PasswordLoginRecord
 from app.modules.auth.service import AuthService, LoginResult, Principal
 from app.modules.identity.models import User, UserStatus
+from app.router import auth as auth_router
 
 USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 
@@ -282,3 +283,28 @@ def test_unconfigured_oauth_provider_is_not_advertised(auth_client: TestClient) 
 
     assert response.status_code == 200
     assert response.json() == {"providers": []}
+
+
+def test_google_oauth_redirect_uri_keeps_public_root_path(monkeypatch) -> None:
+    class FakeGoogleClient:
+        async def authorize_redirect(self, request: object, redirect_uri: str) -> object:
+            del request
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse({"redirect_uri": str(redirect_uri)})
+
+    class FakeOAuth:
+        def create_client(self, provider: str) -> FakeGoogleClient | None:
+            return FakeGoogleClient() if provider == "google" else None
+
+    monkeypatch.setattr(settings, "root_path", "/factory")
+    monkeypatch.setattr(settings, "trusted_hosts", ["lchserver.com"])
+    monkeypatch.setattr(auth_router, "oauth", FakeOAuth())
+    application = create_app()
+    with TestClient(application, base_url="https://lchserver.com") as client:
+        response = client.get("/factory/api/auth/oauth/google/login")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "redirect_uri": "https://lchserver.com/factory/api/auth/oauth/google/callback"
+    }

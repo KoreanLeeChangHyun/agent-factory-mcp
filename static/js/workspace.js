@@ -19,6 +19,8 @@ const specificationTab = document.querySelector("[data-specification-tab]");
 const authGate = document.querySelector("[data-auth-gate]");
 const loginForm = document.querySelector("[data-login-form]");
 const loginError = document.querySelector("[data-login-error]");
+const googleLogin = document.querySelector("[data-google-login]");
+const passwordLoginDivider = document.querySelector("[data-password-login-divider]");
 const organizationSelect = document.querySelector("[data-organization-select]");
 const workspaceSelect = document.querySelector("[data-workspace-select]");
 const workspaceContext = document.querySelector("[data-workspace-context]");
@@ -470,6 +472,18 @@ const bootAuthentication = async () => {
   }
 };
 
+const loadAuthProviders = async () => {
+  try {
+    const payload = await api("/api/auth/providers");
+    const googleEnabled = Array.isArray(payload.providers) && payload.providers.includes("google");
+    if (googleLogin) googleLogin.hidden = !googleEnabled;
+    if (passwordLoginDivider) passwordLoginDivider.hidden = !googleEnabled;
+  } catch {
+    if (googleLogin) googleLogin.hidden = true;
+    if (passwordLoginDivider) passwordLoginDivider.hidden = true;
+  }
+};
+
 if (workspaceShell) {
   workspaceShell.dataset.ready = "true";
 }
@@ -498,6 +512,7 @@ documentGroupToggles.forEach((toggle) => {
 
 selectDocumentView("original-overview");
 initializeOriginalSearch();
+loadAuthProviders();
 bootAuthentication();
 
 loginForm?.addEventListener("submit", async (event) => {
