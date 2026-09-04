@@ -14,6 +14,8 @@
   const status = document.querySelector("[data-admin-status]");
   const title = document.querySelector("[data-admin-title]");
   const tab = document.querySelector("[data-admin-tab]");
+  const panels = document.querySelectorAll("[data-account-panel]");
+  const profileButton = document.querySelector("[data-account-profile]");
   const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
   const escapeHtml = (value) => String(value ?? "—").replace(
     /[&<>'"]/g,
@@ -56,13 +58,30 @@
     }
   };
 
-  document.querySelectorAll("[data-admin-view]").forEach((button) => {
-    button.addEventListener("click", () => {
-      document.querySelector("[data-admin-view].is-selected")?.classList.remove("is-selected");
-      button.classList.add("is-selected");
-      load(button.dataset.adminView);
-    });
-  });
+  const showPanel = (name) => {
+    panels.forEach((panel) => { panel.hidden = panel.dataset.accountPanel !== name; });
+  };
 
-  window.agentFactoryAdmin = { load };
+  const open = (view) => {
+    showPanel("admin");
+    profileButton?.classList.remove("is-selected");
+    document.querySelector("[data-admin-view].is-selected")?.classList.remove("is-selected");
+    document.querySelector(`[data-admin-view="${view}"]`)?.classList.add("is-selected");
+    history.replaceState(null, "", "#admin");
+    load(view);
+  };
+
+  const profile = () => {
+    showPanel("profile");
+    document.querySelector("[data-admin-view].is-selected")?.classList.remove("is-selected");
+    profileButton?.classList.add("is-selected");
+    history.replaceState(null, "", "#account");
+  };
+
+  document.querySelectorAll("[data-admin-view]").forEach((button) => {
+    button.addEventListener("click", () => open(button.dataset.adminView));
+  });
+  profileButton?.addEventListener("click", profile);
+
+  window.agentFactoryAdmin = { load, open, profile };
 })();

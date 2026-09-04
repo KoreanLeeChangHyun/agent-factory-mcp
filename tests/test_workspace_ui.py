@@ -33,11 +33,15 @@ class PageAuthService:
         )
 
 
-def test_workspace_exposes_exactly_five_activities() -> None:
+def test_workspace_exposes_six_decided_activities() -> None:
     html = TEMPLATE.read_text()
-    assert html.count("data-activity=") == 5
-    for label in ("일정", "에이전트", "문서", "로그", "테스트"):
+    assert html.count("data-activity=") == 6
+    labels = ("일정", "에이전트", "문서", "로그", "테스트", "계정")
+    for label in labels:
         assert f'aria-label="{label}"' in html
+    assert [html.index(f'aria-label="{label}"') for label in labels] == sorted(
+        html.index(f'aria-label="{label}"') for label in labels
+    )
     assert 'aria-label="외부연동"' not in html
 
 
@@ -55,8 +59,9 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
     assert 'lang="ko"' in html
     assert 'class="workspace-title-bar"' in html
     assert 'data-workspace-context' in html
-    assert 'data-admin-activity' in html
-    assert 'data-workspace-view="admin"' in html
+    assert 'data-activity="account"' in html
+    assert 'data-workspace-view="account"' in html
+    assert 'data-platform-admin-menu' in html
     assert 'role="status"' in html
     assert 'role="alert"' in login_html
     assert "https://" not in html

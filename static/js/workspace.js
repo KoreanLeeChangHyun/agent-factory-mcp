@@ -27,7 +27,12 @@ const profileToggle = document.querySelector("[data-profile-toggle]");
 const profileMenu = document.querySelector("[data-profile-menu]");
 const profileAvatar = document.querySelector("[data-profile-avatar]");
 const profileName = document.querySelector("[data-profile-name]");
-const adminActivityButton = document.querySelector("[data-admin-activity]");
+const platformAdminMenu = document.querySelector("[data-platform-admin-menu]");
+const accountAvatar = document.querySelector("[data-account-avatar]");
+const accountName = document.querySelector("[data-account-name]");
+const accountEmail = document.querySelector("[data-account-email]");
+const accountOrganization = document.querySelector("[data-account-organization]");
+const accountWorkspace = document.querySelector("[data-account-workspace]");
 const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
 const tenant = { organizationId: null, workspaceId: null };
 const minimumSidebarWidth = 180;
@@ -38,6 +43,7 @@ const activityTitles = {
   documents: "문서",
   logs: "로그",
   tests: "테스트",
+  account: "계정",
 };
 
 const originalSearchFields = [
@@ -362,15 +368,15 @@ const loadDocuments = async () => {
 
 const selectActivity = (activity) => {
   if (!Object.hasOwn(activityTitles, activity)) return;
-  if (location.hash === "#admin") history.replaceState(null, "", location.pathname + location.search);
+  if (activity !== "account" && ["#admin", "#account"].includes(location.hash)) {
+    history.replaceState(null, "", location.pathname + location.search);
+  }
 
   activityButtons.forEach((button) => {
     const isActive = button.dataset.activity === activity;
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
-  adminActivityButton?.classList.remove("is-active");
-  adminActivityButton?.setAttribute("aria-pressed", "false");
   sidebarViews.forEach((view) => {
     view.hidden = view.dataset.sidebarView !== activity;
   });
@@ -378,21 +384,6 @@ const selectActivity = (activity) => {
     view.hidden = view.dataset.workspaceView !== activity;
   });
   if (sidebarTitle) sidebarTitle.textContent = activityTitles[activity];
-};
-
-const selectAdminActivity = () => {
-  if (!adminActivityButton || adminActivityButton.hidden) return;
-  activityButtons.forEach((button) => {
-    button.classList.remove("is-active");
-    button.setAttribute("aria-pressed", "false");
-  });
-  adminActivityButton.classList.add("is-active");
-  adminActivityButton.setAttribute("aria-pressed", "true");
-  sidebarViews.forEach((view) => { view.hidden = view.dataset.sidebarView !== "admin"; });
-  workspaceViews.forEach((view) => { view.hidden = view.dataset.workspaceView !== "admin"; });
-  if (sidebarTitle) sidebarTitle.textContent = "플랫폼 관리";
-  window.agentFactoryAdmin?.load("dashboard");
-  history.replaceState(null, "", "#admin");
 };
 
 const selectDocumentView = (target) => {
@@ -461,6 +452,7 @@ const loadWorkspaces = async () => {
     ? savedWorkspace
     : workspaces[0]?.id || null;
   if (workspaceSelect) workspaceSelect.value = tenant.workspaceId || "";
+  if (accountWorkspace) accountWorkspace.textContent = workspaceSelect?.selectedOptions[0]?.textContent || "—";
   await loadDocuments();
 };
 
@@ -469,8 +461,11 @@ const openWorkspace = async (session) => {
   if (currentUserEmail) currentUserEmail.textContent = session.user.email;
   if (profileName) profileName.textContent = session.user.display_name;
   if (profileAvatar) profileAvatar.textContent = session.user.display_name.trim().slice(0, 1).toUpperCase();
+  if (accountAvatar) accountAvatar.textContent = session.user.display_name.trim().slice(0, 1).toUpperCase();
+  if (accountName) accountName.textContent = session.user.display_name;
+  if (accountEmail) accountEmail.textContent = session.user.email;
   if (profileControl) profileControl.hidden = false;
-  if (adminActivityButton) adminActivityButton.hidden = !session.user.is_platform_admin;
+  if (platformAdminMenu) platformAdminMenu.hidden = !session.user.is_platform_admin;
   if (workspaceContext) workspaceContext.hidden = false;
 
   const organizations = await api("/api/account/organizations");
@@ -484,8 +479,15 @@ const openWorkspace = async (session) => {
     ? savedOrganization
     : organizations[0]?.id || null;
   if (organizationSelect) organizationSelect.value = tenant.organizationId || "";
+  if (accountOrganization) accountOrganization.textContent = organizationSelect?.selectedOptions[0]?.textContent || "—";
   await loadWorkspaces();
-  if (session.user.is_platform_admin && location.hash === "#admin") selectAdminActivity();
+  if (session.user.is_platform_admin && location.hash === "#admin") {
+    selectActivity("account");
+    window.agentFactoryAdmin?.open("dashboard");
+  } else if (location.hash === "#account") {
+    selectActivity("account");
+    window.agentFactoryAdmin?.profile();
+  }
 };
 
 const bootAuthentication = async () => {
@@ -502,10 +504,11 @@ if (workspaceShell) {
 }
 
 activityButtons.forEach((button) => {
-  button.addEventListener("click", () => selectActivity(button.dataset.activity));
+  button.addEventListener("click", () => {
+    selectActivity(button.dataset.activity);
+    if (button.dataset.activity === "account") window.agentFactoryAdmin?.profile();
+  });
 });
-
-adminActivityButton?.addEventListener("click", selectAdminActivity);
 
 profileToggle?.addEventListener("click", () => {
   const expanded = profileToggle.getAttribute("aria-expanded") === "true";
@@ -561,12 +564,14 @@ logoutButton?.addEventListener("click", async () => {
 organizationSelect?.addEventListener("change", async () => {
   tenant.organizationId = organizationSelect.value || null;
   if (tenant.organizationId) localStorage.setItem("agentFactoryOrganizationId", tenant.organizationId);
+  if (accountOrganization) accountOrganization.textContent = organizationSelect.selectedOptions[0]?.textContent || "—";
   await loadWorkspaces();
 });
 
 workspaceSelect?.addEventListener("change", async () => {
   tenant.workspaceId = workspaceSelect.value || null;
   if (tenant.workspaceId) localStorage.setItem("agentFactoryWorkspaceId", tenant.workspaceId);
+  if (accountWorkspace) accountWorkspace.textContent = workspaceSelect.selectedOptions[0]?.textContent || "—";
   await loadDocuments();
 });
 
