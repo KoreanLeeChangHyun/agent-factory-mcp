@@ -50,6 +50,7 @@ const activityTitles = {
 const activityOrderKey = "agentFactoryActivityOrder";
 const activityVisibilityKey = "agentFactoryActivityVisibility";
 let platformAdmin = false;
+let pendingActivityDrop = null;
 
 const originalSearchFields = [
   "classification",
@@ -452,6 +453,20 @@ const moveActivity = (button, direction) => {
   button.focus();
 };
 
+const clearActivityDropIndicator = () => {
+  activityButtons.forEach((button) => {
+    button.classList.remove("is-drop-before", "is-drop-after");
+  });
+  pendingActivityDrop = null;
+};
+
+const showActivityDropIndicator = (target, position) => {
+  if (pendingActivityDrop?.target === target && pendingActivityDrop.position === position) return;
+  clearActivityDropIndicator();
+  target.classList.add(position === "before" ? "is-drop-before" : "is-drop-after");
+  pendingActivityDrop = { target, position };
+};
+
 const selectActivity = (activity) => {
   if (!Object.hasOwn(activityTitles, activity)) return;
   if (!["account", "admin"].includes(activity) && ["#admin", "#account"].includes(location.hash)) {
@@ -607,7 +622,7 @@ activityButtons.forEach((button) => {
   });
   button.addEventListener("dragend", () => {
     button.classList.remove("is-dragging");
-    saveActivityOrder();
+    clearActivityDropIndicator();
   });
   button.addEventListener("keydown", (event) => {
     if (!event.altKey || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
@@ -617,12 +632,32 @@ activityButtons.forEach((button) => {
 });
 
 activityBar?.addEventListener("dragover", (event) => {
-  event.preventDefault();
   const dragging = activityBar.querySelector(".is-dragging");
   const target = event.target.closest("[data-activity]");
-  if (!dragging || !target || dragging === target) return;
+  if (!dragging) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  if (!target || dragging === target) {
+    clearActivityDropIndicator();
+    return;
+  }
   const before = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2;
-  activityBar.insertBefore(dragging, before ? target : target.nextSibling);
+  showActivityDropIndicator(target, before ? "before" : "after");
+});
+
+activityBar?.addEventListener("dragleave", (event) => {
+  if (!activityBar.contains(event.relatedTarget)) clearActivityDropIndicator();
+});
+
+activityBar?.addEventListener("drop", (event) => {
+  const dragging = activityBar.querySelector(".is-dragging");
+  if (!dragging || !pendingActivityDrop) return;
+  event.preventDefault();
+  const { target, position } = pendingActivityDrop;
+  activityBar.insertBefore(dragging, position === "before" ? target : target.nextSibling);
+  saveActivityOrder();
+  clearActivityDropIndicator();
+  dragging.focus();
 });
 
 activityBar?.addEventListener("contextmenu", (event) => {

@@ -84,6 +84,9 @@ def test_activity_bar_supports_persisted_order_and_visibility_controls() -> None
     assert "button.draggable = true" in script
     assert 'addEventListener("contextmenu"' in script
     assert 'event.altKey || !["ArrowUp", "ArrowDown"]' in script
+    assert 'addEventListener("drop"' in script
+    assert 'showActivityDropIndicator(target, before ? "before" : "after")' in script
+    assert 'classList.remove("is-drop-before", "is-drop-after")' in script
 
 
 def test_workspace_is_accessible_below_factory_root(monkeypatch) -> None:

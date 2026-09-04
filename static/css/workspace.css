@@ -150,6 +150,23 @@ body {
 .activity-button:active { cursor: grabbing; }
 .activity-button.is-dragging { opacity: .38; }
 
+.activity-button.is-drop-before::after,
+.activity-button.is-drop-after::after {
+  position: absolute;
+  z-index: 2;
+  right: 7px;
+  left: 7px;
+  height: 2px;
+  border-radius: 1px;
+  background: #007acc;
+  box-shadow: 0 0 0 1px rgba(0, 122, 204, .22);
+  content: "";
+  pointer-events: none;
+}
+
+.activity-button.is-drop-before::after { top: -1px; }
+.activity-button.is-drop-after::after { bottom: -1px; }
+
 .activity-button:hover {
   color: var(--activity-item-active-foreground);
 }
