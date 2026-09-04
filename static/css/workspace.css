@@ -418,9 +418,27 @@ body {
   display: flex;
   height: 22px;
   align-items: center;
-  padding: 0 10px 0 22px;
+  gap: 5px;
+  padding: 0 10px 0 34px;
   color: var(--explorer-foreground);
   text-decoration: none;
+}
+
+.document-navigation__item svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.2;
+}
+
+.document-navigation__item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .document-navigation__item:hover {
@@ -492,12 +510,17 @@ body {
 }
 
 .document-tree__item-status {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
   padding: 3px 14px 3px 38px;
   color: #f0a0a0;
   font-size: 12px;
   line-height: 1.4;
 }
+
+.document-tree__item-status svg { width: 15px; height: 15px; flex: 0 0 15px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.2; }
+.document-tree__item-status span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 .document-tree__item-status.is-muted { color: var(--explorer-muted); }
 

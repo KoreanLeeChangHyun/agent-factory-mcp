@@ -67,6 +67,11 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
     assert html.count("data-document-explorer-toggle") == 2
     assert html.count("<span>탐색기</span>") == 2
     assert html.count('role="tree"') == 2
+    assert html.count('data-document-target=') == 4
+    assert html.count('data-document-target="original-overview"><svg') == 1
+    assert html.count('data-document-target="original-search"><svg') == 1
+    assert html.count('data-document-target="processed-overview"><svg') == 1
+    assert html.count('data-document-target="specification-overview"><svg') == 1
     assert 'data-processed-list' in html
     assert 'data-specification-list' in html
     assert 'data-document-view="processed-document"' in html

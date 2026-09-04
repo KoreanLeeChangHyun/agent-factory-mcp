@@ -306,6 +306,17 @@ const createDocumentTreeLink = (item, kind, open) => {
   return link;
 };
 
+const createDocumentTreeStatus = (message, muted = false) => {
+  const state = document.createElement("span");
+  state.className = `document-tree__item-status${muted ? " is-muted" : ""}`;
+  state.setAttribute("role", "treeitem");
+  state.setAttribute("aria-disabled", "true");
+  const label = document.createElement("span");
+  label.textContent = message;
+  state.append(createDocumentFileIcon(), label);
+  return state;
+};
+
 const safeDocumentHref = (value) => {
   if (typeof value !== "string" || value.trim() === "") return null;
   try {
@@ -409,12 +420,7 @@ const loadDocuments = async () => {
         }, "processed", openProcessedDocument));
         return;
       }
-      const state = document.createElement("span");
-      state.className = "document-tree__item-status is-muted";
-      state.setAttribute("role", "treeitem");
-      state.setAttribute("aria-disabled", "true");
-      state.textContent = `${rawItem.title || rawItem.id} · 내용 없음`;
-      processedList.append(state);
+      processedList.append(createDocumentTreeStatus(`${rawItem.title || rawItem.id} · 내용 없음`, true));
     });
     if (processedDocuments.length === 0) {
       processedTreeState.textContent = "연결된 가공 문서가 없습니다.";
@@ -441,12 +447,9 @@ const loadDocuments = async () => {
         specificationList.append(createDocumentTreeLink({ ...item, href }, "specification", openSpecification));
         return;
       }
-      const state = document.createElement("span");
-      state.className = "document-tree__item-status";
-      state.setAttribute("role", "treeitem");
-      state.setAttribute("aria-disabled", "true");
-      state.textContent = `${item.name || item.id} · ${specificationStatusLabel(item.status)}`;
-      specificationList.append(state);
+      specificationList.append(createDocumentTreeStatus(
+        `${item.name || item.id} · ${specificationStatusLabel(item.status)}`,
+      ));
     });
 
     if (specifications.length === 0) {
