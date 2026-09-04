@@ -11,7 +11,8 @@ downgrade a migration until its downgrade was rehearsed against a restored copy.
 ## Probes and scaling
 
 `/live` checks only the process. `/ready` checks authoritative PostgreSQL and
-removes an instance from traffic on failure. The proxy actively probes `/ready`.
+removes an instance from traffic on failure. The public probe paths are
+`/factory/live` and `/factory/ready`; the proxy actively probes internal `/ready`.
 Scale stateless API replicas on concurrency/latency and workers per named queue
 on queue age, not only CPU. Run exactly one Beat scheduler; database locks and
 idempotency remain the final duplicate-execution defense.

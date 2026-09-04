@@ -9,6 +9,7 @@ from fastapi.responses import RedirectResponse
 
 from app.common.errors import AuthenticationError, NotFoundError
 from app.core.config import settings
+from app.core.urls import public_path
 from app.infrastructure.email import EmailSender
 from app.modules.auth.crypto import new_opaque_token
 from app.modules.auth.dependencies import (
@@ -47,6 +48,7 @@ def _user_response(principal: Principal) -> UserResponse:
 
 def _set_auth_cookies(response: Response, session_token: str) -> None:
     max_age = settings.auth_session_ttl_hours * 60 * 60
+    cookie_path = settings.root_path or "/"
     response.set_cookie(
         settings.session_cookie_name,
         session_token,
@@ -54,7 +56,7 @@ def _set_auth_cookies(response: Response, session_token: str) -> None:
         httponly=True,
         secure=settings.session_cookie_secure,
         samesite="lax",
-        path="/",
+        path=cookie_path,
     )
     response.set_cookie(
         "agent_factory_csrf",
@@ -63,7 +65,7 @@ def _set_auth_cookies(response: Response, session_token: str) -> None:
         httponly=False,
         secure=settings.session_cookie_secure,
         samesite="strict",
-        path="/",
+        path=cookie_path,
     )
 
 
@@ -86,8 +88,9 @@ async def logout(
     session_token: Annotated[str | None, Cookie(alias=settings.session_cookie_name)] = None,
 ) -> None:
     await service.logout(session_token)
-    response.delete_cookie(settings.session_cookie_name, path="/")
-    response.delete_cookie("agent_factory_csrf", path="/")
+    cookie_path = settings.root_path or "/"
+    response.delete_cookie(settings.session_cookie_name, path=cookie_path)
+    response.delete_cookie("agent_factory_csrf", path=cookie_path)
 
 
 @router.get("/me", response_model=SessionResponse)
@@ -236,6 +239,6 @@ async def oauth_callback(
         display_name=profile.display_name,
         user_agent=request.headers.get("user-agent"),
     )
-    response = RedirectResponse("/workspace/", status_code=303)
+    response = RedirectResponse(public_path("/workspace/"), status_code=303)
     _set_auth_cookies(response, result.session_token)
     return response

@@ -9,11 +9,19 @@ runtime directory.
 
 ## Service boundaries
 
-- `/workspace/`: tenant Workspace UI
-- `/admin/`: platform administration UI
-- `/api/`: tenant API
-- `/api/admin/`: platform administration API
-- `/mcp`: authenticated MCP transport
+Production is published below `/factory`; for example, the Workspace is
+`https://example.com/factory/workspace/`. Caddy removes the public prefix before
+proxying while FastAPI's configured root path keeps generated URLs, redirects,
+cookies, and browser requests aligned.
+
+- `/factory/workspace/`: tenant Workspace UI
+- `/factory/admin/`: platform administration UI
+- `/factory/api/`: tenant API
+- `/factory/api/admin/`: platform administration API
+- `/factory/mcp`: authenticated MCP transport
+
+Local development keeps `AGENT_FACTORY_ROOT_PATH` empty and uses the same routes
+without `/factory`.
 
 Workspace scopes Documents, Agents, schedules, integrations, logs, and tests to
 an organization and workspace. Local files under `uploads/`, `feedback/`,
@@ -45,8 +53,10 @@ make dev-up
 The development stack binds the API, MinIO console, and Mailpit UI to loopback.
 PostgreSQL, Redis, and the MinIO API remain on the internal Compose network.
 
-The HTTP health check is available at `/health`, and Streamable HTTP MCP is
-mounted at `/mcp`.
+The local HTTP health check is available at `/health`, and Streamable HTTP MCP
+is mounted at `/mcp`. In production these are `/factory/health` and
+`/factory/mcp`. Set `AGENT_FACTORY_PUBLIC_BASE_URL` to the complete public base,
+such as `https://example.com/factory`.
 
 ## Legacy Document migration
 

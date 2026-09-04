@@ -1,6 +1,8 @@
 services:
   api:
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--proxy-headers", "--forwarded-allow-ips", "10.0.0.0/8"]
+    environment:
+      AGENT_FACTORY_ROOT_PATH: /factory
     restart: always
     networks: [backend, edge]
     deploy:

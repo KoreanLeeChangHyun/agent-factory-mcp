@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from app.common.errors import AuthenticationError
-from app.core.config import Settings
+from app.core.config import Settings, settings
 from app.main import create_app
 from app.modules.auth.crypto import hash_password, token_digest, verify_password
 from app.modules.auth.dependencies import get_auth_service
@@ -247,6 +247,23 @@ def test_login_sets_http_only_session_and_csrf_cookies(auth_client: TestClient) 
     assert any(
         "agent_factory_csrf=" in cookie and "SameSite=strict" in cookie for cookie in cookies
     )
+
+
+def test_factory_login_scopes_cookies_to_public_root(monkeypatch) -> None:
+    monkeypatch.setattr(settings, "root_path", "/factory")
+    application = create_app()
+    application.dependency_overrides[get_auth_service] = lambda: FakeAuthService()
+    try:
+        with TestClient(application) as client:
+            response = client.post(
+                "/factory/api/auth/login",
+                json={"email": "owner@example.com", "password": "a-valid-password"},
+            )
+    finally:
+        application.dependency_overrides.pop(get_auth_service, None)
+
+    assert response.status_code == 200
+    assert all("Path=/factory" in cookie for cookie in response.headers.get_list("set-cookie"))
 
 
 def test_logout_requires_matching_csrf_token(auth_client: TestClient) -> None:

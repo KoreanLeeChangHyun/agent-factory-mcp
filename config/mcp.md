@@ -1,6 +1,7 @@
 # MCP interface policy
 
-The MCP endpoint is an authenticated resource server at `/mcp`. It accepts only
+The MCP endpoint is an authenticated resource server at `/mcp` internally and
+at `/factory/mcp` through the production proxy. It accepts only
 revocable `afm_` API bearer tokens and maps each tool to an explicit token scope.
 Token scope never replaces RBAC: every call also verifies organization and
 Workspace membership before applying transaction-local RLS context.

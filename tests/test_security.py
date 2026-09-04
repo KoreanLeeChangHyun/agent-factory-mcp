@@ -3,6 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.config import Settings
 from app.core.security import validate_public_https_url
 from app.main import create_app
 
@@ -27,3 +28,9 @@ def test_outbound_url_policy_rejects_ssrf_targets_and_credentials() -> None:
     ):
         with pytest.raises(ValueError):
             validate_public_https_url(value)
+
+
+@pytest.mark.parametrize("value", ["factory", "/factory/", "//factory"])
+def test_root_path_rejects_non_normalized_values(value: str) -> None:
+    with pytest.raises(ValueError, match="root path"):
+        Settings(root_path=value)

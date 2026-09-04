@@ -1,7 +1,8 @@
 # Platform administration policy
 
-The admin surface is separate from the tenant Workspace at `/admin/` and all
-data APIs live below `/api/admin`. Loading static assets grants no authority;
+The admin surface is separate from the tenant Workspace at `/admin/` internally
+and `/factory/admin/` publicly. Its data APIs live below `/api/admin` internally
+and `/factory/api/admin` publicly. Loading static assets grants no authority;
 every admin API independently requires an active platform-administrator
 principal and establishes an explicit cross-tenant database context.
 

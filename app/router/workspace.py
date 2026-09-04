@@ -1,45 +1,24 @@
-"""Canonical Workspace browser assets served by the MCP application."""
+"""Canonical Workspace browser template served by the MCP application."""
 
-from pathlib import Path, PurePosixPath
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from fastapi.responses import FileResponse, RedirectResponse
 
-from app.core.paths import STATIC_ROOT
+from app.core.paths import TEMPLATE_ROOT
+from app.core.urls import public_path
 
 router = APIRouter(tags=["workspace"])
-WORKSPACE_ASSET_ROOT = (STATIC_ROOT / "workspace").resolve()
-
-
-def _asset_file(asset_path: str) -> Path:
-    relative = PurePosixPath(asset_path or "index.html")
-    if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
-        raise HTTPException(status_code=400, detail="Invalid Workspace asset path")
-    unresolved = WORKSPACE_ASSET_ROOT.joinpath(*relative.parts)
-    current = WORKSPACE_ASSET_ROOT
-    for part in relative.parts:
-        current /= part
-        if current.is_symlink():
-            raise HTTPException(status_code=404, detail="Workspace asset not found")
-    try:
-        candidate = unresolved.resolve(strict=True)
-        candidate.relative_to(WORKSPACE_ASSET_ROOT)
-    except (FileNotFoundError, OSError, ValueError) as exc:
-        raise HTTPException(status_code=404, detail="Workspace asset not found") from exc
-    if not candidate.is_file() or candidate.is_symlink():
-        raise HTTPException(status_code=404, detail="Workspace asset not found")
-    return candidate
+WORKSPACE_TEMPLATE = TEMPLATE_ROOT / "workspace" / "index.html"
 
 
 @router.get("/", include_in_schema=False)
 async def root() -> RedirectResponse:
-    return RedirectResponse("/workspace/", status_code=307)
+    return RedirectResponse(public_path("/workspace/"), status_code=307)
 
 
-@router.api_route("/workspace/{asset_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
-async def workspace_asset(asset_path: str) -> FileResponse:
+@router.api_route("/workspace/", methods=["GET", "HEAD"], include_in_schema=False)
+async def workspace() -> FileResponse:
     return FileResponse(
-        _asset_file(asset_path),
+        WORKSPACE_TEMPLATE,
         headers={
             "Cache-Control": "no-store",
             "X-Content-Type-Options": "nosniff",

@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import SecretStr, model_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     environment: Literal["local", "test", "staging", "production"] = "local"
     debug: bool = False
     log_level: str = "INFO"
+    root_path: str = ""
     cors_allowed_origins: list[str] = []
     trusted_hosts: list[str] = ["localhost", "127.0.0.1", "testserver"]
     rate_limit_enabled: bool = True
@@ -69,6 +70,17 @@ class Settings(BaseSettings):
     smtp_port: int = 1025
     smtp_from_address: str = "no-reply@agent-factory.local"
     smtp_use_tls: bool = False
+
+    @field_validator("root_path")
+    @classmethod
+    def validate_root_path(cls, value: str) -> str:
+        """Accept an empty root or one normalized absolute URL path."""
+
+        if value == "":
+            return value
+        if not value.startswith("/") or value.endswith("/") or "//" in value:
+            raise ValueError("root path must be empty or a normalized absolute path")
+        return value
 
     @model_validator(mode="after")
     def validate_security_configuration(self) -> "Settings":

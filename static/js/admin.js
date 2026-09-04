@@ -5,6 +5,7 @@ const titles = {
 };
 const content = document.querySelector("#content");
 const status = document.querySelector("#status");
+const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
 const escapeHtml = (value) => String(value ?? "—").replace(/[&<>'"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
 
 function table(rows) {
@@ -18,8 +19,8 @@ async function load(view) {
   status.textContent = "Loading…";
   content.innerHTML = "";
   try {
-    const response = await fetch(`/api/admin/${view}`, {credentials: "same-origin"});
-    if (response.status === 401) { location.href = "/workspace/?login=required"; return; }
+    const response = await fetch(`${rootPath}/api/admin/${view}`, {credentials: "same-origin"});
+    if (response.status === 401) { location.href = `${rootPath}/workspace/?login=required`; return; }
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     const data = await response.json();
     if (view === "dashboard") {

@@ -1,9 +1,13 @@
 {$AGENT_FACTORY_DOMAIN} {
   encode zstd gzip
-  reverse_proxy api:8000 {
-    health_uri /ready
-    health_interval 10s
+  redir /factory /factory/ 308
+  handle_path /factory/* {
+    reverse_proxy api:8000 {
+      health_uri /ready
+      health_interval 10s
+    }
+    request_body { max_size 30MB }
   }
-  request_body { max_size 30MB }
+  handle { respond "Not Found" 404 }
   log { output stdout; format json }
 }

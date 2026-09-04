@@ -1,6 +1,5 @@
 """Platform administrator UI and API."""
 
-from pathlib import Path, PurePosixPath
 from typing import Annotated
 from uuid import UUID
 
@@ -9,7 +8,8 @@ from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.paths import STATIC_ROOT
+from app.core.paths import TEMPLATE_ROOT
+from app.core.urls import public_path
 from app.db.session import get_session
 from app.modules.admin.repository import AdminRepository
 from app.modules.admin.schemas import (
@@ -32,7 +32,7 @@ from app.modules.auth.dependencies import require_csrf
 from app.modules.auth.service import Principal
 
 router = APIRouter(tags=["admin"])
-ADMIN_ASSET_ROOT = (STATIC_ROOT / "admin").resolve()
+ADMIN_TEMPLATE = TEMPLATE_ROOT / "admin" / "index.html"
 
 
 async def get_admin_service(
@@ -44,37 +44,17 @@ async def get_admin_service(
     return service
 
 
-def _admin_asset(asset_path: str) -> Path:
-    relative = PurePosixPath(asset_path or "index.html")
-    if relative.is_absolute() or any(part in {"", ".", ".."} for part in relative.parts):
-        raise HTTPException(status_code=400, detail="Invalid admin asset path")
-    unresolved = ADMIN_ASSET_ROOT.joinpath(*relative.parts)
-    current = ADMIN_ASSET_ROOT
-    for part in relative.parts:
-        current /= part
-        if current.is_symlink():
-            raise HTTPException(status_code=404, detail="Admin asset not found")
-    try:
-        candidate = unresolved.resolve(strict=True)
-        candidate.relative_to(ADMIN_ASSET_ROOT)
-    except (FileNotFoundError, OSError, ValueError) as exc:
-        raise HTTPException(status_code=404, detail="Admin asset not found") from exc
-    if not candidate.is_file() or candidate.is_symlink():
-        raise HTTPException(status_code=404, detail="Admin asset not found")
-    return candidate
-
-
-@router.api_route("/admin/{asset_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
-async def admin_asset(asset_path: str) -> FileResponse:
+@router.api_route("/admin/", methods=["GET", "HEAD"], include_in_schema=False)
+async def admin() -> FileResponse:
     return FileResponse(
-        _admin_asset(asset_path),
+        ADMIN_TEMPLATE,
         headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
     )
 
 
 @router.get("/admin", include_in_schema=False)
 async def admin_root() -> RedirectResponse:
-    return RedirectResponse("/admin/", status_code=307)
+    return RedirectResponse(public_path("/admin/"), status_code=307)
 
 
 @router.get("/api/admin/dashboard", response_model=DashboardResponse)

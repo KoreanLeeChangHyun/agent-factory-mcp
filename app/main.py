@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -13,7 +14,7 @@ from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.middleware import RequestContextMiddleware
 from app.core.observability import ObservabilityMiddleware, configure_tracing
-from app.core.paths import ensure_runtime_directories
+from app.core.paths import STATIC_ROOT, ensure_runtime_directories
 from app.core.security import RateLimitMiddleware, SecurityHeadersMiddleware
 from app.db.session import dispose_engine
 from app.mcp.server import create_mcp_server
@@ -36,11 +37,17 @@ def create_app() -> FastAPI:
 
     configure_logging(settings.log_level)
     configure_tracing("agent-factory-mcp")
-    application = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
+    application = FastAPI(
+        title=settings.app_name,
+        debug=settings.debug,
+        lifespan=lifespan,
+        root_path=settings.root_path,
+    )
     application.add_middleware(
         SessionMiddleware,
         secret_key=settings.auth_token_secret.get_secret_value(),
         session_cookie="agent_factory_oauth_state",
+        path=settings.root_path or "/",
         same_site="lax",
         https_only=settings.session_cookie_secure,
     )
@@ -66,6 +73,7 @@ def create_app() -> FastAPI:
         )
     install_exception_handlers(application)
     application.include_router(api_router)
+    application.mount("/static", StaticFiles(directory=STATIC_ROOT), name="static")
     application.mount(
         "/mcp",
         mcp_server.streamable_http_app(streamable_http_path="/"),
