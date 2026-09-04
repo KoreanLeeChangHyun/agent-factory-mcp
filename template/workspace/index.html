@@ -25,15 +25,19 @@
             <span>워크스페이스</span>
             <select aria-label="워크스페이스" data-workspace-select></select>
           </label>
-          <p data-current-user></p>
         </div>
         <div class="workspace-title-bar__actions">
-          <a class="title-action" href="../admin/" aria-label="관리자 화면" title="관리자 화면" data-admin-link hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.75 19 7v5.25c0 4.25-2.9 7.05-7 8-4.1-.95-7-3.75-7-8V7l7-3.25Z"/><path d="M9 12.25 11 14l4-4.25"/></svg>
-          </a>
-          <button class="title-action" type="button" aria-label="로그아웃" title="로그아웃" data-logout hidden>
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 5H6.5A2.5 2.5 0 0 0 4 7.5v9A2.5 2.5 0 0 0 6.5 19H10M14 8l4 4-4 4M18 12H9"/></svg>
-          </button>
+          <div class="profile-control" data-profile-control hidden>
+            <button class="profile-button" type="button" aria-haspopup="menu" aria-expanded="false" data-profile-toggle>
+              <span class="profile-avatar" aria-hidden="true" data-profile-avatar></span>
+              <span class="profile-button__name" data-profile-name></span>
+              <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg>
+            </button>
+            <div class="profile-menu" role="menu" data-profile-menu hidden>
+              <div class="profile-menu__identity"><strong data-current-user></strong><span data-current-user-email></span></div>
+              <button type="button" role="menuitem" data-logout><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 5H6.5A2.5 2.5 0 0 0 4 7.5v9A2.5 2.5 0 0 0 6.5 19H10M14 8l4 4-4 4M18 12H9"/></svg><span>로그아웃</span></button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -53,6 +57,9 @@
         </button>
         <button class="activity-button" type="button" aria-label="테스트" aria-pressed="false" data-activity="tests">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.75 3.75h6.5M10.25 3.75v5.1l-5.4 8.95a1.65 1.65 0 0 0 1.4 2.45h11.5a1.65 1.65 0 0 0 1.4-2.45l-5.4-8.95v-5.1M7.25 14h9.5"/><path d="m9 16.5 1.75 1.75L15 14.5"/></svg>
+        </button>
+        <button class="activity-button activity-button--bottom" type="button" aria-label="플랫폼 관리" aria-pressed="false" title="플랫폼 관리" data-admin-activity hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.5 19 6.75v5.5c0 4.25-2.9 7.05-7 8-4.1-.95-7-3.75-7-8v-5.5L12 3.5Z"/><path d="M9.25 12.25 11 14l3.75-4"/></svg>
         </button>
       </nav>
 
@@ -108,6 +115,20 @@
           </div>
           <div class="sidebar-view oversight-sidebar" data-sidebar-view="logs" hidden><span class="source-state">정의 대기</span><p>Primary Sidebar 정보 구조는 Human 결정을 기다리고 있습니다.</p></div>
           <div class="sidebar-view oversight-sidebar" data-sidebar-view="tests" hidden><span class="source-state">정의 대기</span><p>Primary Sidebar 정보 구조는 Human 결정을 기다리고 있습니다.</p></div>
+          <div class="sidebar-view admin-sidebar" data-sidebar-view="admin" hidden>
+            <p class="admin-sidebar__label">Control plane</p>
+            <nav aria-label="플랫폼 관리 메뉴">
+              <button class="is-selected" type="button" data-admin-view="dashboard">개요</button>
+              <button type="button" data-admin-view="users">사용자</button>
+              <button type="button" data-admin-view="organizations">조직</button>
+              <button type="button" data-admin-view="workspaces">워크스페이스</button>
+              <button type="button" data-admin-view="jobs">작업</button>
+              <button type="button" data-admin-view="integrations">연동</button>
+              <button type="button" data-admin-view="audit">감사 로그</button>
+              <button type="button" data-admin-view="feature-flags">기능 플래그</button>
+              <button type="button" data-admin-view="runtime">런타임</button>
+            </nav>
+          </div>
         </div>
       </aside>
 
@@ -156,10 +177,18 @@
         </section>
         <section class="workspace-view" data-workspace-view="logs" hidden><div class="oversight-introduction"><span class="source-state">정의 대기</span><h1>로그</h1><p>이 Activity의 상세 기능, 내부 구조, source와 control은 Human 결정을 기다리고 있습니다.</p></div></section>
         <section class="workspace-view" data-workspace-view="tests" hidden><div class="oversight-introduction"><span class="source-state">정의 대기</span><h1>테스트</h1><p>이 Activity의 상세 기능, 내부 구조, source와 control은 Human 결정을 기다리고 있습니다.</p></div></section>
+        <section class="workspace-view admin-workspace" data-workspace-view="admin" hidden>
+          <header class="editor-header"><span class="editor-header__tab" data-admin-tab>플랫폼 관리 / 개요</span><span class="admin-status" role="status" data-admin-status>불러오는 중</span></header>
+          <div class="admin-canvas">
+            <header class="admin-view-header"><p>Control plane</p><h1 data-admin-title>개요</h1></header>
+            <div class="admin-content" aria-live="polite" data-admin-content></div>
+          </div>
+        </section>
       </main>
     </div>
 
     <script src="../static/vendor/tabulator/6.5.2/tabulator.min.js"></script>
     <script src="../static/js/workspace.js"></script>
+    <script src="../static/js/admin.js"></script>
   </body>
 </html>

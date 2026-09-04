@@ -20,8 +20,14 @@ const organizationSelect = document.querySelector("[data-organization-select]");
 const workspaceSelect = document.querySelector("[data-workspace-select]");
 const workspaceContext = document.querySelector("[data-workspace-context]");
 const currentUser = document.querySelector("[data-current-user]");
+const currentUserEmail = document.querySelector("[data-current-user-email]");
 const logoutButton = document.querySelector("[data-logout]");
-const adminLink = document.querySelector("[data-admin-link]");
+const profileControl = document.querySelector("[data-profile-control]");
+const profileToggle = document.querySelector("[data-profile-toggle]");
+const profileMenu = document.querySelector("[data-profile-menu]");
+const profileAvatar = document.querySelector("[data-profile-avatar]");
+const profileName = document.querySelector("[data-profile-name]");
+const adminActivityButton = document.querySelector("[data-admin-activity]");
 const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
 const tenant = { organizationId: null, workspaceId: null };
 const minimumSidebarWidth = 180;
@@ -356,12 +362,15 @@ const loadDocuments = async () => {
 
 const selectActivity = (activity) => {
   if (!Object.hasOwn(activityTitles, activity)) return;
+  if (location.hash === "#admin") history.replaceState(null, "", location.pathname + location.search);
 
   activityButtons.forEach((button) => {
     const isActive = button.dataset.activity === activity;
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
+  adminActivityButton?.classList.remove("is-active");
+  adminActivityButton?.setAttribute("aria-pressed", "false");
   sidebarViews.forEach((view) => {
     view.hidden = view.dataset.sidebarView !== activity;
   });
@@ -369,6 +378,21 @@ const selectActivity = (activity) => {
     view.hidden = view.dataset.workspaceView !== activity;
   });
   if (sidebarTitle) sidebarTitle.textContent = activityTitles[activity];
+};
+
+const selectAdminActivity = () => {
+  if (!adminActivityButton || adminActivityButton.hidden) return;
+  activityButtons.forEach((button) => {
+    button.classList.remove("is-active");
+    button.setAttribute("aria-pressed", "false");
+  });
+  adminActivityButton.classList.add("is-active");
+  adminActivityButton.setAttribute("aria-pressed", "true");
+  sidebarViews.forEach((view) => { view.hidden = view.dataset.sidebarView !== "admin"; });
+  workspaceViews.forEach((view) => { view.hidden = view.dataset.workspaceView !== "admin"; });
+  if (sidebarTitle) sidebarTitle.textContent = "플랫폼 관리";
+  window.agentFactoryAdmin?.load("dashboard");
+  history.replaceState(null, "", "#admin");
 };
 
 const selectDocumentView = (target) => {
@@ -441,9 +465,12 @@ const loadWorkspaces = async () => {
 };
 
 const openWorkspace = async (session) => {
-  if (currentUser) currentUser.textContent = `${session.user.display_name} · ${session.user.email}`;
-  if (logoutButton) logoutButton.hidden = false;
-  if (adminLink) adminLink.hidden = !session.user.is_platform_admin;
+  if (currentUser) currentUser.textContent = session.user.display_name;
+  if (currentUserEmail) currentUserEmail.textContent = session.user.email;
+  if (profileName) profileName.textContent = session.user.display_name;
+  if (profileAvatar) profileAvatar.textContent = session.user.display_name.trim().slice(0, 1).toUpperCase();
+  if (profileControl) profileControl.hidden = false;
+  if (adminActivityButton) adminActivityButton.hidden = !session.user.is_platform_admin;
   if (workspaceContext) workspaceContext.hidden = false;
 
   const organizations = await api("/api/account/organizations");
@@ -454,6 +481,7 @@ const openWorkspace = async (session) => {
     : organizations[0]?.id || null;
   if (organizationSelect) organizationSelect.value = tenant.organizationId || "";
   await loadWorkspaces();
+  if (session.user.is_platform_admin && location.hash === "#admin") selectAdminActivity();
 };
 
 const bootAuthentication = async () => {
@@ -471,6 +499,29 @@ if (workspaceShell) {
 
 activityButtons.forEach((button) => {
   button.addEventListener("click", () => selectActivity(button.dataset.activity));
+});
+
+adminActivityButton?.addEventListener("click", selectAdminActivity);
+
+profileToggle?.addEventListener("click", () => {
+  const expanded = profileToggle.getAttribute("aria-expanded") === "true";
+  profileToggle.setAttribute("aria-expanded", String(!expanded));
+  if (profileMenu) profileMenu.hidden = expanded;
+});
+
+document.addEventListener("click", (event) => {
+  if (!profileControl?.contains(event.target)) {
+    profileToggle?.setAttribute("aria-expanded", "false");
+    if (profileMenu) profileMenu.hidden = true;
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && profileMenu && !profileMenu.hidden) {
+    profileMenu.hidden = true;
+    profileToggle?.setAttribute("aria-expanded", "false");
+    profileToggle?.focus();
+  }
 });
 
 documentNavigationItems.forEach((item) => {

@@ -4,11 +4,10 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.paths import TEMPLATE_ROOT
 from app.core.urls import public_path
 from app.db.session import get_session
 from app.modules.admin.repository import AdminRepository
@@ -32,7 +31,6 @@ from app.modules.auth.dependencies import require_csrf
 from app.modules.auth.service import Principal
 
 router = APIRouter(tags=["admin"])
-ADMIN_TEMPLATE = TEMPLATE_ROOT / "admin" / "index.html"
 
 
 async def get_admin_service(
@@ -45,11 +43,8 @@ async def get_admin_service(
 
 
 @router.api_route("/admin/", methods=["GET", "HEAD"], include_in_schema=False)
-async def admin() -> FileResponse:
-    return FileResponse(
-        ADMIN_TEMPLATE,
-        headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
-    )
+async def admin() -> RedirectResponse:
+    return RedirectResponse(public_path("/workspace/#admin"), status_code=307)
 
 
 @router.get("/admin", include_in_schema=False)

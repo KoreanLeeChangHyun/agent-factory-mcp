@@ -1,6 +1,4 @@
 """Platform administration authorization and safety tests."""
-
-from pathlib import Path
 from uuid import UUID
 
 import pytest
@@ -28,18 +26,12 @@ def test_admin_dependency_fails_closed() -> None:
     assert require_platform_admin(principal(admin=True)).user_id == ADMIN_ID
 
 
-def test_admin_page_is_separate_from_workspace() -> None:
+def test_admin_page_redirects_to_integrated_workspace() -> None:
     with TestClient(create_app()) as client:
-        response = client.get("/admin/")
+        response = client.get("/admin/", follow_redirects=False)
 
-    assert response.status_code == 200
-    assert "Platform administration" in response.text
-    assert 'class="admin-shell"' in response.text
-    assert 'class="activity-bar"' in response.text
-    assert 'class="primary-sidebar"' in response.text
-    assert 'class="status-bar"' in response.text
-    assert (Path(__file__).parents[1] / "template" / "admin" / "index.html").is_file()
-    assert (Path(__file__).parents[1] / "static" / "js" / "admin.js").is_file()
+    assert response.status_code == 307
+    assert response.headers["location"] == "/workspace/#admin"
 
 
 class FakeAdminRepository:

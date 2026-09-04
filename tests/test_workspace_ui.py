@@ -55,7 +55,8 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
     assert 'lang="ko"' in html
     assert 'class="workspace-title-bar"' in html
     assert 'data-workspace-context' in html
-    assert 'data-admin-link' in html
+    assert 'data-admin-activity' in html
+    assert 'data-workspace-view="admin"' in html
     assert 'role="status"' in html
     assert 'role="alert"' in login_html
     assert "https://" not in html
