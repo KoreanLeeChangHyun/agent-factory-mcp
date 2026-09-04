@@ -21,6 +21,7 @@ const workspaceSelect = document.querySelector("[data-workspace-select]");
 const workspaceContext = document.querySelector("[data-workspace-context]");
 const currentUser = document.querySelector("[data-current-user]");
 const logoutButton = document.querySelector("[data-logout]");
+const adminLink = document.querySelector("[data-admin-link]");
 const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
 const tenant = { organizationId: null, workspaceId: null };
 const minimumSidebarWidth = 180;
@@ -442,6 +443,7 @@ const loadWorkspaces = async () => {
 const openWorkspace = async (session) => {
   if (currentUser) currentUser.textContent = `${session.user.display_name} · ${session.user.email}`;
   if (logoutButton) logoutButton.hidden = false;
+  if (adminLink) adminLink.hidden = !session.user.is_platform_admin;
   if (workspaceContext) workspaceContext.hidden = false;
 
   const organizations = await api("/api/account/organizations");

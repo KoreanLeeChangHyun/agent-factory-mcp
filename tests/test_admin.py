@@ -34,6 +34,10 @@ def test_admin_page_is_separate_from_workspace() -> None:
 
     assert response.status_code == 200
     assert "Platform administration" in response.text
+    assert 'class="admin-shell"' in response.text
+    assert 'class="activity-bar"' in response.text
+    assert 'class="primary-sidebar"' in response.text
+    assert 'class="status-bar"' in response.text
     assert (Path(__file__).parents[1] / "template" / "admin" / "index.html").is_file()
     assert (Path(__file__).parents[1] / "static" / "js" / "admin.js").is_file()
 
