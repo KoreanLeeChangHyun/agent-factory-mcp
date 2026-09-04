@@ -419,7 +419,7 @@ body {
   height: 22px;
   align-items: center;
   gap: 5px;
-  padding: 0 10px 0 34px;
+  padding: 0 10px 0 20px;
   color: var(--explorer-foreground);
   text-decoration: none;
 }
@@ -464,7 +464,7 @@ body {
   height: 22px;
   align-items: center;
   gap: 3px;
-  padding: 0 10px 0 17px;
+  padding: 0 10px 0 4px;
   border: 0;
   background: transparent;
   color: var(--explorer-foreground);
@@ -485,7 +485,7 @@ body {
   height: 22px;
   align-items: center;
   gap: 5px;
-  padding: 0 10px 0 38px;
+  padding: 0 10px 0 28px;
   color: var(--explorer-foreground);
   text-decoration: none;
 }
@@ -499,7 +499,7 @@ body {
 
 .document-tree__state {
   margin: 0;
-  padding: 5px 14px 8px 38px;
+  padding: 5px 14px 8px 28px;
   color: var(--explorer-muted);
   font-size: 12px;
   line-height: 1.4;
@@ -513,7 +513,7 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 5px;
-  padding: 3px 14px 3px 38px;
+  padding: 3px 14px 3px 28px;
   color: #f0a0a0;
   font-size: 12px;
   line-height: 1.4;

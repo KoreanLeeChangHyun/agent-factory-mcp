@@ -100,6 +100,12 @@ def test_activity_bar_supports_persisted_order_and_visibility_controls() -> None
     assert 'classList.remove("is-drop-before", "is-drop-after")' in script
 
 
+def test_empty_processed_explorer_stays_visually_quiet() -> None:
+    script = SCRIPT.read_text()
+    assert 'processedTreeState.textContent = ""' in script
+    assert "연결된 가공 문서가 없습니다." not in script
+
+
 def test_workspace_is_accessible_below_factory_root(monkeypatch) -> None:
     monkeypatch.setattr(settings, "root_path", "/factory")
     application = create_app()

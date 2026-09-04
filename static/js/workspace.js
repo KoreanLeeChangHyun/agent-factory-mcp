@@ -423,8 +423,8 @@ const loadDocuments = async () => {
       processedList.append(createDocumentTreeStatus(`${rawItem.title || rawItem.id} · 내용 없음`, true));
     });
     if (processedDocuments.length === 0) {
-      processedTreeState.textContent = "연결된 가공 문서가 없습니다.";
-      processedTreeState.hidden = false;
+      processedTreeState.textContent = "";
+      processedTreeState.hidden = true;
       processedList.hidden = true;
     } else {
       processedTreeState.hidden = true;
