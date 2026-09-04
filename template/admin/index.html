@@ -4,11 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Agent Factory Admin</title>
+    <link rel="icon" type="image/svg+xml" href="../static/images/agent-factory.svg">
     <link rel="stylesheet" href="../static/css/admin.css">
   </head>
   <body>
     <aside>
-      <div class="brand"><span>AF</span><strong>Agent Factory</strong></div>
+      <div class="brand"><img src="../static/images/agent-factory.svg" alt="" width="34" height="34"><strong>Agent Factory</strong></div>
       <p class="eyebrow">Platform administration</p>
       <nav aria-label="관리자 메뉴">
         <button class="active" data-view="dashboard">Overview</button>
@@ -21,7 +22,12 @@
         <button data-view="feature-flags">Feature flags</button>
         <button data-view="runtime">Runtime</button>
       </nav>
-      <a href="../workspace/" class="back">← Workspace</a>
+      <a href="../workspace/" class="back">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m14 6-6 6 6 6M8 12h11" />
+        </svg>
+        <span>Workspace</span>
+      </a>
     </aside>
     <main>
       <header>

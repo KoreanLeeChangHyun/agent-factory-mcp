@@ -35,6 +35,8 @@ def test_workspace_login_is_visible_before_javascript_boots() -> None:
     assert "../api/auth/oauth/google/login" in login_html
     assert (ROOT / "static/css/login.css").is_file()
     assert (ROOT / "static/js/login.js").is_file()
+    assert (ROOT / "static/images/agent-factory.svg").is_file()
+    assert "../static/images/agent-factory.svg" in login_html
 
     workspace_html = (ROOT / "template/workspace/index.html").read_text()
     assert 'data-login-form' not in workspace_html
