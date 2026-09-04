@@ -33,16 +33,19 @@ class PageAuthService:
         )
 
 
-def test_workspace_exposes_seven_decided_activities_in_default_order() -> None:
+def test_workspace_exposes_nine_decided_activities_in_default_order() -> None:
     html = TEMPLATE.read_text()
-    assert html.count("data-activity=") == 7
-    labels = ("일정", "에이전트", "문서", "로그", "테스트", "계정", "관리자")
+    assert html.count("data-activity=") == 9
+    labels = ("일정", "에이전트", "문서", "로그", "테스트", "연동", "DB", "계정", "관리자")
     for label in labels:
         assert f'aria-label="{label}"' in html
     assert [html.index(f'aria-label="{label}"') for label in labels] == sorted(
         html.index(f'aria-label="{label}"') for label in labels
     )
-    assert 'aria-label="외부연동"' not in html
+    assert 'data-sidebar-view="integrations"' in html
+    assert 'data-workspace-view="integrations"' in html
+    assert 'data-sidebar-view="database"' in html
+    assert 'data-workspace-view="database"' in html
 
 
 def test_workspace_uses_authenticated_tenant_apis_not_project_files() -> None:

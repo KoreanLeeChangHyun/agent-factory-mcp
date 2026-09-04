@@ -50,6 +50,8 @@ const activityTitles = {
   documents: "문서",
   logs: "로그",
   tests: "테스트",
+  integrations: "연동",
+  database: "DB",
   account: "계정",
   admin: "관리자",
 };
@@ -489,8 +491,20 @@ const applyActivityOrder = () => {
   if (!activityBar) return;
   const candidateOrder = storedJson(activityOrderKey, []);
   const storedOrder = Array.isArray(candidateOrder) ? candidateOrder : [];
-  const rank = new Map(storedOrder.map((activity, index) => [activity, index]));
-  orderedActivityButtons()
+  const buttons = orderedActivityButtons();
+  const defaultOrder = buttons.map((button) => button.dataset.activity);
+  const knownActivities = new Set(defaultOrder);
+  const mergedOrder = storedOrder.filter((activity, index) =>
+    knownActivities.has(activity) && storedOrder.indexOf(activity) === index,
+  );
+  defaultOrder.forEach((activity, defaultIndex) => {
+    if (mergedOrder.includes(activity)) return;
+    const nextActivity = defaultOrder.slice(defaultIndex + 1).find((candidate) => mergedOrder.includes(candidate));
+    if (nextActivity) mergedOrder.splice(mergedOrder.indexOf(nextActivity), 0, activity);
+    else mergedOrder.push(activity);
+  });
+  const rank = new Map(mergedOrder.map((activity, index) => [activity, index]));
+  buttons
     .sort((left, right) => (rank.get(left.dataset.activity) ?? 99) - (rank.get(right.dataset.activity) ?? 99))
     .forEach((button) => activityBar.append(button));
 };
