@@ -30,8 +30,14 @@ def test_production_overlay_has_tls_release_and_scaling_boundaries() -> None:
 
 def test_workspace_login_is_visible_before_javascript_boots() -> None:
     workspace_html = (ROOT / "template/workspace/index.html").read_text()
-    assert '<section id="login" class="login">' in workspace_html
+    assert '<section class="auth-gate"' in workspace_html
     assert "<noscript>" in workspace_html
+    assert 'class="activity-bar"' in workspace_html
+    assert 'class="primary-sidebar"' in workspace_html
+    assert 'class="workspace"' in workspace_html
+    assert (ROOT / "static/vendor/tabulator/6.5.2/tabulator.min.css").is_file()
+    assert (ROOT / "static/vendor/tabulator/6.5.2/tabulator.min.js").is_file()
+    assert (ROOT / "static/vendor/THIRD_PARTY_NOTICES.txt").is_file()
 
 
 def test_operations_runbook_covers_recovery_and_alerting() -> None:

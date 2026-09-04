@@ -67,6 +67,12 @@ def test_workspace_shell_is_served_without_cache(client: TestClient) -> None:
     response = client.get("/workspace/")
 
     assert response.status_code == 200
-    assert "Workspace activities" in response.text
+    assert 'class="activity-bar"' in response.text
+    assert 'data-region="primary-sidebar"' in response.text
+    assert 'data-workspace-view="documents"' in response.text
+    assert response.text.index('aria-label="일정"') < response.text.index('aria-label="에이전트"')
+    assert response.text.index('aria-label="에이전트"') < response.text.index('aria-label="문서"')
+    assert "../static/css/workspace.css" in response.text
+    assert "../static/js/workspace.js" in response.text
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["x-content-type-options"] == "nosniff"
