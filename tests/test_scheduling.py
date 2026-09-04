@@ -6,6 +6,7 @@ import pytest
 
 from app.common.errors import ApplicationError
 from app.modules.schedule.service import calculate_next_run, retry_delay, validate_task_queue
+from app.worker import tasks
 
 
 def test_interval_schedule_has_minimum_and_exact_next_time() -> None:
@@ -40,3 +41,19 @@ def test_task_types_are_pinned_to_bounded_queues() -> None:
         validate_task_queue("agent.run", "integrations")
     with pytest.raises(ApplicationError, match="Unsupported"):
         validate_task_queue("shell.arbitrary", "default")
+
+
+def test_worker_task_disposes_loop_bound_database_engine(monkeypatch) -> None:
+    events: list[str] = []
+
+    async def operation() -> int:
+        events.append("operation")
+        return 3
+
+    async def fake_dispose_engine() -> None:
+        events.append("dispose")
+
+    monkeypatch.setattr(tasks, "dispose_engine", fake_dispose_engine)
+
+    assert tasks._run_task(operation()) == 3
+    assert events == ["operation", "dispose"]

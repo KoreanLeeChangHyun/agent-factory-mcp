@@ -1,11 +1,12 @@
 """Celery tasks backed by transactionally managed Job records."""
 
 import asyncio
+from collections.abc import Awaitable
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from app.core.config import settings
-from app.db.session import get_session_factory
+from app.db.session import dispose_engine, get_session_factory
 from app.db.tenant import TenantContext, apply_tenant_context
 from app.infrastructure.job_queue import CeleryJobPublisher
 from app.modules.schedule.models import Job, JobStatus
@@ -18,9 +19,19 @@ SYSTEM_USER_ID = UUID("00000000-0000-4000-8000-000000000000")
 SYSTEM_ORGANIZATION_ID = UUID("00000000-0000-4000-8000-000000000000")
 
 
+def _run_task[Result](awaitable: Awaitable[Result]) -> Result:
+    async def run_and_dispose() -> Result:
+        try:
+            return await awaitable
+        finally:
+            await dispose_engine()
+
+    return asyncio.run(run_and_dispose())
+
+
 @celery_app.task(name="agent_factory.execute_job")
 def execute_job(job_id: str, organization_id: str, workspace_id: str, user_id: str) -> str:
-    return asyncio.run(
+    return _run_task(
         _execute_job(UUID(job_id), UUID(organization_id), UUID(workspace_id), UUID(user_id))
     )
 
@@ -96,7 +107,7 @@ async def _execute_job(
 
 @celery_app.task(name="agent_factory.dispatch_due_schedules")
 def dispatch_due_schedules() -> int:
-    return asyncio.run(_dispatch_due_schedules())
+    return _run_task(_dispatch_due_schedules())
 
 
 async def _dispatch_due_schedules() -> int:
@@ -141,7 +152,7 @@ async def _dispatch_due_schedules() -> int:
 
 @celery_app.task(name="agent_factory.dispatch_due_retries")
 def dispatch_due_retries() -> int:
-    return asyncio.run(_dispatch_due_retries())
+    return _run_task(_dispatch_due_retries())
 
 
 async def _dispatch_due_retries() -> int:
