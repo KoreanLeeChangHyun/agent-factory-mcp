@@ -15,6 +15,7 @@ proxying while FastAPI's configured root path keeps generated URLs, redirects,
 cookies, and browser requests aligned.
 
 - `/factory/workspace/`: tenant Workspace UI
+- `/factory/login/`: browser sign-in; unauthenticated Workspace requests redirect here
 - `/factory/admin/`: platform administration UI
 - `/factory/api/`: tenant API
 - `/factory/api/admin/`: platform administration API

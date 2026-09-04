@@ -4,6 +4,9 @@ Browser authentication uses server-side opaque sessions. Only an HMAC-SHA-256
 digest of each session, recovery token, verification token, or MCP API token is
 stored. Session cookies are HTTP-only; state-changing browser requests also
 require the matching CSRF cookie and header.
+Unauthenticated browser requests to `/workspace/` are redirected server-side to
+the separate `/login/` page. An active session is required before the Workspace
+HTML is returned; an authenticated request to `/login/` returns to Workspace.
 
 Local credentials use pwdlib's recommended Argon2 hasher. Repeated failures
 lock the credential without changing the generic login error. A successful

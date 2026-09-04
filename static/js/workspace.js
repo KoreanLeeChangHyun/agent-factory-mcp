@@ -16,11 +16,6 @@ const specificationList = document.querySelector("[data-specification-list]");
 const specificationTreeState = document.getElementById("specification-tree-state");
 const specificationFrame = document.querySelector("[data-specification-frame]");
 const specificationTab = document.querySelector("[data-specification-tab]");
-const authGate = document.querySelector("[data-auth-gate]");
-const loginForm = document.querySelector("[data-login-form]");
-const loginError = document.querySelector("[data-login-error]");
-const googleLogin = document.querySelector("[data-google-login]");
-const passwordLoginDivider = document.querySelector("[data-password-login-divider]");
 const organizationSelect = document.querySelector("[data-organization-select]");
 const workspaceSelect = document.querySelector("[data-workspace-select]");
 const workspaceContext = document.querySelector("[data-workspace-context]");
@@ -448,7 +443,6 @@ const openWorkspace = async (session) => {
   if (currentUser) currentUser.textContent = `${session.user.display_name} · ${session.user.email}`;
   if (logoutButton) logoutButton.hidden = false;
   if (workspaceContext) workspaceContext.hidden = false;
-  if (authGate) authGate.hidden = true;
 
   const organizations = await api("/api/account/organizations");
   populateSelect(organizationSelect, organizations);
@@ -465,22 +459,7 @@ const bootAuthentication = async () => {
     const session = await api("/api/auth/me");
     await openWorkspace(session);
   } catch (error) {
-    if (error.status !== 401 && loginError) {
-      loginError.textContent = "Workspace 정보를 불러오지 못했습니다.";
-    }
-    if (authGate) authGate.hidden = false;
-  }
-};
-
-const loadAuthProviders = async () => {
-  try {
-    const payload = await api("/api/auth/providers");
-    const googleEnabled = Array.isArray(payload.providers) && payload.providers.includes("google");
-    if (googleLogin) googleLogin.hidden = !googleEnabled;
-    if (passwordLoginDivider) passwordLoginDivider.hidden = !googleEnabled;
-  } catch {
-    if (googleLogin) googleLogin.hidden = true;
-    if (passwordLoginDivider) passwordLoginDivider.hidden = true;
+    if (error.status === 401) window.location.replace(`${rootPath}/login/`);
   }
 };
 
@@ -512,33 +491,13 @@ documentGroupToggles.forEach((toggle) => {
 
 selectDocumentView("original-overview");
 initializeOriginalSearch();
-loadAuthProviders();
 bootAuthentication();
-
-loginForm?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (loginError) loginError.textContent = "";
-  const formData = new FormData(loginForm);
-  try {
-    await api("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({
-        email: formData.get("email"),
-        password: formData.get("password"),
-      }),
-    });
-    const session = await api("/api/auth/me");
-    await openWorkspace(session);
-  } catch (error) {
-    if (loginError) loginError.textContent = error.message || "로그인에 실패했습니다.";
-  }
-});
 
 logoutButton?.addEventListener("click", async () => {
   try {
     await api("/api/auth/logout", { method: "POST" });
   } finally {
-    window.location.reload();
+    window.location.assign(`${rootPath}/login/`);
   }
 });
 

@@ -29,11 +29,15 @@ def test_production_overlay_has_tls_release_and_scaling_boundaries() -> None:
 
 
 def test_workspace_login_is_visible_before_javascript_boots() -> None:
+    login_html = (ROOT / "template/login/index.html").read_text()
+    assert "<noscript>" in login_html
+    assert 'data-google-login' in login_html
+    assert "../api/auth/oauth/google/login" in login_html
+    assert (ROOT / "static/css/login.css").is_file()
+    assert (ROOT / "static/js/login.js").is_file()
+
     workspace_html = (ROOT / "template/workspace/index.html").read_text()
-    assert '<section class="auth-gate"' in workspace_html
-    assert "<noscript>" in workspace_html
-    assert 'data-google-login' in workspace_html
-    assert "../api/auth/oauth/google/login" in workspace_html
+    assert 'data-login-form' not in workspace_html
     assert 'class="activity-bar"' in workspace_html
     assert 'class="primary-sidebar"' in workspace_html
     assert 'class="workspace"' in workspace_html
