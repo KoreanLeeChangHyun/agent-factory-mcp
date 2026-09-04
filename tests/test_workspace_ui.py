@@ -33,10 +33,10 @@ class PageAuthService:
         )
 
 
-def test_workspace_exposes_six_decided_activities() -> None:
+def test_workspace_exposes_seven_decided_activities_in_default_order() -> None:
     html = TEMPLATE.read_text()
-    assert html.count("data-activity=") == 6
-    labels = ("일정", "에이전트", "문서", "로그", "테스트", "계정")
+    assert html.count("data-activity=") == 7
+    labels = ("일정", "에이전트", "문서", "로그", "테스트", "계정", "관리자")
     for label in labels:
         assert f'aria-label="{label}"' in html
     assert [html.index(f'aria-label="{label}"') for label in labels] == sorted(
@@ -60,8 +60,10 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
     assert 'class="workspace-title-bar"' in html
     assert 'data-workspace-context' in html
     assert 'data-activity="account"' in html
+    assert 'data-activity="admin"' in html
     assert 'data-workspace-view="account"' in html
-    assert 'data-platform-admin-menu' in html
+    assert 'data-workspace-view="admin"' in html
+    assert 'data-activity-context-menu' in html
     assert 'role="status"' in html
     assert 'role="alert"' in login_html
     assert "https://" not in html
@@ -73,6 +75,15 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
         assert client.get("/static/css/workspace.css").status_code == 200
         assert client.get("/static/js/login.js").status_code == 200
         assert client.get("/static/css/login.css").status_code == 200
+
+
+def test_activity_bar_supports_persisted_order_and_visibility_controls() -> None:
+    script = SCRIPT.read_text()
+    assert "agentFactoryActivityOrder" in script
+    assert "agentFactoryActivityVisibility" in script
+    assert "button.draggable = true" in script
+    assert 'addEventListener("contextmenu"' in script
+    assert 'event.altKey || !["ArrowUp", "ArrowDown"]' in script
 
 
 def test_workspace_is_accessible_below_factory_root(monkeypatch) -> None:

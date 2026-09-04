@@ -1,6 +1,8 @@
 const workspaceShell = document.querySelector("[data-workspace-shell]");
+const activityBar = document.querySelector(".activity-bar");
 const sidebarResizer = document.querySelector("[data-sidebar-resizer]");
 const activityButtons = document.querySelectorAll("[data-activity]");
+const activityContextMenu = document.querySelector("[data-activity-context-menu]");
 const sidebarTitle = document.querySelector("[data-sidebar-title]");
 const sidebarViews = document.querySelectorAll("[data-sidebar-view]");
 const workspaceViews = document.querySelectorAll("[data-workspace-view]");
@@ -27,7 +29,6 @@ const profileToggle = document.querySelector("[data-profile-toggle]");
 const profileMenu = document.querySelector("[data-profile-menu]");
 const profileAvatar = document.querySelector("[data-profile-avatar]");
 const profileName = document.querySelector("[data-profile-name]");
-const platformAdminMenu = document.querySelector("[data-platform-admin-menu]");
 const accountAvatar = document.querySelector("[data-account-avatar]");
 const accountName = document.querySelector("[data-account-name]");
 const accountEmail = document.querySelector("[data-account-email]");
@@ -44,7 +45,11 @@ const activityTitles = {
   logs: "로그",
   tests: "테스트",
   account: "계정",
+  admin: "관리자",
 };
+const activityOrderKey = "agentFactoryActivityOrder";
+const activityVisibilityKey = "agentFactoryActivityVisibility";
+let platformAdmin = false;
 
 const originalSearchFields = [
   "classification",
@@ -366,9 +371,90 @@ const loadDocuments = async () => {
   }
 };
 
+const storedJson = (key, fallback) => {
+  try {
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const orderedActivityButtons = () => Array.from(activityBar?.querySelectorAll("[data-activity]") || []);
+
+const saveActivityOrder = () => {
+  localStorage.setItem(activityOrderKey, JSON.stringify(orderedActivityButtons().map((button) => button.dataset.activity)));
+};
+
+const applyActivityOrder = () => {
+  if (!activityBar) return;
+  const candidateOrder = storedJson(activityOrderKey, []);
+  const storedOrder = Array.isArray(candidateOrder) ? candidateOrder : [];
+  const rank = new Map(storedOrder.map((activity, index) => [activity, index]));
+  orderedActivityButtons()
+    .sort((left, right) => (rank.get(left.dataset.activity) ?? 99) - (rank.get(right.dataset.activity) ?? 99))
+    .forEach((button) => activityBar.append(button));
+};
+
+const activityVisibility = () => {
+  const visibility = storedJson(activityVisibilityKey, {});
+  return visibility && typeof visibility === "object" && !Array.isArray(visibility) ? visibility : {};
+};
+
+const applyActivityVisibility = () => {
+  const visibility = activityVisibility();
+  activityButtons.forEach((button) => {
+    const activity = button.dataset.activity;
+    const permitted = activity !== "admin" || platformAdmin;
+    button.hidden = !permitted || visibility[activity] === false;
+  });
+};
+
+const setActivityVisibility = (activity, visible) => {
+  const visibility = activityVisibility();
+  visibility[activity] = visible;
+  localStorage.setItem(activityVisibilityKey, JSON.stringify(visibility));
+  applyActivityVisibility();
+  const active = document.querySelector("[data-activity].is-active");
+  if (active?.hidden) {
+    const fallback = orderedActivityButtons().find((button) => !button.hidden);
+    if (fallback) selectActivity(fallback.dataset.activity);
+  }
+};
+
+const closeActivityContextMenu = () => {
+  if (activityContextMenu) activityContextMenu.hidden = true;
+};
+
+const openActivityContextMenu = (x, y) => {
+  if (!activityContextMenu) return;
+  const activities = Object.keys(activityTitles).filter((activity) => activity !== "admin" || platformAdmin);
+  const visibility = activityVisibility();
+  activityContextMenu.innerHTML = activities.map((activity) => {
+    const checked = visibility[activity] !== false;
+    return `<button type="button" role="menuitemcheckbox" aria-checked="${checked}" data-activity-visibility="${activity}"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"${checked ? "" : " hidden"}><path d="m3.5 8 3 3 6-6"/></svg><span>${activityTitles[activity]}</span></button>`;
+  }).join("");
+  activityContextMenu.hidden = false;
+  const width = activityContextMenu.offsetWidth;
+  const height = activityContextMenu.offsetHeight;
+  activityContextMenu.style.left = `${Math.max(6, Math.min(x, window.innerWidth - width - 6))}px`;
+  activityContextMenu.style.top = `${Math.max(6, Math.min(y, window.innerHeight - height - 6))}px`;
+  activityContextMenu.querySelector("button")?.focus();
+};
+
+const moveActivity = (button, direction) => {
+  const buttons = orderedActivityButtons().filter((candidate) => !candidate.hidden);
+  const index = buttons.indexOf(button);
+  const target = buttons[index + direction];
+  if (!target || !activityBar) return;
+  if (direction < 0) activityBar.insertBefore(button, target);
+  else activityBar.insertBefore(target, button);
+  saveActivityOrder();
+  button.focus();
+};
+
 const selectActivity = (activity) => {
   if (!Object.hasOwn(activityTitles, activity)) return;
-  if (activity !== "account" && ["#admin", "#account"].includes(location.hash)) {
+  if (!["account", "admin"].includes(activity) && ["#admin", "#account"].includes(location.hash)) {
     history.replaceState(null, "", location.pathname + location.search);
   }
 
@@ -465,7 +551,8 @@ const openWorkspace = async (session) => {
   if (accountName) accountName.textContent = session.user.display_name;
   if (accountEmail) accountEmail.textContent = session.user.email;
   if (profileControl) profileControl.hidden = false;
-  if (platformAdminMenu) platformAdminMenu.hidden = !session.user.is_platform_admin;
+  platformAdmin = session.user.is_platform_admin;
+  applyActivityVisibility();
   if (workspaceContext) workspaceContext.hidden = false;
 
   const organizations = await api("/api/account/organizations");
@@ -482,7 +569,7 @@ const openWorkspace = async (session) => {
   if (accountOrganization) accountOrganization.textContent = organizationSelect?.selectedOptions[0]?.textContent || "—";
   await loadWorkspaces();
   if (session.user.is_platform_admin && location.hash === "#admin") {
-    selectActivity("account");
+    selectActivity("admin");
     window.agentFactoryAdmin?.open("dashboard");
   } else if (location.hash === "#account") {
     selectActivity("account");
@@ -503,11 +590,63 @@ if (workspaceShell) {
   workspaceShell.dataset.ready = "true";
 }
 
+applyActivityOrder();
+applyActivityVisibility();
+
 activityButtons.forEach((button) => {
+  button.draggable = true;
   button.addEventListener("click", () => {
     selectActivity(button.dataset.activity);
     if (button.dataset.activity === "account") window.agentFactoryAdmin?.profile();
+    if (button.dataset.activity === "admin") window.agentFactoryAdmin?.open("dashboard");
   });
+  button.addEventListener("dragstart", (event) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", button.dataset.activity);
+    button.classList.add("is-dragging");
+  });
+  button.addEventListener("dragend", () => {
+    button.classList.remove("is-dragging");
+    saveActivityOrder();
+  });
+  button.addEventListener("keydown", (event) => {
+    if (!event.altKey || !["ArrowUp", "ArrowDown"].includes(event.key)) return;
+    event.preventDefault();
+    moveActivity(button, event.key === "ArrowUp" ? -1 : 1);
+  });
+});
+
+activityBar?.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  const dragging = activityBar.querySelector(".is-dragging");
+  const target = event.target.closest("[data-activity]");
+  if (!dragging || !target || dragging === target) return;
+  const before = event.clientY < target.getBoundingClientRect().top + target.offsetHeight / 2;
+  activityBar.insertBefore(dragging, before ? target : target.nextSibling);
+});
+
+activityBar?.addEventListener("contextmenu", (event) => {
+  event.preventDefault();
+  openActivityContextMenu(event.clientX, event.clientY);
+});
+
+activityContextMenu?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-activity-visibility]");
+  if (!button) return;
+  const activity = button.dataset.activityVisibility;
+  setActivityVisibility(activity, button.getAttribute("aria-checked") !== "true");
+  openActivityContextMenu(Number.parseFloat(activityContextMenu.style.left), Number.parseFloat(activityContextMenu.style.top));
+});
+
+activityContextMenu?.addEventListener("keydown", (event) => {
+  if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+  const items = Array.from(activityContextMenu.querySelectorAll("button"));
+  const current = items.indexOf(document.activeElement);
+  if (!items.length) return;
+  event.preventDefault();
+  if (event.key === "Home") items[0].focus();
+  else if (event.key === "End") items.at(-1).focus();
+  else items[(current + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus();
 });
 
 profileToggle?.addEventListener("click", () => {
@@ -521,14 +660,17 @@ document.addEventListener("click", (event) => {
     profileToggle?.setAttribute("aria-expanded", "false");
     if (profileMenu) profileMenu.hidden = true;
   }
+  if (!activityContextMenu?.contains(event.target)) closeActivityContextMenu();
 });
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && profileMenu && !profileMenu.hidden) {
+  if (event.key !== "Escape") return;
+  if (profileMenu && !profileMenu.hidden) {
     profileMenu.hidden = true;
     profileToggle?.setAttribute("aria-expanded", "false");
     profileToggle?.focus();
   }
+  closeActivityContextMenu();
 });
 
 documentNavigationItems.forEach((item) => {

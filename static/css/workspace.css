@@ -144,8 +144,11 @@ body {
   border: 0;
   background: transparent;
   color: var(--activity-item-foreground);
-  cursor: pointer;
+  cursor: grab;
 }
+
+.activity-button:active { cursor: grabbing; }
+.activity-button.is-dragging { opacity: .38; }
 
 .activity-button:hover {
   color: var(--activity-item-active-foreground);
@@ -179,7 +182,51 @@ body {
   stroke-width: 1.5;
 }
 
-.activity-button--bottom { margin-top: auto; }
+.activity-context-menu {
+  position: fixed;
+  z-index: 100;
+  min-width: 176px;
+  padding: 4px;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  background: #252526;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .38);
+}
+
+.activity-context-menu button {
+  display: flex;
+  width: 100%;
+  height: 28px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--explorer-foreground);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.activity-context-menu button:hover,
+.activity-context-menu button:focus-visible {
+  outline: none;
+  background: #04395e;
+  color: #ffffff;
+}
+
+.activity-context-menu svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
 
 .activity-divider {
   width: 24px;

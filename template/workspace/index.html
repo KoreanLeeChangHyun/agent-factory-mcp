@@ -59,8 +59,11 @@
         <button class="activity-button" type="button" aria-label="테스트" aria-pressed="false" data-activity="tests">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.75 3.75h6.5M10.25 3.75v5.1l-5.4 8.95a1.65 1.65 0 0 0 1.4 2.45h11.5a1.65 1.65 0 0 0 1.4-2.45l-5.4-8.95v-5.1M7.25 14h9.5"/><path d="m9 16.5 1.75 1.75L15 14.5"/></svg>
         </button>
-        <button class="activity-button activity-button--bottom" type="button" aria-label="계정" aria-pressed="false" data-activity="account">
+        <button class="activity-button" type="button" aria-label="계정" aria-pressed="false" data-activity="account">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="3.25"/><path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6"/></svg>
+        </button>
+        <button class="activity-button" type="button" aria-label="관리자" aria-pressed="false" data-activity="admin" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.5 19 6.75v5.5c0 4.25-2.9 7.05-7 8-4.1-.95-7-3.75-7-8v-5.5L12 3.5Z"/><path d="M9.25 12.25 11 14l3.75-4"/></svg>
         </button>
       </nav>
 
@@ -119,9 +122,10 @@
           <div class="sidebar-view account-sidebar" data-sidebar-view="account" hidden>
             <p class="account-sidebar__label">Account</p>
             <nav aria-label="계정 메뉴"><button class="is-selected" type="button" data-account-profile>프로필</button></nav>
-            <div data-platform-admin-menu hidden>
-              <p class="account-sidebar__label">Platform administration</p>
-              <nav aria-label="플랫폼 관리 메뉴">
+          </div>
+          <div class="sidebar-view account-sidebar" data-sidebar-view="admin" hidden>
+            <p class="account-sidebar__label">Platform administration</p>
+            <nav aria-label="플랫폼 관리 메뉴">
               <button type="button" data-admin-view="dashboard">개요</button>
               <button type="button" data-admin-view="users">사용자</button>
               <button type="button" data-admin-view="organizations">조직</button>
@@ -131,8 +135,7 @@
               <button type="button" data-admin-view="audit">감사 로그</button>
               <button type="button" data-admin-view="feature-flags">기능 플래그</button>
               <button type="button" data-admin-view="runtime">런타임</button>
-              </nav>
-            </div>
+            </nav>
           </div>
         </div>
       </aside>
@@ -183,20 +186,20 @@
         <section class="workspace-view" data-workspace-view="logs" hidden><div class="oversight-introduction"><span class="source-state">정의 대기</span><h1>로그</h1><p>이 Activity의 상세 기능, 내부 구조, source와 control은 Human 결정을 기다리고 있습니다.</p></div></section>
         <section class="workspace-view" data-workspace-view="tests" hidden><div class="oversight-introduction"><span class="source-state">정의 대기</span><h1>테스트</h1><p>이 Activity의 상세 기능, 내부 구조, source와 control은 Human 결정을 기다리고 있습니다.</p></div></section>
         <section class="workspace-view account-workspace" data-workspace-view="account" hidden>
-          <article data-account-panel="profile">
-            <header class="editor-header"><span class="editor-header__tab">계정 / 프로필</span></header>
-            <div class="account-canvas">
-              <div class="account-avatar" aria-hidden="true" data-account-avatar></div>
-              <div><p class="account-eyebrow">Signed in account</p><h1 data-account-name></h1><p data-account-email></p><dl><div><dt>조직</dt><dd data-account-organization></dd></div><div><dt>워크스페이스</dt><dd data-account-workspace></dd></div></dl></div>
-            </div>
-          </article>
-          <article class="admin-workspace" data-account-panel="admin" hidden>
-            <header class="editor-header"><span class="editor-header__tab" data-admin-tab>플랫폼 관리 / 개요</span><span class="admin-status" role="status" data-admin-status>불러오는 중</span></header>
-            <div class="admin-canvas"><header class="admin-view-header"><p>Control plane</p><h1 data-admin-title>개요</h1></header><div class="admin-content" aria-live="polite" data-admin-content></div></div>
-          </article>
+          <header class="editor-header"><span class="editor-header__tab">계정 / 프로필</span></header>
+          <div class="account-canvas">
+            <div class="account-avatar" aria-hidden="true" data-account-avatar></div>
+            <div><p class="account-eyebrow">Signed in account</p><h1 data-account-name></h1><p data-account-email></p><dl><div><dt>조직</dt><dd data-account-organization></dd></div><div><dt>워크스페이스</dt><dd data-account-workspace></dd></div></dl></div>
+          </div>
+        </section>
+        <section class="workspace-view admin-workspace" data-workspace-view="admin" hidden>
+          <header class="editor-header"><span class="editor-header__tab" data-admin-tab>플랫폼 관리 / 개요</span><span class="admin-status" role="status" data-admin-status>불러오는 중</span></header>
+          <div class="admin-canvas"><header class="admin-view-header"><p>Control plane</p><h1 data-admin-title>개요</h1></header><div class="admin-content" aria-live="polite" data-admin-content></div></div>
         </section>
       </main>
     </div>
+
+    <div class="activity-context-menu" role="menu" aria-label="작업 표시줄 표시 설정" data-activity-context-menu hidden></div>
 
     <script src="../static/vendor/tabulator/6.5.2/tabulator.min.js"></script>
     <script src="../static/js/workspace.js"></script>

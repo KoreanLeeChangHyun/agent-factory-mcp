@@ -14,7 +14,6 @@
   const status = document.querySelector("[data-admin-status]");
   const title = document.querySelector("[data-admin-title]");
   const tab = document.querySelector("[data-admin-tab]");
-  const panels = document.querySelectorAll("[data-account-panel]");
   const profileButton = document.querySelector("[data-account-profile]");
   const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
   const escapeHtml = (value) => String(value ?? "—").replace(
@@ -58,12 +57,7 @@
     }
   };
 
-  const showPanel = (name) => {
-    panels.forEach((panel) => { panel.hidden = panel.dataset.accountPanel !== name; });
-  };
-
   const open = (view) => {
-    showPanel("admin");
     profileButton?.classList.remove("is-selected");
     document.querySelector("[data-admin-view].is-selected")?.classList.remove("is-selected");
     document.querySelector(`[data-admin-view="${view}"]`)?.classList.add("is-selected");
@@ -72,7 +66,6 @@
   };
 
   const profile = () => {
-    showPanel("profile");
     document.querySelector("[data-admin-view].is-selected")?.classList.remove("is-selected");
     profileButton?.classList.add("is-selected");
     history.replaceState(null, "", "#account");
