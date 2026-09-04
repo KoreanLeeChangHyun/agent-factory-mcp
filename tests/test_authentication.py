@@ -298,10 +298,11 @@ def test_google_oauth_redirect_uri_keeps_public_root_path(monkeypatch) -> None:
             return FakeGoogleClient() if provider == "google" else None
 
     monkeypatch.setattr(settings, "root_path", "/factory")
+    monkeypatch.setattr(settings, "public_base_url", "https://lchserver.com/factory")
     monkeypatch.setattr(settings, "trusted_hosts", ["lchserver.com"])
     monkeypatch.setattr(auth_router, "oauth", FakeOAuth())
     application = create_app()
-    with TestClient(application, base_url="https://lchserver.com") as client:
+    with TestClient(application, base_url="http://lchserver.com") as client:
         response = client.get("/factory/api/auth/oauth/google/login")
 
     assert response.status_code == 200

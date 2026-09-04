@@ -214,7 +214,9 @@ async def oauth_login(provider: str, request: Request) -> Response:
     client = oauth.create_client(provider)
     if client is None:
         raise NotFoundError("oauth_provider_not_configured", "OAuth provider is not configured")
-    redirect_uri = request.url_for("oauth_callback", provider=provider)
+    redirect_uri = (
+        f"{settings.public_base_url.rstrip('/')}/api/auth/oauth/{provider}/callback"
+    )
     return await client.authorize_redirect(request, redirect_uri)
 
 
