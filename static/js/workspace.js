@@ -453,8 +453,8 @@ const loadDocuments = async () => {
     });
 
     if (specifications.length === 0) {
-      specificationTreeState.textContent = "연결된 명세 문서가 없습니다.";
-      specificationTreeState.hidden = false;
+      specificationTreeState.textContent = "";
+      specificationTreeState.hidden = true;
       specificationList.hidden = true;
       return;
     }
