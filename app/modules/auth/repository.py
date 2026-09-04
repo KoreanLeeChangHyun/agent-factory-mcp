@@ -141,17 +141,20 @@ class AuthRepository:
                 slug=f"personal-{user_id.hex[:12]}",
                 is_personal=True,
             )
+            self.session.add_all([user, organization])
+            await self.session.flush()
+
             workspace = Workspace(
                 id=uuid4(),
                 organization_id=organization.id,
                 name="Personal Workspace",
                 slug="personal",
             )
+            self.session.add(workspace)
+            await self.session.flush()
+
             self.session.add_all(
                 [
-                    user,
-                    organization,
-                    workspace,
                     OrganizationMembership(
                         organization_id=organization.id,
                         user_id=user.id,

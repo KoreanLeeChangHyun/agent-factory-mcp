@@ -12,9 +12,9 @@ from app.core.config import Settings, settings
 from app.main import create_app
 from app.modules.auth.crypto import hash_password, token_digest, verify_password
 from app.modules.auth.dependencies import get_auth_service
-from app.modules.auth.models import UserCredential
+from app.modules.auth.models import ExternalIdentity, UserCredential
 from app.modules.auth.oauth import external_profile
-from app.modules.auth.repository import PasswordLoginRecord
+from app.modules.auth.repository import AuthRepository, PasswordLoginRecord
 from app.modules.auth.service import AuthService, LoginResult, Principal
 from app.modules.identity.models import User, UserStatus
 from app.router import auth as auth_router
@@ -105,6 +105,41 @@ def auth_settings() -> Settings:
         auth_max_failed_attempts=2,
         auth_lock_minutes=10,
     )
+
+
+@pytest.mark.asyncio
+async def test_external_user_is_flushed_before_google_identity() -> None:
+    class OrderedSession:
+        def __init__(self) -> None:
+            self.flushes = 0
+
+        async def execute(self, statement: object) -> None:
+            del statement
+
+        async def scalar(self, statement: object) -> None:
+            del statement
+
+        def add_all(self, records: list[object]) -> None:
+            del records
+
+        def add(self, record: object) -> None:
+            if isinstance(record, ExternalIdentity):
+                assert self.flushes == 2
+
+        async def flush(self) -> None:
+            self.flushes += 1
+
+    session = OrderedSession()
+    repository = AuthRepository(session)  # type: ignore[arg-type]
+
+    await repository.find_or_create_external_user(
+        provider="google",
+        subject="google-subject",
+        normalized_email="owner@example.com",
+        display_name="Owner",
+    )
+
+    assert session.flushes == 3
 
 
 def test_password_hash_is_not_reversible_plaintext() -> None:
