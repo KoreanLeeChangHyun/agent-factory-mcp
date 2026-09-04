@@ -96,8 +96,16 @@
                 <nav class="document-navigation" aria-label="가공 문서 보기">
                   <a class="document-navigation__item" href="#document-processed-overview" data-document-target="processed-overview">개요</a>
                 </nav>
-                <div class="document-tree" role="region" aria-label="가공 문서 탐색기" aria-describedby="processed-tree-state">
-                  <p class="document-tree__state" id="processed-tree-state">문서 연결 방식은 Human 결정을 기다리고 있습니다.</p>
+                <div class="document-explorer" data-document-explorer>
+                  <button class="document-explorer__toggle" type="button" aria-expanded="true" aria-controls="processed-explorer-content" data-document-explorer-toggle>
+                    <svg class="document-explorer__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg>
+                    <svg class="document-explorer__folder" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1.75 4.25h4l1.5 1.5h7v6.75a1.25 1.25 0 0 1-1.25 1.25H3a1.25 1.25 0 0 1-1.25-1.25Z"/><path d="M1.75 6h12.5"/></svg>
+                    <span>탐색기</span>
+                  </button>
+                  <div id="processed-explorer-content" data-document-explorer-content>
+                    <p class="document-tree__state" id="processed-tree-state" role="status" aria-live="polite">가공 문서를 불러오는 중입니다.</p>
+                    <nav class="document-tree__list" aria-label="가공 문서 탐색기" role="tree" data-processed-list hidden></nav>
+                  </div>
                 </div>
               </div>
             </section>
@@ -110,9 +118,16 @@
                 <nav class="document-navigation" aria-label="명세 문서 보기">
                   <a class="document-navigation__item" href="#document-specification-overview" data-document-target="specification-overview">개요</a>
                 </nav>
-                <div class="document-tree" role="region" aria-label="명세 문서 탐색기" aria-describedby="specification-tree-state">
-                  <p class="document-tree__state" id="specification-tree-state" role="status" aria-live="polite">명세 문서를 불러오는 중입니다.</p>
-                  <nav class="document-tree__list" aria-label="연결된 명세 문서" data-specification-list hidden></nav>
+                <div class="document-explorer" data-document-explorer>
+                  <button class="document-explorer__toggle" type="button" aria-expanded="true" aria-controls="specification-explorer-content" data-document-explorer-toggle>
+                    <svg class="document-explorer__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg>
+                    <svg class="document-explorer__folder" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1.75 4.25h4l1.5 1.5h7v6.75a1.25 1.25 0 0 1-1.25 1.25H3a1.25 1.25 0 0 1-1.25-1.25Z"/><path d="M1.75 6h12.5"/></svg>
+                    <span>탐색기</span>
+                  </button>
+                  <div id="specification-explorer-content" data-document-explorer-content>
+                    <p class="document-tree__state" id="specification-tree-state" role="status" aria-live="polite">명세 문서를 불러오는 중입니다.</p>
+                    <nav class="document-tree__list" aria-label="명세 문서 탐색기" role="tree" data-specification-list hidden></nav>
+                  </div>
                 </div>
               </div>
             </section>
@@ -173,6 +188,10 @@
           <article class="document-view" id="document-processed-overview" data-document-view="processed-overview">
             <header class="editor-header"><span class="editor-header__tab">가공 문서 / 개요</span></header>
             <div class="document-view__canvas"><p class="document-view__status">상세 정의 대기</p><h1>가공 문서 개요</h1><p>가공 문서는 transformation과 derived working knowledge를 담는 non-authoritative 문서입니다.</p><p>개요의 세부 내용은 Human 정의를 기다리고 있습니다.</p></div>
+          </article>
+          <article class="document-view processed-document-view" id="document-processed-document" data-document-view="processed-document" hidden>
+            <header class="editor-header"><span class="editor-header__tab" data-processed-tab>가공 문서</span></header>
+            <div class="processed-document-canvas"><p class="processed-document__state" role="status" aria-live="polite" data-processed-content-state>문서를 선택해 주세요.</p><pre data-processed-content hidden></pre></div>
           </article>
           <article class="document-view" id="document-specification-overview" data-document-view="specification-overview">
             <header class="editor-header"><span class="editor-header__tab">명세 문서 / 개요</span></header>

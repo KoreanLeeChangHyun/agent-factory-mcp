@@ -64,6 +64,12 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
     assert 'data-workspace-view="account"' in html
     assert 'data-workspace-view="admin"' in html
     assert 'data-activity-context-menu' in html
+    assert html.count("data-document-explorer-toggle") == 2
+    assert html.count("<span>탐색기</span>") == 2
+    assert html.count('role="tree"') == 2
+    assert 'data-processed-list' in html
+    assert 'data-specification-list' in html
+    assert 'data-document-view="processed-document"' in html
     assert 'role="status"' in html
     assert 'role="alert"' in login_html
     assert "https://" not in html

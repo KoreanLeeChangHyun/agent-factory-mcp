@@ -436,14 +436,52 @@ body {
   color: #ffffff;
 }
 
-.document-tree {
+.document-explorer {
   margin: 0;
-  border-top: 1px solid transparent;
 }
+
+.document-explorer__toggle {
+  display: flex;
+  width: 100%;
+  height: 22px;
+  align-items: center;
+  gap: 3px;
+  padding: 0 10px 0 17px;
+  border: 0;
+  background: transparent;
+  color: var(--explorer-foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.document-explorer__toggle:hover { background: var(--explorer-row-hover); }
+.document-explorer__toggle:focus-visible { outline: 1px solid var(--focus-border); outline-offset: -1px; }
+.document-explorer__toggle svg { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.4; }
+.document-explorer__toggle .document-explorer__folder { width: 16px; height: 16px; flex-basis: 16px; color: #c8a85a; }
+.document-explorer__toggle[aria-expanded="false"] .document-explorer__chevron { transform: rotate(-90deg); }
+.document-explorer__toggle + [data-document-explorer-content][hidden] { display: none; }
+
+.document-tree__item {
+  display: flex;
+  height: 22px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px 0 38px;
+  color: var(--explorer-foreground);
+  text-decoration: none;
+}
+
+.document-tree__item:hover { background: var(--explorer-row-hover); }
+.document-tree__item.is-selected { background: var(--explorer-row-selected); }
+.document-tree__list:focus-within .document-tree__item.is-selected { background: var(--explorer-row-active-selected); color: #ffffff; }
+.document-tree__item:focus-visible { outline: 1px solid var(--focus-border); outline-offset: -1px; }
+.document-tree__item svg { width: 15px; height: 15px; flex: 0 0 15px; fill: none; stroke: #b8b8b8; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.2; }
+.document-tree__item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .document-tree__state {
   margin: 0;
-  padding: 6px 14px 9px 22px;
+  padding: 5px 14px 8px 38px;
   color: var(--explorer-muted);
   font-size: 12px;
   line-height: 1.4;
@@ -455,11 +493,18 @@ body {
 
 .document-tree__item-status {
   display: block;
-  padding: 3px 14px 3px 22px;
+  padding: 3px 14px 3px 38px;
   color: #f0a0a0;
   font-size: 12px;
   line-height: 1.4;
 }
+
+.document-tree__item-status.is-muted { color: var(--explorer-muted); }
+
+.processed-document-view { min-height: 100%; }
+.processed-document-canvas { min-height: calc(100% - 35px); padding: 20px 24px 36px; color: var(--explorer-foreground); }
+.processed-document__state { margin: 0; color: var(--explorer-muted); font-size: 13px; }
+.processed-document-canvas pre { margin: 0; overflow: auto; color: var(--explorer-foreground); font: 13px/1.65 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .source-state {
   display: inline-block;

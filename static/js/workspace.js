@@ -9,6 +9,7 @@ const workspaceViews = document.querySelectorAll("[data-workspace-view]");
 const documentNavigationItems = document.querySelectorAll("[data-document-target]");
 const documentViews = document.querySelectorAll("[data-document-view]");
 const documentGroupToggles = document.querySelectorAll("[data-document-group-toggle]");
+const documentExplorerToggles = document.querySelectorAll("[data-document-explorer-toggle]");
 const originalSearchInput = document.querySelector("[data-original-global-search]");
 const originalSearchState = document.querySelector("[data-original-search-state]");
 const originalSearchFailure = document.querySelector("[data-original-search-failure]");
@@ -16,6 +17,11 @@ const originalTableElement = document.querySelector("[data-original-table]");
 const originalTableFallback = document.querySelector("[data-original-table-fallback]");
 const specificationList = document.querySelector("[data-specification-list]");
 const specificationTreeState = document.getElementById("specification-tree-state");
+const processedList = document.querySelector("[data-processed-list]");
+const processedTreeState = document.getElementById("processed-tree-state");
+const processedContent = document.querySelector("[data-processed-content]");
+const processedContentState = document.querySelector("[data-processed-content-state]");
+const processedTab = document.querySelector("[data-processed-tab]");
 const specificationFrame = document.querySelector("[data-specification-frame]");
 const specificationTab = document.querySelector("[data-specification-tab]");
 const organizationSelect = document.querySelector("[data-organization-select]");
@@ -270,6 +276,36 @@ const specificationStatusLabel = (status) => {
   return "바인딩 불일치";
 };
 
+const createDocumentFileIcon = () => {
+  const namespace = "http://www.w3.org/2000/svg";
+  const icon = document.createElementNS(namespace, "svg");
+  icon.setAttribute("viewBox", "0 0 16 16");
+  icon.setAttribute("aria-hidden", "true");
+  icon.setAttribute("focusable", "false");
+  const outline = document.createElementNS(namespace, "path");
+  outline.setAttribute("d", "M3.25 1.75h6l3.5 3.5v9H3.25Z");
+  const fold = document.createElementNS(namespace, "path");
+  fold.setAttribute("d", "M9.25 1.75v3.5h3.5");
+  icon.append(outline, fold);
+  return icon;
+};
+
+const createDocumentTreeLink = (item, kind, open) => {
+  const link = document.createElement("a");
+  link.className = "document-tree__item";
+  link.href = item.href.href;
+  link.setAttribute("role", "treeitem");
+  link.dataset[`${kind}Link`] = item.id;
+  const label = document.createElement("span");
+  label.textContent = item.name || item.id;
+  link.append(createDocumentFileIcon(), label);
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    open(item, link);
+  });
+  return link;
+};
+
 const safeDocumentHref = (value) => {
   if (typeof value !== "string" || value.trim() === "") return null;
   try {
@@ -298,9 +334,43 @@ const openSpecification = (item, link) => {
   selectDocumentView("specification-document");
 };
 
+const openProcessedDocument = async (item, link) => {
+  document.querySelectorAll("[data-processed-link]").forEach((candidate) => {
+    const isCurrent = candidate === link;
+    candidate.classList.toggle("is-selected", isCurrent);
+    if (isCurrent) candidate.setAttribute("aria-current", "page");
+    else candidate.removeAttribute("aria-current");
+  });
+  if (processedTab) processedTab.textContent = item.name || item.id;
+  if (processedContentState) {
+    processedContentState.hidden = false;
+    processedContentState.textContent = "가공 문서를 불러오는 중입니다.";
+  }
+  if (processedContent) processedContent.hidden = true;
+  selectActivity("documents");
+  selectDocumentView("processed-document");
+  try {
+    const response = await fetch(item.href.href, { credentials: "same-origin" });
+    if (response.status === 401) {
+      window.location.assign(`${rootPath}/login/`);
+      return;
+    }
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+    const body = await response.text();
+    if (processedContent) {
+      processedContent.textContent = body;
+      processedContent.hidden = false;
+    }
+    if (processedContentState) processedContentState.hidden = true;
+  } catch {
+    if (processedContentState) processedContentState.textContent = "가공 문서를 불러오지 못했습니다.";
+  }
+};
+
 const loadDocuments = async () => {
-  if (!specificationList || !specificationTreeState) return;
+  if (!processedList || !processedTreeState || !specificationList || !specificationTreeState) return;
   if (!tenant.organizationId || !tenant.workspaceId) {
+    processedTreeState.textContent = "워크스페이스를 선택해 주세요.";
     specificationTreeState.textContent = "워크스페이스를 선택해 주세요.";
     return;
   }
@@ -325,6 +395,36 @@ const loadDocuments = async () => {
       });
     window.agentFactoryWorkspace?.originalSearch?.replaceRows(originalRows);
 
+    processedList.replaceChildren();
+    const processedDocuments = documents.filter((item) => item.document_type === "processed");
+    processedDocuments.forEach((rawItem) => {
+      const href = rawItem.current_revision_number > 0
+        ? safeDocumentHref(`${rootPath}/api/organizations/${tenant.organizationId}/workspaces/${tenant.workspaceId}/documents/${rawItem.id}/revisions/${rawItem.current_revision_number}/content`)
+        : null;
+      if (href) {
+        processedList.append(createDocumentTreeLink({
+          id: String(rawItem.id),
+          name: rawItem.title,
+          href,
+        }, "processed", openProcessedDocument));
+        return;
+      }
+      const state = document.createElement("span");
+      state.className = "document-tree__item-status is-muted";
+      state.setAttribute("role", "treeitem");
+      state.setAttribute("aria-disabled", "true");
+      state.textContent = `${rawItem.title || rawItem.id} · 내용 없음`;
+      processedList.append(state);
+    });
+    if (processedDocuments.length === 0) {
+      processedTreeState.textContent = "연결된 가공 문서가 없습니다.";
+      processedTreeState.hidden = false;
+      processedList.hidden = true;
+    } else {
+      processedTreeState.hidden = true;
+      processedList.hidden = false;
+    }
+
     specificationList.replaceChildren();
     const specifications = documents.filter((item) => item.document_type === "specification");
     specifications.forEach((rawItem) => {
@@ -338,20 +438,13 @@ const loadDocuments = async () => {
       };
       const href = item.status === "paired" ? safeDocumentHref(item.href) : null;
       if (href) {
-        const link = document.createElement("a");
-        link.className = "document-navigation__item";
-        link.href = href.href;
-        link.textContent = item.name || item.id;
-        link.dataset.specificationLink = item.id;
-        link.addEventListener("click", (event) => {
-          event.preventDefault();
-          openSpecification(item, link);
-        });
-        specificationList.append(link);
+        specificationList.append(createDocumentTreeLink({ ...item, href }, "specification", openSpecification));
         return;
       }
       const state = document.createElement("span");
       state.className = "document-tree__item-status";
+      state.setAttribute("role", "treeitem");
+      state.setAttribute("aria-disabled", "true");
       state.textContent = `${item.name || item.id} · ${specificationStatusLabel(item.status)}`;
       specificationList.append(state);
     });
@@ -366,6 +459,9 @@ const loadDocuments = async () => {
     specificationTreeState.hidden = true;
     specificationList.hidden = false;
   } catch {
+    processedList.hidden = true;
+    processedTreeState.hidden = false;
+    processedTreeState.textContent = "가공 문서를 불러오지 못했습니다.";
     specificationList.hidden = true;
     specificationTreeState.hidden = false;
     specificationTreeState.textContent = "명세 문서를 불러오지 못했습니다.";
@@ -501,6 +597,12 @@ const selectDocumentView = (target) => {
   });
   if (target !== "specification-document") {
     document.querySelectorAll("[data-specification-link]").forEach((item) => {
+      item.classList.remove("is-selected");
+      item.removeAttribute("aria-current");
+    });
+  }
+  if (target !== "processed-document") {
+    document.querySelectorAll("[data-processed-link]").forEach((item) => {
       item.classList.remove("is-selected");
       item.removeAttribute("aria-current");
     });
@@ -717,6 +819,16 @@ documentNavigationItems.forEach((item) => {
 });
 
 documentGroupToggles.forEach((toggle) => {
+  toggle.addEventListener("click", () => {
+    const content = document.getElementById(toggle.getAttribute("aria-controls"));
+    if (!content) return;
+    const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!isExpanded));
+    content.hidden = isExpanded;
+  });
+});
+
+documentExplorerToggles.forEach((toggle) => {
   toggle.addEventListener("click", () => {
     const content = document.getElementById(toggle.getAttribute("aria-controls"));
     if (!content) return;
