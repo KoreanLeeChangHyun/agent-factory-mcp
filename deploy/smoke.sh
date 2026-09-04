@@ -2,6 +2,8 @@
 set -eu
 
 base_url="${1:?usage: deploy/smoke.sh https://example.com/factory}"
+root_url="${base_url%/}"
+curl --fail --silent --show-error --location "$root_url" | grep -q 'Agent Factory'
 curl --fail --silent --show-error "$base_url/live" | grep -q '"alive"'
 curl --fail --silent --show-error "$base_url/ready" | grep -q '"ready"'
 curl --fail --silent --show-error "$base_url/workspace/" | grep -q 'Agent Factory'

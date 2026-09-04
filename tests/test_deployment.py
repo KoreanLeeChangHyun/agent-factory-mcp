@@ -24,6 +24,15 @@ def test_production_overlay_has_tls_release_and_scaling_boundaries() -> None:
     assert "handle /factory/*" in caddyfile
     assert "redir /factory /factory/ 308" in caddyfile
 
+    smoke = (ROOT / "deploy/smoke.sh").read_text()
+    assert 'curl --fail --silent --show-error --location "$root_url"' in smoke
+
+
+def test_workspace_login_is_visible_before_javascript_boots() -> None:
+    workspace_html = (ROOT / "template/workspace/index.html").read_text()
+    assert '<section id="login" class="login">' in workspace_html
+    assert "<noscript>" in workspace_html
+
 
 def test_operations_runbook_covers_recovery_and_alerting() -> None:
     runbook = (ROOT / "config/operations.md").read_text()
