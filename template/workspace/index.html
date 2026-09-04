@@ -17,12 +17,13 @@
           <span>Agent Factory</span>
         </div>
         <div class="workspace-context" data-workspace-context hidden>
-          <label>
-            <span>조직</span>
+          <label class="organization-context">
+            <span class="sr-only">조직</span>
             <select aria-label="조직" data-organization-select></select>
           </label>
-          <label>
-            <span>워크스페이스</span>
+          <span class="workspace-context__separator" aria-hidden="true">/</span>
+          <label class="workspace-context__workspace">
+            <span class="sr-only">워크스페이스</span>
             <select aria-label="워크스페이스" data-workspace-select></select>
           </label>
         </div>

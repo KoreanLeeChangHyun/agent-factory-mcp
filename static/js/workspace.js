@@ -475,6 +475,10 @@ const openWorkspace = async (session) => {
 
   const organizations = await api("/api/account/organizations");
   populateSelect(organizationSelect, organizations);
+  if (organizationSelect) {
+    organizationSelect.disabled = organizations.length <= 1;
+    organizationSelect.title = organizations.length > 1 ? "조직 변경" : "현재 조직";
+  }
   const savedOrganization = localStorage.getItem("agentFactoryOrganizationId");
   tenant.organizationId = organizations.some((item) => item.id === savedOrganization)
     ? savedOrganization
