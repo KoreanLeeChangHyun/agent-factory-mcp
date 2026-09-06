@@ -1,21 +1,40 @@
 """Document API schemas."""
 
+import re
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.modules.document.models import DocumentStatus, DocumentType, ProvenanceRelation
 
 
-class DocumentCreate(BaseModel):
+class DocumentMetadataInput(BaseModel):
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+    @field_validator("metadata")
+    @classmethod
+    def validate_explorer_path(cls, metadata: dict[str, object]) -> dict[str, object]:
+        path = metadata.get("path")
+        if path is not None and (
+            not isinstance(path, str)
+            or len(path) > 1024
+            or re.search(r"[\\\x00-\x1f]", path)
+            or any(part in {"", ".", ".."} for part in path.split("/"))
+            or len(path.split("/")) > 32
+        ):
+            raise ValueError("metadata.path must be a relative document path (up to 32 levels)")
+        return metadata
+
+
+class DocumentCreate(DocumentMetadataInput):
     title: str = Field(min_length=1, max_length=300)
     slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=160)
     document_type: DocumentType
     metadata: dict[str, object] = Field(default_factory=dict)
 
 
-class DocumentUpdate(BaseModel):
+class DocumentUpdate(DocumentMetadataInput):
     title: str = Field(min_length=1, max_length=300)
     status: DocumentStatus
     metadata: dict[str, object] = Field(default_factory=dict)

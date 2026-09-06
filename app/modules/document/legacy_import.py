@@ -184,7 +184,7 @@ async def apply_import(
     context = AuthorizedContext(
         Principal(user_id, "legacy-import@agent-factory.local", "Legacy import", True),
         AuthorizationScope(organization_id, workspace_id),
-        frozenset({"workspace.read", "document.manage"}),
+        frozenset({"workspace.read", "document.read", "document.create", "document.update"}),
     )
     async with get_session_factory()() as session:
         await apply_tenant_context(

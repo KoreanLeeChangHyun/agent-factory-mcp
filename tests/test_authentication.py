@@ -112,6 +112,7 @@ async def test_external_user_is_flushed_before_google_identity() -> None:
     class OrderedSession:
         def __init__(self) -> None:
             self.flushes = 0
+            self.added = []
 
         async def execute(self, statement: object) -> None:
             del statement
@@ -120,11 +121,12 @@ async def test_external_user_is_flushed_before_google_identity() -> None:
             del statement
 
         def add_all(self, records: list[object]) -> None:
-            del records
+            self.added.extend(records)
 
         def add(self, record: object) -> None:
+            self.added.append(record)
             if isinstance(record, ExternalIdentity):
-                assert self.flushes == 2
+                assert self.flushes >= 1
 
         async def flush(self) -> None:
             self.flushes += 1
@@ -139,7 +141,10 @@ async def test_external_user_is_flushed_before_google_identity() -> None:
         display_name="Owner",
     )
 
-    assert session.flushes == 3
+    from app.modules.workspace.models import Workspace
+
+    assert not any(isinstance(record, Workspace) for record in session.added)
+    assert any(isinstance(record, ExternalIdentity) for record in session.added)
 
 
 def test_password_hash_is_not_reversible_plaintext() -> None:

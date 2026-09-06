@@ -1,0 +1,280 @@
+// Run: NODE_PATH=<directory containing playwright> node tests/browser/workspace-start.cjs
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+const fs = require('node:fs/promises');
+const http = require('node:http');
+const path = require('node:path');
+const root = path.resolve(__dirname, '../..');
+const server = http.createServer(async (req, res) => {
+  let file = req.url.replace(/^\/factory/, '');
+  if (file === '/workspace/') file = '/template/workspace/index.html';
+  if (!file.startsWith('/static/') && !file.startsWith('/template/')) { res.writeHead(404).end(); return; }
+  try {
+    const data = await fs.readFile(path.join(root, file));
+    const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
+    res.setHeader('Content-Type', types[path.extname(file)] || 'application/octet-stream');
+    res.end(data);
+  } catch { res.writeHead(404).end(); }
+});
+(async () => {
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const chooseWorkspace = async id => {
+    await page.locator('[data-workspace-picker-toggle]').click();
+    if (id) await page.locator('[data-workspace-list] [data-workspace-id="' + id + '"]').click();
+  };
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  let organizations = [];
+  let rows = [];
+  let recent = [];
+  let failCreate = false;
+  let failList = false;
+  let delayedDocument;
+  let slowId;
+  let deferCreate = false;
+  let finishCreate;
+  const mutations = [];
+  await context.addCookies([{ name: 'agent_factory_csrf', value: 'test-csrf', url: `http://127.0.0.1:${server.address().port}` }]);
+  await page.route('**/api/**', async route => {
+    const request = route.request();
+    const url = new URL(request.url()).pathname.replace(/^\/factory/, '');
+    const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
+    if (request.method() === 'POST') {
+      assert.equal(request.headers()['x-csrf-token'], 'test-csrf');
+      mutations.push({ url, body: request.postDataJSON() });
+    }
+    if (url.endsWith('/mcp-connections')) return reply({ state: 'verified', connections: [] });
+    if (url === '/api/auth/me') return reply({ user: { id: 'user', display_name: '테스터', email: 'test@example.com', is_platform_admin: false } });
+    if (url === '/api/account/organizations') return reply(organizations);
+    if (url.endsWith('/visits')) { const id = url.split('/').at(-2); recent = [rows.find(row => row.id === id), ...recent.filter(row => row.id !== id)]; return route.fulfill({ status: 204 }); }
+    if (url.endsWith('/documents')) {
+      if (url.includes(slowId) && slowId) { delayedDocument = () => reply([{ id: 'stale', title: '다른 공간 문서', document_type: 'processed', current_revision_number: 1 }]); return; }
+      return reply([]);
+    }
+    if (url.endsWith('/recent')) return reply(recent.filter(row => url.includes(row.organization_id)));
+    if (request.method() === 'POST' && (url.endsWith('/workspaces') || url.endsWith('/personal-workspaces'))) {
+      if (failCreate) return reply({ error: { message: 'denied' } }, 403);
+      if (!organizations.length) organizations = [{ id: 'personal-owner', name: '테스터 Personal', is_personal: true }];
+      const row = { id: `workspace-${rows.length + 1}`, organization_id: organizations[0].id, status: 'active', ...request.postDataJSON() };
+      rows.push(row);
+      if (deferCreate) { finishCreate = () => reply(row, 201); return; }
+      return reply(row, 201);
+    }
+    if (url.endsWith('/workspaces')) return failList ? reply({}, 500) : reply(rows.filter(row => url.includes(row.organization_id)));
+    return reply({});
+  });
+  const base = `http://127.0.0.1:${server.address().port}/factory/workspace/`;
+  const visible = selector => page.locator(selector).isVisible();
+  const menu = async () => { await page.locator('[data-workspace-picker-toggle]').click(); };
+  try {
+    await page.goto(base);
+    await page.waitForFunction(() => document.querySelector('[data-workspace-list-state]').textContent.includes('없습니다'));
+    assert(await visible('.workspace-picker'));
+    assert(await visible('.activity-bar'));
+    assert.equal(await page.locator('[data-region=activity-bar]').count(), 1);
+    assert.equal(await page.locator('.start-rail').count(), 0);
+    assert(await visible('[data-workspace-picker-toggle]'));
+    assert.equal(await page.locator('[data-activity]:visible').count(), 0);
+    assert.equal(await page.locator('[data-organization-select]').inputValue(), '');
+    assert.equal(await page.locator('.workspace-title-bar [data-organization-select]').count(), 0);
+    assert.equal(await page.locator('.organization-sidebar [data-organization-select]').count(), 1);
+    const headerGeometry = await page.locator('.workspace-title-bar').evaluate(header => ({
+      height: header.getBoundingClientRect().height,
+      rowHeight: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--title-bar-height')),
+      rows: getComputedStyle(header.parentElement).gridTemplateRows.split(' ').length,
+    }));
+    assert.equal(headerGeometry.height, headerGeometry.rowHeight);
+    assert.equal(headerGeometry.rows, 2);
+    await page.screenshot({ path: '/tmp/workspace-start-empty.png' });
+    await page.locator('.workspace-picker-links [data-create-workspace]').click();
+    await page.locator('#workspace-name').fill('첫 프로젝트');
+    failCreate = true;
+    await page.locator('[data-create-form] [type=submit]').click();
+    await page.waitForFunction(() => document.querySelector('[data-create-error]').textContent.includes('권한'));
+    assert(await visible('[data-create-dialog]'));
+    failCreate = false;
+    await page.locator('[data-create-form] [type=submit]').click();
+    await page.waitForFunction(() => document.querySelector('[data-workspace-shell]').dataset.mode === 'workspace');
+    assert(await visible('.activity-bar'));
+    assert(!await visible('.workspace-picker'));
+    assert.equal(await page.evaluate(() => tenant.workspaceId || ''), 'workspace-1');
+    assert(!await visible('[data-workspace-view="documents"]'));
+    assert.equal(await page.locator('[data-activity].is-active').count(), 0);
+    assert(mutations.some(item => item.url === '/api/account/personal-workspaces'));
+    assert.equal(await page.locator('[data-connect-workspace], [data-workspace-filter]').count(), 0);
+    await menu();
+    await page.locator('.workspace-picker-sidebar [data-create-workspace]').click();
+    await page.locator('#workspace-name').fill('두 번째 프로젝트');
+    await page.locator('[data-create-form] [type=submit]').click();
+    await page.waitForFunction(() => tenant.workspaceId === 'workspace-2');
+    assert(await visible('[data-workspace-picker-toggle]'));
+    assert.equal(await page.locator('[data-workspace-picker-toggle]').getAttribute('aria-pressed'), 'true');
+    assert(await visible('.workspace-picker-sidebar'));
+    assert.equal(await page.locator('.activity-button__label').count(), 11);
+    assert.equal(await page.locator('.activity-bar').evaluate(node => getComputedStyle(node).borderTopWidth), '1px');
+    assert.equal(await page.locator('.workspace-title-bar [data-workspace-select], .workspace-title-bar [data-workspace-actions]').count(), 0);
+    assert.deepEqual(await page.locator('.activity-bar > button').evaluateAll(buttons => buttons.slice(0, 2).map(button => button.getAttribute('aria-label'))), ['조직', '작업공간 목록']);
+    const previousIcons = await page.locator('[data-activity]:visible').count();
+    await page.locator('[data-open-organizations]').click();
+    assert(await visible('.organization-sidebar'));
+    assert(await visible('.organization-view'));
+    assert.equal(await page.evaluate(() => tenant.workspaceId), 'workspace-2');
+    assert.equal(await page.locator('[data-activity]:visible').count(), previousIcons);
+    await page.screenshot({ path: '/tmp/workspace-organizations.png' });
+    await chooseWorkspace('workspace-2');
+    const originalBar = await page.locator('.activity-bar').elementHandle();
+    await page.locator('[data-activity="logs"]').click({ button: 'right' });
+    await page.locator('[data-activity-visibility="logs"]').click();
+    await page.keyboard.press('Escape');
+    assert(!await visible('[data-activity="logs"]'));
+    await page.locator('[data-activity="documents"]').focus();
+    await page.keyboard.press('Alt+ArrowUp');
+    const orderTwo = await page.locator('.activity-bar [data-activity]').evaluateAll(nodes => nodes.map(node => node.dataset.activity));
+    await chooseWorkspace('workspace-1');
+    assert(await visible('[data-activity="logs"]'));
+    assert.notDeepEqual(await page.locator('.activity-bar [data-activity]').evaluateAll(nodes => nodes.map(node => node.dataset.activity)), orderTwo);
+    await chooseWorkspace('workspace-2');
+    assert(!await visible('[data-activity="logs"]'));
+    assert.deepEqual(await page.locator('.activity-bar [data-activity]').evaluateAll(nodes => nodes.map(node => node.dataset.activity)), orderTwo);
+    assert(await originalBar.evaluate(node => node === document.querySelector('.activity-bar')));
+    await page.locator('[data-activity="documents"]').click();
+    const geometry = await page.evaluate(() => {
+      const side = document.querySelector('.primary-sidebar');
+      const main = document.querySelector('.workspace');
+      return { gap: main.getBoundingClientRect().left - side.getBoundingClientRect().right, radius: getComputedStyle(main).borderRadius, border: getComputedStyle(side).borderTopWidth };
+    });
+    assert.equal(geometry.gap, 5);
+    assert.equal(geometry.radius, '7px');
+    assert.equal(geometry.border, '1px');
+    const resizer = page.locator('[data-sidebar-resizer]');
+    await resizer.focus();
+    const beforeWidth = await page.locator('.primary-sidebar').evaluate(node => node.getBoundingClientRect().width);
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.locator('.primary-sidebar').evaluate(node => node.getBoundingClientRect().width), beforeWidth + 16);
+    await page.locator('[data-activity="documents"]').click();
+    await page.screenshot({ path: '/tmp/workspace-selected.png' });
+    await page.reload();
+    await page.waitForFunction(() => tenant.workspaceId === 'workspace-2');
+    assert(await visible('[data-workspace-view="documents"]'));
+    assert.equal(await page.locator('[data-header-workspace]').textContent(), await page.locator('[data-account-workspace]').textContent());
+    assert(await visible('[data-header-workspace]'));
+    assert.equal(await page.locator('[data-workspace-list] .workspace-row[aria-current="true"]').getAttribute('data-workspace-id'), 'workspace-2');
+    assert.equal(await page.locator('.primary-sidebar').evaluate(node => node.getBoundingClientRect().width), beforeWidth + 16);
+    assert(!await visible('[data-activity="logs"]'));
+    // Hiding every icon leaves a recoverable state inside this Workspace only.
+    await page.locator('.activity-bar').click({ button: 'right', position: { x: 20, y: 550 } });
+    const checked = await page.locator('[data-activity-visibility][aria-checked="true"]').evaluateAll(nodes => nodes.map(node => node.dataset.activityVisibility));
+    for (const activity of checked) await page.locator(`[data-activity-visibility="${activity}"]`).click();
+    await page.keyboard.press('Escape');
+    assert(await visible('[data-no-activities]'));
+    await page.locator('[data-configure-activities]').click();
+    await page.locator('[data-activity-visibility="documents"]').click();
+    await page.keyboard.press('Escape');
+    assert(!await visible('[data-no-activities]'));
+    assert(await visible('[data-workspace-view="documents"]'));
+    await chooseWorkspace('workspace-1');
+    assert(await visible('[data-activity="logs"]'));
+    await chooseWorkspace('workspace-2');
+    await menu();
+    await page.keyboard.press('Escape');
+    await page.locator('[data-workspace-picker-toggle]').click();
+    assert(await visible('.workspace-picker'));
+    assert(await visible('[data-workspace-picker-toggle]'));
+    assert((await page.locator('[data-activity]:visible').count()) > 0);
+    assert.equal(await page.evaluate(() => tenant.workspaceId || ''), 'workspace-2');
+    await page.locator('[data-activity="documents"]').click();
+    assert(await visible('[data-workspace-view="documents"]'));
+    assert(!await visible('.workspace-picker'));
+    await page.locator('[data-workspace-picker-toggle]').click();
+    assert(await visible('.workspace-picker'));
+    assert.equal(await page.locator('[data-workspace-list] button').count(), 2);
+    await page.screenshot({ path: '/tmp/workspace-start-list.png' });
+    await page.reload();
+    await page.waitForFunction(() => tenant.workspaceId === 'workspace-2');
+    await page.waitForFunction(() => document.querySelector('[data-workspace-shell]').dataset.mode === 'picker');
+    assert((await page.locator('[data-activity]:visible').count()) > 0);
+    slowId = 'workspace-1';
+    await page.locator('[data-workspace-list] button').first().click();
+    await page.waitForTimeout(50);
+    await chooseWorkspace('workspace-2');
+    await delayedDocument();
+    await page.waitForTimeout(50);
+    assert.equal(await page.locator('[data-processed-list]').textContent(), '');
+    await menu();
+    await page.locator('[data-workspace-picker-toggle]').click();
+    assert.equal(await page.evaluate(() => tenant.workspaceId || ''), 'workspace-2');
+    await chooseWorkspace('');
+    assert.equal(await page.evaluate(() => tenant.workspaceId || ''), 'workspace-2');
+    assert((await page.locator('[data-activity]:visible').count()) > 0);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: '/tmp/workspace-start-mobile.png' });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    await menu();
+    assert(await visible('.workspace-picker-sidebar [data-create-workspace]'));
+    await page.keyboard.press('Escape');
+    failList = true;
+    await page.reload();
+    await page.waitForFunction(() => !document.querySelector('[data-retry-workspaces]').hidden);
+    failList = false;
+    await page.locator('[data-retry-workspaces]').click();
+    await page.waitForFunction(() => document.querySelectorAll('[data-workspace-list] button').length === 2);
+    await page.locator('[data-create-workspace-group]').click();
+    await page.getByRole('textbox', { name: '새 그룹 이름', exact: true }).fill('개발');
+    await page.getByRole('textbox', { name: '새 그룹 이름', exact: true }).press('Enter');
+    await page.locator('.workspace-group summary').getByText('개발', { exact: true }).waitFor();
+    assert.equal(await page.locator('.workspace-group-move').count(), 0);
+    await page.locator('[data-workspace-list] [data-workspace-id="workspace-2"]').dragTo(page.locator('.workspace-group summary'));
+    await page.locator('.workspace-group [data-workspace-id="workspace-2"]').waitFor();
+    await page.locator('.workspace-group [data-workspace-id="workspace-2"]').dragTo(page.locator('.workspace-ungrouped'));
+    await page.locator('.workspace-ungrouped [data-workspace-id="workspace-2"]').waitFor();
+    await page.locator('.workspace-ungrouped [data-workspace-id="workspace-2"]').dragTo(page.locator('.workspace-group summary'));
+    assert.equal(await page.locator('.workspace-group [data-workspace-id="workspace-2"]').count(), 1);
+    await page.locator('.workspace-group summary').click();
+    assert(!await visible('.workspace-group [data-workspace-id="workspace-2"]'));
+    await page.waitForFunction(() => workspaceGroups()[0]?.collapsed === true);
+    await page.reload();
+    await page.locator('.workspace-group summary').waitFor();
+    assert(!await visible('.workspace-group [data-workspace-id="workspace-2"]'));
+    await page.locator('.workspace-group summary').click();
+    await page.locator('.workspace-group [data-workspace-id="workspace-2"]').click();
+    assert(await visible('.workspace-picker-sidebar'));
+    await page.screenshot({ path: '/tmp/workspace-groups.png' });
+    await chooseWorkspace('');
+    // A canceled creation must not mix its result into another ownership context.
+    organizations.push({ id: 'other-owner', name: '다른 조직', is_personal: false });
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('[data-workspace-list] button').length === 2);
+    deferCreate = true;
+    await page.locator('.workspace-picker-links [data-create-workspace]').click();
+    await page.locator('#workspace-name').fill('늦게 생성된 프로젝트');
+    await page.locator('[data-create-form] [type=submit]').click();
+    while (!finishCreate) await page.waitForTimeout(10);
+    await page.keyboard.press('Escape');
+    await page.locator('[data-open-organizations]').click();
+    await page.locator('[data-organization-select]').selectOption('other-owner');
+    await finishCreate();
+    await page.waitForTimeout(80);
+    assert.equal(await page.evaluate(() => tenant.workspaceId || ''), '');
+    assert.equal(await page.locator('[data-workspace-list] button').count(), 0);
+    assert(await visible('.workspace-picker'));
+    await page.goto(base + '#account');
+    await page.reload();
+    await page.waitForFunction(() => !document.querySelector('[data-workspace-view="account"]').hidden);
+    assert(await visible('[data-workspace-view="account"]'));
+    assert.equal(await page.locator('[data-go-home]').count(), 0);
+    assert(!(await page.locator('body').innerText()).includes('워크스페이스'));
+    assert(!(await page.locator('body').innerText()).includes('시작 화면'));
+    // A stored selection may only restore an accessible, active Workspace.
+    await page.evaluate(() => localStorage.setItem('agentFactorySelection:user:other-owner', JSON.stringify({ workspaceId: 'not-accessible', mode: 'workspace', activity: 'documents' })));
+    await page.goto(base);
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('[data-workspace-list-state]').textContent.includes('없습니다'));
+    assert.equal(await page.evaluate(() => tenant.workspaceId || ''), '');
+    assert.equal(await page.locator('[data-activity]:visible').count(), 0);
+    assert.deepEqual(errors, []);
+    console.log('PASS: empty, creation/error/repeated creation, open/switch/home, search/recent, connection scope, stale responses, mobile, retry, /factory prefix, CSRF');
+  } finally { await browser.close(); server.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; server.close(); });

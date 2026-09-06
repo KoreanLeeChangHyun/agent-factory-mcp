@@ -17,7 +17,7 @@ class WorkspaceStatus(StrEnum):
 
 class Workspace(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, RevisionMixin, Base):
     __tablename__ = "workspaces"
-    __table_args__ = (UniqueConstraint("organization_id", "slug"),)
+    __table_args__ = (UniqueConstraint("organization_id", "slug"), UniqueConstraint("organization_id", "id"))
 
     organization_id: Mapped[UUID] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), index=True

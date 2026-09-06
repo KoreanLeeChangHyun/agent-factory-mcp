@@ -61,23 +61,27 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
     login_html = LOGIN_TEMPLATE.read_text()
     assert 'lang="ko"' in html
     assert 'class="workspace-title-bar"' in html
-    assert 'data-workspace-context' in html
+    assert "data-workspace-context" not in html
+    assert "data-open-organizations" in html
     assert 'data-activity="account"' in html
     assert 'data-activity="admin"' in html
     assert 'data-workspace-view="account"' in html
     assert 'data-workspace-view="admin"' in html
-    assert 'data-activity-context-menu' in html
-    assert html.count("data-document-explorer-toggle") == 2
-    assert html.count("<span>탐색기</span>") == 2
+    assert "data-activity-context-menu" in html
+    assert "data-document-explorer-toggle" not in html
+    assert "<span>탐색기</span>" not in html
+    assert "<span>개요</span>" not in html
+    assert html.count('class="de-document-header"') == 3
     assert html.count('role="tree"') == 2
-    assert html.count('data-document-target=') == 4
+    assert html.count("data-document-target=") == 4
     assert html.count('data-document-target="original-overview"><svg') == 1
-    assert html.count('data-document-target="original-search"><svg') == 1
+    assert html.count('data-document-target="original-search"><span>검색</span>') == 1
     assert html.count('data-document-target="processed-overview"><svg') == 1
     assert html.count('data-document-target="specification-overview"><svg') == 1
-    assert 'data-processed-list' in html
-    assert 'data-specification-list' in html
-    assert 'data-document-view="processed-document"' in html
+    assert "data-processed-list" in html
+    assert "data-specification-list" in html
+    assert 'data-document-view="document-editor"' in html
+    assert "../static/js/document-editor.js" in html
     assert 'role="status"' in html
     assert 'role="alert"' in login_html
     assert "https://" not in html
@@ -104,9 +108,8 @@ def test_activity_bar_supports_persisted_order_and_visibility_controls() -> None
 
 
 def test_empty_document_explorers_stay_visually_quiet() -> None:
-    script = SCRIPT.read_text()
-    assert 'processedTreeState.textContent = ""' in script
-    assert 'specificationTreeState.textContent = ""' in script
+    script = (ROOT / "static/js/document-editor.js").read_text()
+    assert 'tree.status.textContent = tree.status.hidden ? ""' in script
     assert "연결된 가공 문서가 없습니다." not in script
     assert "연결된 명세 문서가 없습니다." not in script
 
@@ -119,5 +122,8 @@ def test_workspace_is_accessible_below_factory_root(monkeypatch) -> None:
         response = client.get("/factory/", follow_redirects=False)
         assert response.headers["location"] == "/factory/login/"
         assert client.get("/factory/login/").status_code == 200
-        assert client.get("/factory/workspace/", follow_redirects=False).headers["location"] == "/factory/login/"
+        assert (
+            client.get("/factory/workspace/", follow_redirects=False).headers["location"]
+            == "/factory/login/"
+        )
         assert client.get("/factory/static/js/workspace.js").status_code == 200

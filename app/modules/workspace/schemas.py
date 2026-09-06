@@ -12,11 +12,17 @@ class OrganizationSummary(BaseModel):
     id: UUID
     name: str
     slug: str
+    is_personal: bool = False
 
 
 class WorkspaceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=100)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def trim_name(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
 
 
 class WorkspaceUpdate(BaseModel):

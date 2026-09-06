@@ -68,3 +68,12 @@ class JobResponse(BaseModel):
     error_message: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class ScheduleUpdate(ScheduleCreate):
+    revision: int = Field(ge=1)
+
+
+class ScheduleToggle(BaseModel):
+    is_enabled: bool
+    revision: int = Field(ge=1)

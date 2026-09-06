@@ -49,7 +49,7 @@ def _run_response(record: object) -> AgentRunResponse:
 
 @router.get("/definitions", response_model=list[AgentDefinitionResponse])
 async def list_definitions(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.read"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
 ) -> list[AgentDefinitionResponse]:
     return [_definition_response(record) for record in await service.list_definitions(context)]
@@ -63,7 +63,7 @@ async def list_definitions(
 )
 async def create_definition(
     payload: AgentDefinitionCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.create"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
 ) -> AgentDefinitionResponse:
     return _definition_response(
@@ -79,7 +79,7 @@ async def create_definition(
 async def update_definition(
     definition_id: UUID,
     payload: AgentDefinitionUpdate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.update"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
 ) -> AgentDefinitionResponse:
     return _definition_response(
@@ -97,7 +97,7 @@ async def update_definition(
 @router.get("/definitions/{definition_id}/versions", response_model=list[AgentVersionResponse])
 async def list_versions(
     definition_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.read"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
 ) -> list[AgentVersionResponse]:
     return [
@@ -115,7 +115,7 @@ async def list_versions(
 async def create_version(
     definition_id: UUID,
     payload: AgentVersionCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.update"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
 ) -> AgentVersionResponse:
     record = await service.create_version(
@@ -131,7 +131,7 @@ async def create_version(
 
 @router.get("/runs", response_model=list[AgentRunResponse])
 async def list_runs(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.read"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
 ) -> list[AgentRunResponse]:
     return [_run_response(record) for record in await service.list_runs(context)]
@@ -171,7 +171,7 @@ async def create_run(
 @router.get("/runs/{run_id}", response_model=AgentRunResponse)
 async def get_run(
     run_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.read"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
 ) -> AgentRunResponse:
     return _run_response(await service.get_run(context, run_id))
@@ -184,7 +184,7 @@ async def get_run(
 )
 async def cancel_run(
     run_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("agent.execute"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.stop"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
 ) -> AgentRunResponse:
     return _run_response(await service.cancel_run(context, run_id))
@@ -207,10 +207,17 @@ async def retry_run(
 @router.get("/runs/{run_id}/events", response_model=list[AgentRunEventResponse])
 async def list_run_events(
     run_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.read"))],
     service: Annotated[AgentService, Depends(get_agent_service)],
 ) -> list[AgentRunEventResponse]:
     return [
         AgentRunEventResponse.model_validate(record, from_attributes=True)
         for record in await service.list_events(context, run_id)
     ]
+
+
+@router.delete("/definitions/{definition_id}", status_code=204, dependencies=[Depends(require_csrf)])
+async def delete_definition(definition_id: UUID,
+    context: Annotated[AuthorizedContext, Depends(require_permission("agent.delete"))],
+    service: Annotated[AgentService, Depends(get_agent_service)]):
+    await service.delete_definition(context, definition_id)

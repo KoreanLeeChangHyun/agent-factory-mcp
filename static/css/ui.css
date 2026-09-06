@@ -1,0 +1,117 @@
+/* Shared Workspace controls and interaction states. Feature CSS owns layout. */
+:root {
+  --ui-control-compact-height: 22px;
+  --ui-focus-width: 1px;
+  --ui-focus-offset: -1px;
+  --ui-drop-border: var(--focus-border);
+  --ui-drop-background: color-mix(in srgb, var(--ui-drop-border) 20%, transparent);
+  --ui-disabled-opacity: .5;
+}
+
+:is(.workspace-shell, .workspace-dialog, .plan-dialog) :is(input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"])), select, textarea),
+.original-search .tabulator .tabulator-header-filter :is(input, select),
+.de-search-link {
+  box-sizing: border-box;
+  min-width: 0;
+  height: var(--ui-control-height);
+  padding: var(--ui-space-1) var(--ui-space-2);
+  border: 1px solid var(--ui-control-border);
+  border-radius: var(--ui-control-radius);
+  background: var(--ui-control-background);
+  color: var(--explorer-foreground);
+  font-weight: var(--ui-weight-normal);
+  font-family: inherit;
+  font-size: var(--ui-font-body);
+  line-height: var(--ui-line-body);
+  color-scheme: dark;
+}
+:is(.workspace-shell, .workspace-dialog, .plan-dialog) textarea { height: auto; }
+:is(.de-document-header, .tabulator-header-filter) { --ui-control-height: var(--ui-control-compact-height); }
+.de-document-header input, .de-search-link,
+.original-search .tabulator .tabulator-header-filter :is(input, select) { padding: 0 var(--ui-space-1); }
+.de-search-link,
+:is(.workspace-shell, .workspace-dialog, .plan-dialog) input::placeholder,
+:is(.workspace-shell, .workspace-dialog, .plan-dialog) textarea::placeholder { color: var(--explorer-muted); opacity: 1; }
+:is(.workspace-shell, .workspace-dialog, .plan-dialog) select option { background: var(--ui-control-background); color: var(--explorer-foreground); }
+:is(.workspace-shell, .workspace-dialog, .plan-dialog) :is(input[type="checkbox"], input[type="radio"], progress) { accent-color: var(--focus-border); }
+
+:is(.organization-view, .planning-panel, .plan-dialog, .reporting-panel, .mcp-onboarding, .workspace-dialog footer) button {
+  min-height: var(--ui-control-height);
+  padding: var(--ui-space-1) var(--ui-space-2);
+  border: 1px solid var(--ui-control-border);
+  border-radius: var(--ui-control-radius);
+  background: var(--ui-control-background);
+  color: var(--explorer-foreground);
+  font: inherit;
+  font-size: var(--ui-font-body);
+  line-height: var(--ui-line-body);
+  cursor: pointer;
+}
+:is(.organization-view, .planning-panel, .plan-dialog, .reporting-panel, .mcp-onboarding, .workspace-dialog footer) button:enabled:hover { background: var(--explorer-row-hover); }
+.workspace-dialog footer .primary-action { background: var(--explorer-row-active-selected); border-color: var(--focus-border); color: var(--ui-color-selected-text); }
+:is(.plan-table td, .plan-time-label) button,
+.planning-panel .plan-date-point { background: transparent; border-color: transparent; }
+.planning-panel .plan-date-point { padding: 0; }
+
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .de-menu) :focus-visible {
+  outline: var(--ui-focus-width) solid var(--focus-border);
+  outline-offset: var(--ui-focus-offset);
+}
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .de-menu) :disabled {
+  opacity: var(--ui-disabled-opacity);
+  cursor: not-allowed;
+}
+
+:is(.account-sidebar, .planning-sidebar, .reporting-sidebar, [data-organization-navigation]) button,
+.workspace-row, .document-navigation__item, .document-tree__item, .de-tree-row {
+  font-family: inherit;
+  font-size: var(--ui-font-body);
+  line-height: var(--ui-line-body);
+}
+:is(.account-sidebar, .planning-sidebar, .reporting-sidebar, [data-organization-navigation]) button:enabled:hover,
+.workspace-row:hover, .document-navigation__item:hover, .document-tree__item:hover, .de-tree-row:hover { background: var(--explorer-row-hover); }
+:is(.account-sidebar, .planning-sidebar) button.is-selected,
+:is(.reporting-sidebar, [data-organization-navigation]) [aria-current="page"],
+.workspace-row[aria-current="true"], .document-navigation__item.is-selected,
+.document-tree__item.is-selected, .explorer-row.is-selected, .de-tree-row[aria-selected="true"] {
+  background: var(--explorer-row-selected);
+  color: var(--ui-color-selected-text);
+}
+:is(.account-sidebar, .planning-sidebar):focus-within button.is-selected,
+:is(.reporting-sidebar, [data-organization-navigation]):focus-within [aria-current="page"],
+.workspace-group-row:focus-within .workspace-row[aria-current="true"],
+.workspace-row[aria-current="true"]:focus-visible,
+.document-navigation:focus-within .document-navigation__item.is-selected,
+.document-tree__list:focus-within .document-tree__item.is-selected,
+.de-tree:focus-within .de-tree-row[aria-selected="true"] {
+  background: var(--explorer-row-active-selected);
+}
+
+:is(.de-menu, .activity-context-menu, .workspace-actions__popup, .profile-menu) {
+  padding: var(--ui-space-1);
+  border: 1px solid var(--ui-control-border);
+  border-radius: var(--ui-control-radius);
+  background: var(--primary-sidebar-background);
+  color: var(--explorer-foreground);
+  box-shadow: var(--ui-notice-shadow);
+}
+:is(.de-menu, .activity-context-menu, .workspace-actions__popup, .profile-menu) button {
+  min-height: var(--ui-control-height);
+  padding: var(--ui-space-1) var(--ui-space-2);
+  font-family: inherit;
+  font-size: var(--ui-font-body);
+}
+:is(.de-menu, .activity-context-menu, .workspace-actions__popup, .profile-menu) button:enabled:hover { background: var(--explorer-row-hover); }
+:is(.de-menu, .activity-context-menu, .workspace-actions__popup, .profile-menu) button:focus-visible { background: var(--explorer-row-active-selected); }
+
+:is(.planning-panel, .reporting-panel, .organization-view) { font-size: var(--ui-font-body); line-height: var(--ui-line-body); }
+:is(.planning-panel, .reporting-panel, .organization-view) h1 { font-size: var(--ui-font-title); line-height: 24px; font-weight: var(--ui-weight-heading); }
+:is(.planning-panel, .reporting-panel, .organization-view) :is(h2, h3) { font-size: var(--ui-font-section); line-height: var(--ui-line-body); font-weight: var(--ui-weight-heading); }
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .de-menu) * { scrollbar-width: thin; scrollbar-color: var(--ui-scroll-thumb) transparent; }
+
+/* Code fields and timeline annotations keep their semantic text metrics. */
+.mcp-onboarding :is(textarea, [data-mcp-token], [data-mcp-url]) {
+  font: var(--ui-weight-normal) var(--ui-font-caption)/var(--ui-line-code) var(--ui-font-code);
+}
+.plan-marker-caption { line-height: var(--ui-line-code); }
+:is(.workspace-row, .activity-button, .de-tab, .de-tree-row).is-dragging { opacity: .4; }

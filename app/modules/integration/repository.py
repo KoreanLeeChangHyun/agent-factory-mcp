@@ -59,7 +59,7 @@ class IntegrationRepository:
                 IntegrationConnection.id == connection_id,
                 IntegrationConnection.workspace_id == workspace_id,
                 IntegrationConnection.deleted_at.is_(None),
-            )
+            ).execution_options(populate_existing=True)
         )
 
     async def create_connection(

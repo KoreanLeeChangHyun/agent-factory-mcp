@@ -1,0 +1,107 @@
+.planning-sidebar { padding: 0 8px 12px; font-size: 12px; }
+.planning-sidebar button, .planning-panel button, .plan-dialog button { display: inline-flex; align-items: center; gap: var(--ui-space-1); }
+.planning-sidebar svg, .planning-panel svg, .plan-dialog svg { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.4; vertical-align: middle; }
+.plan-header-actions { display: flex; align-items: center; gap: 2px; margin-inline-start: auto; }
+.plan-header-actions[hidden], .plan-header-actions button[hidden] { display: none; }
+.plan-header-actions .sidebar-header-button { margin: 0; }
+.planning-sidebar button { display: flex; align-items: center; gap: 5px; padding: 5px 6px; background: transparent; color: var(--explorer-foreground); border: 0; border-radius: 2px; min-height: 28px; text-align: left; }
+.planning-sidebar nav > button { width: 100%; }
+.plan-domain-row { display: flex; align-items: center; margin-top: 8px; }
+.plan-domain-row > button:first-child { flex: 0 0 24px; padding: 4px; }
+.plan-domain-row > button:last-child { flex: 1; min-width: 0; }
+.plan-feature-nav { padding-left: 24px; }
+.plan-feature-nav button { width: 100%; min-width: 0; }
+.planning-sidebar button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.planning-panel { padding: 16px; overflow: auto; color: var(--explorer-foreground); font-size: 13px; }
+.planning-panel[hidden], .planning-sidebar [hidden], .planning-panel [hidden] { display: none !important; }
+.plan-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.plan-header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+.planning-panel h2 { margin: 18px 0 8px; font-size: 14px; font-weight: 600; }
+.plan-actions, .plan-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.plan-summary { padding: 12px 0; border-bottom: 1px solid var(--region-border); }
+.planning-panel button, .plan-dialog button { display: inline-flex; align-items: center; gap: var(--ui-space-1); }
+
+.planning-panel select, .planning-panel input, .plan-dialog input, .plan-dialog select, .plan-dialog textarea { min-width: 0; }
+.plan-muted { color: var(--explorer-muted); font-size: 12px; }
+.plan-empty { color: var(--explorer-muted); padding: 24px 0; }
+.plan-message { color: #d7bd85; min-height: 1em; margin: 6px 0; }
+.plan-description, .plan-acceptance p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.plan-status { display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+.status-pending { color: #b0b0b0; }
+.status-active { color: #96c7f3; }
+.status-done { color: #a6c6ad; }
+.plan-warning { color: #edbd78; font-size: 12px; margin-left: 5px; }
+.plan-table-scroll { overflow-x: auto; }
+.plan-table { width: 100%; border-collapse: collapse; text-align: left; }
+.plan-table th { font-weight: 500; color: var(--explorer-muted); background: var(--ui-control-background); }
+.plan-table th, .plan-table td { border-bottom: 1px solid var(--region-border); padding: 8px; vertical-align: top; }
+.plan-table th:first-child { min-width: 180px; }
+.plan-table td:first-child { width: 44%; overflow-wrap: anywhere; }
+.plan-table td > button { text-align: left; background: transparent; border-color: transparent; }
+.plan-table td { min-width: 100px; }
+.plan-table td[colspan] { padding: 0; }
+.plan-issue-detail { padding: 16px; background: var(--ui-control-background); }
+.plan-form { display: grid; gap: 12px; }
+.plan-form label { display: grid; gap: 5px; font-size: 12px; }
+.plan-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.plan-form textarea { resize: vertical; }
+.plan-form input, .plan-form textarea, .plan-form select { width: 100%; box-sizing: border-box; }
+.plan-form footer { display: flex; justify-content: flex-end; gap: 8px; }
+.plan-form footer [data-plan-action="delete"] { margin-right: auto; color: #e6a7a7; }
+.plan-form-error { color: #e6a7a7; white-space: pre-wrap; margin: 0; }
+.plan-dialog { width: min(540px,calc(100vw - 32px)); max-height: 90vh; overflow-y: auto; box-sizing: border-box; }
+.plan-dialog h2 { font-size: 17px; margin: 0 0 16px; }
+.plan-dialog::backdrop { background: #0008; }
+.plan-timeline-scroll { overflow: auto; max-height: calc(100vh - 260px); border: 1px solid var(--region-border); }
+.planning-panel { --plan-label-width: 280px; }
+.plan-timeline { min-width: calc(var(--plan-label-width) + var(--plan-chart-width)); position: relative; }
+.plan-time-header, .plan-time-row, .plan-time-group { display: grid; grid-template-columns: var(--plan-label-width) minmax(0,1fr); }
+.plan-time-header { height: 52px; position: sticky; top: 0; background: var(--ui-control-background); z-index: 5; }
+.plan-time-header > strong { padding: 12px; position: sticky; left: 0; background: var(--ui-control-background); z-index: 6; font-weight: 500; }
+.plan-time-header > div { position: relative; overflow: hidden; }
+.plan-time-header > div > span { position: absolute; top: 12px; white-space: nowrap; font-size: 12px; border-left: 1px solid #555; padding-left: 5px; }
+.plan-time-body { position: relative; }
+.plan-time-row, .plan-time-group { min-height: 52px; border-top: 1px solid var(--region-border); }
+.plan-time-group { background: #202020; min-height: 52px; }
+.plan-time-label { position: sticky; left: 0; z-index: 3; background: #1f1f1f; padding: 8px 12px; border-right: 1px solid #444; display: flex; flex-direction: column; align-items: stretch; justify-content: center; min-width: 0; }
+.plan-time-group .plan-time-label { background: #202020; }
+.plan-time-label button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; border: 0; background: transparent; text-align: left; }
+.plan-time-label svg { margin-right: 5px; }
+.plan-time-track { position: relative; z-index: 1; display: flex; align-items: center; min-height: 44px; }
+.planning-panel .plan-bar { position: absolute; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 26px; padding: 3px 6px; text-align: left; border-radius: 3px; }
+.plan-bar.status-pending { background: #3b3b40; border-color: #74747b; }
+.plan-bar.status-active { background: #244560; border-color: #6190b5; }
+.plan-bar.status-done { background: #304b3b; border-color: #718c78; }
+.plan-marker-layer { position: absolute; left: var(--plan-label-width); right: 0; top: 0; bottom: 0; pointer-events: none; z-index: 2; }
+.plan-marker { position: absolute; top: 0; bottom: 0; border-left: 1px solid #629bc7; }
+.plan-marker.launch { border-color: #c2ab81; }
+.plan-marker-caption { position: absolute; top: 30px; white-space: nowrap; font-size: 10px; color: #a1c8e8; border-left: 1px solid #629bc7; }
+.plan-marker-caption span { display: block; padding: 2px 4px; }
+.plan-marker-caption.near-end span { transform: translateX(-100%); }
+@media (max-width: 700px) {
+  .planning-panel { padding: 12px; }
+  .plan-actions { gap: 6px; }
+  .plan-form-grid { grid-template-columns: 1fr; }
+  .plan-timeline-scroll { max-height: 65vh; }
+}
+.plan-timeline.is-fitted { min-width: 0; width: 100%; }
+.plan-marker-layer { overflow: hidden; }
+
+
+.plan-task-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.plan-task-title > button { flex: 1; min-width: 0; padding: 0; }
+.plan-task-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 11px; color: #999; min-width: 0; }
+.plan-task-meta > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-origin { font-size: 10px; flex-shrink: 0; color: var(--explorer-muted); }
+.plan-time-label.is-child { padding-left: 28px; }
+.plan-time-label > .plan-warning { margin-top: 4px; }
+.planning-panel .plan-summary-bar { min-height: 22px; border-radius: 2px; border-bottom-width: 3px; background: #30383e; }
+.planning-panel .plan-date-point { position: absolute; transform: translateX(-50%); padding: 0; min-height: 20px; width: 20px; border: 0; background: transparent; color: #8bb5d4; }
+.plan-grid-layer { position: absolute; left: var(--plan-label-width); right: 0; top: 0; bottom: 0; pointer-events: none; }
+.plan-grid-line { position: absolute; top: 0; bottom: 0; border-left: 1px solid #ffffff06; }
+.plan-marker-layer { z-index: 2; }
+@media (max-width: 700px) { .planning-panel { --plan-label-width: 220px; } }
+
+.plan-message:empty { display: none; }
+.plan-actions { gap: 8px; }

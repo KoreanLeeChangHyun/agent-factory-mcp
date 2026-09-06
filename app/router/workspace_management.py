@@ -41,7 +41,7 @@ def _workspace_response(record: object) -> WorkspaceResponse:
 async def list_workspaces(
     context: Annotated[
         AuthorizedContext,
-        Depends(require_permission("workspace.read", workspace_required=False)),
+        Depends(require_permission("organization.read", workspace_required=False)),
     ],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> list[WorkspaceResponse]:
@@ -52,7 +52,7 @@ async def list_workspaces(
 async def recent_workspaces(
     context: Annotated[
         AuthorizedContext,
-        Depends(require_permission("workspace.read", workspace_required=False)),
+        Depends(require_permission("organization.read", workspace_required=False)),
     ],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> list[WorkspaceResponse]:
@@ -69,7 +69,7 @@ async def create_workspace(
     payload: WorkspaceCreate,
     context: Annotated[
         AuthorizedContext,
-        Depends(require_permission("workspace.manage", workspace_required=False)),
+        Depends(require_permission("workspace.create", workspace_required=False)),
     ],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> WorkspaceResponse:
@@ -91,7 +91,7 @@ async def get_workspace(
 )
 async def update_workspace(
     payload: WorkspaceUpdate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.update"))],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> WorkspaceResponse:
     return _workspace_response(await service.update(context, payload.name, payload.revision))
@@ -99,7 +99,7 @@ async def update_workspace(
 
 @router.delete("/{workspace_id}", status_code=204, dependencies=[Depends(require_csrf)])
 async def deactivate_workspace(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.delete"))],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> None:
     await service.deactivate(context)
@@ -124,7 +124,7 @@ async def workspace_usage(
 
 @router.get("/{workspace_id}/repositories", response_model=list[RepositoryResponse])
 async def list_repositories(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("repository.read"))],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> list[RepositoryResponse]:
     records = await service.list_repositories(context)
@@ -139,7 +139,7 @@ async def list_repositories(
 )
 async def add_repository(
     payload: RepositoryCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("repository.create"))],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> RepositoryResponse:
     record = await service.add_repository(
@@ -153,7 +153,7 @@ async def add_repository(
 
 @router.get("/{workspace_id}/members", response_model=list[WorkspaceMemberResponse])
 async def list_members(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage_members"))],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> list[WorkspaceMemberResponse]:
     return [
@@ -170,7 +170,7 @@ async def list_members(
 @router.post("/{workspace_id}/members", status_code=204, dependencies=[Depends(require_csrf)])
 async def add_member(
     payload: WorkspaceMemberCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage_members"))],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> None:
     await service.add_member(context, payload.email, payload.role)
@@ -183,7 +183,14 @@ async def add_member(
 )
 async def remove_member(
     user_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage_members"))],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
 ) -> None:
     await service.remove_member(context, user_id)
+
+
+@router.delete("/{workspace_id}/repositories/{repository_id}", status_code=204, dependencies=[Depends(require_csrf)])
+async def delete_repository(repository_id: UUID,
+    context: Annotated[AuthorizedContext, Depends(require_permission("repository.delete"))],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)]):
+    await service.delete_repository(context, repository_id)

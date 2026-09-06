@@ -4,12 +4,12 @@ const sidebarResizer = document.querySelector("[data-sidebar-resizer]");
 const activityButtons = document.querySelectorAll("[data-activity]");
 const activityContextMenu = document.querySelector("[data-activity-context-menu]");
 const sidebarTitle = document.querySelector("[data-sidebar-title]");
+const documentConnectorsButton = document.querySelector("[data-document-connectors]");
 const sidebarViews = document.querySelectorAll("[data-sidebar-view]");
 const workspaceViews = document.querySelectorAll("[data-workspace-view]");
 const documentNavigationItems = document.querySelectorAll("[data-document-target]");
 const documentViews = document.querySelectorAll("[data-document-view]");
 const documentGroupToggles = document.querySelectorAll("[data-document-group-toggle]");
-const documentExplorerToggles = document.querySelectorAll("[data-document-explorer-toggle]");
 const originalSearchInput = document.querySelector("[data-original-global-search]");
 const originalSearchState = document.querySelector("[data-original-search-state]");
 const originalSearchFailure = document.querySelector("[data-original-search-failure]");
@@ -19,14 +19,7 @@ const specificationList = document.querySelector("[data-specification-list]");
 const specificationTreeState = document.getElementById("specification-tree-state");
 const processedList = document.querySelector("[data-processed-list]");
 const processedTreeState = document.getElementById("processed-tree-state");
-const processedContent = document.querySelector("[data-processed-content]");
-const processedContentState = document.querySelector("[data-processed-content-state]");
-const processedTab = document.querySelector("[data-processed-tab]");
-const specificationFrame = document.querySelector("[data-specification-frame]");
-const specificationTab = document.querySelector("[data-specification-tab]");
 const organizationSelect = document.querySelector("[data-organization-select]");
-const workspaceSelect = document.querySelector("[data-workspace-select]");
-const workspaceContext = document.querySelector("[data-workspace-context]");
 const currentUser = document.querySelector("[data-current-user]");
 const currentUserEmail = document.querySelector("[data-current-user-email]");
 const logoutButton = document.querySelector("[data-logout]");
@@ -40,6 +33,7 @@ const accountName = document.querySelector("[data-account-name]");
 const accountEmail = document.querySelector("[data-account-email]");
 const accountOrganization = document.querySelector("[data-account-organization]");
 const accountWorkspace = document.querySelector("[data-account-workspace]");
+const headerWorkspace = document.querySelector("[data-header-workspace]");
 const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
 const tenant = { organizationId: null, workspaceId: null };
 const minimumSidebarWidth = 180;
@@ -57,6 +51,27 @@ const activityTitles = {
 };
 const activityOrderKey = "agentFactoryActivityOrder";
 const activityVisibilityKey = "agentFactoryActivityVisibility";
+let activityUserId = "";
+const activityPreferenceKey = (key) => `${key}:${activityUserId}:${tenant.organizationId}:${tenant.workspaceId}`;
+const defaultActivityOrder = Array.from(activityButtons, (button) => button.dataset.activity);
+const selectionStorageKey = () => `agentFactorySelection:${activityUserId}:${tenant.organizationId}`;
+const savedWorkspaceView = () => {
+  try { return JSON.parse(localStorage.getItem(selectionStorageKey())) || null; }
+  catch { return null; }
+};
+const rememberWorkspaceView = () => {
+  if (!activityUserId || !tenant.organizationId || !tenant.workspaceId) return;
+  const view = {
+    workspaceId: tenant.workspaceId,
+    mode: workspaceShell.dataset.mode,
+    activity: document.querySelector("[data-activity].is-active")?.dataset.activity
+      || document.querySelector("[data-workspace-view]:not([hidden])")?.dataset.workspaceView || null,
+    documentView: document.querySelector("[data-document-view]:not([hidden])")?.dataset.documentView,
+    processedId: document.querySelector('[data-processed-link][aria-current="page"]')?.dataset.processedLink,
+    specificationId: document.querySelector('[data-specification-link][aria-current="page"]')?.dataset.specificationLink,
+  };
+  try { localStorage.setItem(selectionStorageKey(), JSON.stringify(view)); } catch { /* Storage may be unavailable. */ }
+};
 let platformAdmin = false;
 let pendingActivityDrop = null;
 
@@ -273,203 +288,49 @@ const initializeOriginalSearch = () => {
   }
 };
 
-const specificationStatusLabel = (status) => {
-  if (status === "missing-human") return "사람용 명세 문서 없음";
-  return "바인딩 불일치";
-};
-
 const createDocumentFileIcon = () => {
   const namespace = "http://www.w3.org/2000/svg";
-  const icon = document.createElementNS(namespace, "svg");
-  icon.setAttribute("viewBox", "0 0 16 16");
-  icon.setAttribute("aria-hidden", "true");
-  icon.setAttribute("focusable", "false");
-  const outline = document.createElementNS(namespace, "path");
-  outline.setAttribute("d", "M3.25 1.75h6l3.5 3.5v9H3.25Z");
-  const fold = document.createElementNS(namespace, "path");
-  fold.setAttribute("d", "M9.25 1.75v3.5h3.5");
-  icon.append(outline, fold);
-  return icon;
+  const svg = document.createElementNS(namespace, "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const path = document.createElementNS(namespace, "path");
+  path.setAttribute("d", "M3.25 1.75h6l3.5 3.5v9H3.25ZM9.25 1.75v3.5h3.5");
+  svg.append(path);
+  return svg;
 };
 
-const createDocumentTreeLink = (item, kind, open) => {
-  const link = document.createElement("a");
-  link.className = "document-tree__item";
-  link.href = item.href.href;
-  link.setAttribute("role", "treeitem");
-  link.dataset[`${kind}Link`] = item.id;
-  const label = document.createElement("span");
-  label.textContent = item.name || item.id;
-  link.append(createDocumentFileIcon(), label);
-  link.addEventListener("click", (event) => {
-    event.preventDefault();
-    open(item, link);
-  });
-  return link;
-};
-
-const createDocumentTreeStatus = (message, muted = false) => {
-  const state = document.createElement("span");
-  state.className = `document-tree__item-status${muted ? " is-muted" : ""}`;
-  state.setAttribute("role", "treeitem");
-  state.setAttribute("aria-disabled", "true");
-  const label = document.createElement("span");
-  label.textContent = message;
-  state.append(createDocumentFileIcon(), label);
-  return state;
-};
-
-const safeDocumentHref = (value) => {
-  if (typeof value !== "string" || value.trim() === "") return null;
-  try {
-    const resolved = new URL(value, window.location.href);
-    return resolved.origin === window.location.origin && resolved.pathname.startsWith(`${rootPath}/api/`)
-      ? resolved
-      : null;
-  } catch {
-    return null;
-  }
-};
-
-const openSpecification = (item, link) => {
-  const href = safeDocumentHref(item.href);
-  if (!href || !specificationFrame) return;
-  document.querySelectorAll("[data-specification-link]").forEach((candidate) => {
-    const isCurrent = candidate === link;
-    candidate.classList.toggle("is-selected", isCurrent);
-    if (isCurrent) candidate.setAttribute("aria-current", "page");
-    else candidate.removeAttribute("aria-current");
-  });
-  specificationFrame.src = href.href;
-  specificationFrame.title = `${item.name} 명세 문서`;
-  if (specificationTab) specificationTab.textContent = item.name;
-  selectActivity("documents");
-  selectDocumentView("specification-document");
-};
-
-const openProcessedDocument = async (item, link) => {
-  document.querySelectorAll("[data-processed-link]").forEach((candidate) => {
-    const isCurrent = candidate === link;
-    candidate.classList.toggle("is-selected", isCurrent);
-    if (isCurrent) candidate.setAttribute("aria-current", "page");
-    else candidate.removeAttribute("aria-current");
-  });
-  if (processedTab) processedTab.textContent = item.name || item.id;
-  if (processedContentState) {
-    processedContentState.hidden = false;
-    processedContentState.textContent = "가공 문서를 불러오는 중입니다.";
-  }
-  if (processedContent) processedContent.hidden = true;
-  selectActivity("documents");
-  selectDocumentView("processed-document");
-  try {
-    const response = await fetch(item.href.href, { credentials: "same-origin" });
-    if (response.status === 401) {
-      window.location.assign(`${rootPath}/login/`);
-      return;
-    }
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-    const body = await response.text();
-    if (processedContent) {
-      processedContent.textContent = body;
-      processedContent.hidden = false;
-    }
-    if (processedContentState) processedContentState.hidden = true;
-  } catch {
-    if (processedContentState) processedContentState.textContent = "가공 문서를 불러오지 못했습니다.";
-  }
-};
-
+let documentEditor;
 const loadDocuments = async () => {
-  if (!processedList || !processedTreeState || !specificationList || !specificationTreeState) return;
-  if (!tenant.organizationId || !tenant.workspaceId) {
-    processedTreeState.textContent = "워크스페이스를 선택해 주세요.";
-    specificationTreeState.textContent = "워크스페이스를 선택해 주세요.";
-    return;
-  }
+  const version = ++documentLoadVersion;
+  if (!tenant.organizationId || !tenant.workspaceId) return;
+  const base = `/api/organizations/${tenant.organizationId}/workspaces/${tenant.workspaceId}/documents`;
   try {
-    const documents = await api(`/api/organizations/${tenant.organizationId}/workspaces/${tenant.workspaceId}/documents`);
+    const documents = await api(base);
+    if (version !== documentLoadVersion) return;
     if (!Array.isArray(documents)) throw new TypeError("문서 응답 형식이 올바르지 않습니다.");
-
-    const originalRows = documents
-      .filter((item) => item.document_type === "original")
-      .map((item) => {
-        const metadata = item.document_metadata || {};
-        return {
-          classification: metadata.classification || "원본 문서",
-          provider: metadata.provider || metadata.source || "—",
-          tags: metadata.tags || [],
-          name: item.title,
-          extension: metadata.extension || "—",
-          modifiedAt: new Date(item.updated_at).toLocaleString("ko-KR"),
-          sourceUrl: metadata.source_url || "",
-          sourceIdentity: item.id,
-        };
-      });
-    window.agentFactoryWorkspace?.originalSearch?.replaceRows(originalRows);
-
-    processedList.replaceChildren();
-    const processedDocuments = documents.filter((item) => item.document_type === "processed");
-    processedDocuments.forEach((rawItem) => {
-      const href = rawItem.current_revision_number > 0
-        ? safeDocumentHref(`${rootPath}/api/organizations/${tenant.organizationId}/workspaces/${tenant.workspaceId}/documents/${rawItem.id}/revisions/${rawItem.current_revision_number}/content`)
-        : null;
-      if (href) {
-        processedList.append(createDocumentTreeLink({
-          id: String(rawItem.id),
-          name: rawItem.title,
-          href,
-        }, "processed", openProcessedDocument));
-        return;
-      }
-      processedList.append(createDocumentTreeStatus(`${rawItem.title || rawItem.id} · 내용 없음`, true));
-    });
-    if (processedDocuments.length === 0) {
-      processedTreeState.textContent = "";
-      processedTreeState.hidden = true;
-      processedList.hidden = true;
-    } else {
-      processedTreeState.hidden = true;
-      processedList.hidden = false;
-    }
-
-    specificationList.replaceChildren();
-    const specifications = documents.filter((item) => item.document_type === "specification");
-    specifications.forEach((rawItem) => {
-      const item = {
-        id: String(rawItem.id),
-        name: rawItem.title,
-        href: rawItem.current_revision_number > 0
-          ? `${rootPath}/api/organizations/${tenant.organizationId}/workspaces/${tenant.workspaceId}/documents/${rawItem.id}/revisions/${rawItem.current_revision_number}/content`
-          : null,
-        status: rawItem.current_revision_number > 0 ? "paired" : "missing-human",
+    const originalRows = documents.filter((item) => item.document_type === "original").map((item) => {
+      const metadata = item.document_metadata || {};
+      return {
+        classification: metadata.classification || "원본 문서",
+        provider: metadata.provider || metadata.source || "—",
+        tags: metadata.tags || [],
+        name: item.title,
+        extension: metadata.extension || "—",
+        modifiedAt: new Date(item.updated_at).toLocaleString("ko-KR"),
+        sourceUrl: metadata.source_url || "",
+        sourceIdentity: item.id,
       };
-      const href = item.status === "paired" ? safeDocumentHref(item.href) : null;
-      if (href) {
-        specificationList.append(createDocumentTreeLink({ ...item, href }, "specification", openSpecification));
-        return;
-      }
-      specificationList.append(createDocumentTreeStatus(
-        `${item.name || item.id} · ${specificationStatusLabel(item.status)}`,
-      ));
     });
-
-    if (specifications.length === 0) {
-      specificationTreeState.textContent = "";
-      specificationTreeState.hidden = true;
-      specificationList.hidden = true;
-      return;
-    }
-    specificationTreeState.textContent = `명세 문서 ${specifications.length}개`;
-    specificationTreeState.hidden = true;
-    specificationList.hidden = false;
+    window.agentFactoryWorkspace?.originalSearch?.replaceRows(originalRows);
+    documentEditor.setDocuments(documents, `${rootPath}${base}`);
   } catch {
-    processedList.hidden = true;
-    processedTreeState.hidden = false;
-    processedTreeState.textContent = "가공 문서를 불러오지 못했습니다.";
-    specificationList.hidden = true;
-    specificationTreeState.hidden = false;
-    specificationTreeState.textContent = "명세 문서를 불러오지 못했습니다.";
+    if (version !== documentLoadVersion) return;
+    for (const [list, state, label] of [[processedList, processedTreeState, "가공"], [specificationList, specificationTreeState, "명세"]]) {
+      list.hidden = true;
+      state.hidden = false;
+      state.textContent = `${label} 문서를 불러오지 못했습니다.`;
+    }
   }
 };
 
@@ -484,15 +345,15 @@ const storedJson = (key, fallback) => {
 const orderedActivityButtons = () => Array.from(activityBar?.querySelectorAll("[data-activity]") || []);
 
 const saveActivityOrder = () => {
-  localStorage.setItem(activityOrderKey, JSON.stringify(orderedActivityButtons().map((button) => button.dataset.activity)));
+  localStorage.setItem(activityPreferenceKey(activityOrderKey), JSON.stringify(orderedActivityButtons().map((button) => button.dataset.activity)));
 };
 
 const applyActivityOrder = () => {
   if (!activityBar) return;
-  const candidateOrder = storedJson(activityOrderKey, []);
+  const candidateOrder = storedJson(activityPreferenceKey(activityOrderKey), []);
   const storedOrder = Array.isArray(candidateOrder) ? candidateOrder : [];
   const buttons = orderedActivityButtons();
-  const defaultOrder = buttons.map((button) => button.dataset.activity);
+  const defaultOrder = defaultActivityOrder;
   const knownActivities = new Set(defaultOrder);
   const mergedOrder = storedOrder.filter((activity, index) =>
     knownActivities.has(activity) && storedOrder.indexOf(activity) === index,
@@ -510,28 +371,36 @@ const applyActivityOrder = () => {
 };
 
 const activityVisibility = () => {
-  const visibility = storedJson(activityVisibilityKey, {});
+  const visibility = storedJson(activityPreferenceKey(activityVisibilityKey), {});
   return visibility && typeof visibility === "object" && !Array.isArray(visibility) ? visibility : {};
 };
 
 const applyActivityVisibility = () => {
+  const workspaceButton = document.querySelector("[data-workspace-picker-toggle]");
+  workspaceButton.hidden = false;
+  const organizationButton = document.querySelector("[data-open-organizations]");
+  organizationButton.classList.toggle("is-active", workspaceShell.dataset.mode === "organization");
+  organizationButton.setAttribute("aria-pressed", String(workspaceShell.dataset.mode === "organization"));
+  workspaceButton.classList.toggle("is-active", (workspaceShell.dataset.mode === "picker" || (workspaceShell.dataset.mode === "workspace" && workspaceShell.dataset.sidebar === "workspaces")));
+  workspaceButton.setAttribute("aria-pressed", String(workspaceShell.dataset.mode === "picker" || (workspaceShell.dataset.mode === "workspace" && workspaceShell.dataset.sidebar === "workspaces")));
   const visibility = activityVisibility();
   activityButtons.forEach((button) => {
     const activity = button.dataset.activity;
     const permitted = activity !== "admin" || platformAdmin;
-    button.hidden = !permitted || visibility[activity] === false;
+    button.hidden = !tenant.workspaceId || !permitted || visibility[activity] === false;
   });
 };
 
 const setActivityVisibility = (activity, visible) => {
+  if (!tenant.workspaceId) return;
   const visibility = activityVisibility();
   visibility[activity] = visible;
-  localStorage.setItem(activityVisibilityKey, JSON.stringify(visibility));
+  localStorage.setItem(activityPreferenceKey(activityVisibilityKey), JSON.stringify(visibility));
   applyActivityVisibility();
   const active = document.querySelector("[data-activity].is-active");
-  if (active?.hidden) {
+  if (!active || active.hidden) {
     const fallback = orderedActivityButtons().find((button) => !button.hidden);
-    if (fallback) selectActivity(fallback.dataset.activity);
+    selectActivity(fallback?.dataset.activity || null);
   }
 };
 
@@ -540,6 +409,7 @@ const closeActivityContextMenu = () => {
 };
 
 const openActivityContextMenu = (x, y) => {
+  if (!tenant.workspaceId) return;
   if (!activityContextMenu) return;
   const activities = Object.keys(activityTitles).filter((activity) => activity !== "admin" || platformAdmin);
   const visibility = activityVisibility();
@@ -581,7 +451,21 @@ const showActivityDropIndicator = (target, position) => {
 };
 
 const selectActivity = (activity) => {
-  if (!Object.hasOwn(activityTitles, activity)) return;
+  if (activity !== null && !Object.hasOwn(activityTitles, activity)) return;
+  if (activity !== null) window.agentFactoryMCPConnection?.dismiss();
+  documentEditor?.clearDrag();
+  documentEditor?.closeMenu(false);
+  workspaceShell.dataset.sidebar = activity === null ? "workspaces" : "activity";
+  if (tenant.workspaceId) {
+    workspaceShell.dataset.mode = "workspace";
+    applyActivityVisibility();
+  }
+  const hasActivities = orderedActivityButtons().some((button) => !button.hidden);
+  document.querySelector("[data-no-activities]").hidden = activity !== null || hasActivities;
+  document.querySelector("[data-no-activities] p").textContent = hasActivities
+    ? "왼쪽 작업 표시줄에서 사용할 기능을 선택하세요."
+    : "표시할 작업 아이콘이 없습니다.";
+  document.querySelector("[data-configure-activities]").hidden = hasActivities;
   if (!["account", "admin"].includes(activity) && ["#admin", "#account"].includes(location.hash)) {
     history.replaceState(null, "", location.pathname + location.search);
   }
@@ -597,10 +481,15 @@ const selectActivity = (activity) => {
   workspaceViews.forEach((view) => {
     view.hidden = view.dataset.workspaceView !== activity;
   });
-  if (sidebarTitle) sidebarTitle.textContent = activityTitles[activity];
+  if (sidebarTitle) sidebarTitle.textContent = activityTitles[activity] || "작업공간";
+  document.querySelector("[data-plan-header-actions]").hidden = activity !== "schedule";
+  if (documentConnectorsButton) documentConnectorsButton.hidden = activity !== "documents";
+  rememberWorkspaceView();
 };
 
 const selectDocumentView = (target) => {
+  if (["processed-document", "specification-document"].includes(target)) target = "document-editor";
+  if (target !== "document-editor") documentEditor?.clearDrag();
   const nextView = Array.from(documentViews).find(
     (view) => view.dataset.documentView === target,
   );
@@ -612,13 +501,13 @@ const selectDocumentView = (target) => {
     if (isCurrent) item.setAttribute("aria-current", "page");
     else item.removeAttribute("aria-current");
   });
-  if (target !== "specification-document") {
+  if (target !== "document-editor") {
     document.querySelectorAll("[data-specification-link]").forEach((item) => {
       item.classList.remove("is-selected");
       item.removeAttribute("aria-current");
     });
   }
-  if (target !== "processed-document") {
+  if (target !== "document-editor") {
     document.querySelectorAll("[data-processed-link]").forEach((item) => {
       item.classList.remove("is-selected");
       item.removeAttribute("aria-current");
@@ -627,6 +516,8 @@ const selectDocumentView = (target) => {
   documentViews.forEach((view) => {
     view.hidden = view !== nextView;
   });
+  if (target === "document-editor") documentEditor?.syncSelection();
+  rememberWorkspaceView();
 };
 
 const setSidebarWidth = (width) => {
@@ -637,7 +528,7 @@ const setSidebarWidth = (width) => {
   );
   const availableWidth = Math.max(
     minimumSidebarWidth,
-    workspaceShell.clientWidth - activityBarWidth - 96,
+    workspaceShell.clientWidth - activityBarWidth - 112,
   );
   const nextWidth = Math.min(
     Math.max(width, minimumSidebarWidth),
@@ -646,6 +537,7 @@ const setSidebarWidth = (width) => {
 
   workspaceShell.style.setProperty("--primary-sidebar-width", `${nextWidth}px`);
   sidebarResizer.setAttribute("aria-valuenow", String(Math.round(nextWidth)));
+  try { localStorage.setItem(activityPreferenceKey("sidebarWidth"), String(nextWidth)); } catch {}
 };
 
 const populateSelect = (select, rows) => {
@@ -658,25 +550,383 @@ const populateSelect = (select, rows) => {
   }));
 };
 
-const loadWorkspaces = async () => {
-  if (!tenant.organizationId) {
-    tenant.workspaceId = null;
-    populateSelect(workspaceSelect, []);
-    await loadDocuments();
-    return;
+let workspaceRows = [];
+let recentRows = [];
+let organizationRows = [];
+let workspaceLoadVersion = 0;
+let documentLoadVersion = 0;
+const listState = document.querySelector("[data-workspace-list-state]");
+const createDialog = document.querySelector("[data-create-dialog]");
+const createForm = document.querySelector("[data-create-form]");
+
+const resetWorkspaceDocuments = () => {
+  documentLoadVersion += 1;
+  documentEditor?.reset();
+  processedList?.replaceChildren();
+  specificationList?.replaceChildren();
+  window.agentFactoryWorkspace?.originalSearch?.replaceRows([]);
+  selectDocumentView("original-overview");
+};
+
+const showWorkspaceList = (focus = false) => {
+  activityButtons.forEach((button) => {
+    button.classList.remove("is-active");
+    button.setAttribute("aria-pressed", "false");
+  });
+  workspaceShell.dataset.mode = "picker";
+  applyActivityVisibility();
+  if (!tenant.workspaceId) accountWorkspace.textContent = "—";
+  history.replaceState(null, "", location.pathname + location.search);
+  closeActivityContextMenu();
+  rememberWorkspaceView();
+  if (focus) document.querySelector("[data-workspace-list] button, .workspace-picker-sidebar [data-create-workspace]")?.focus();
+};
+
+const workspaceRow = (record) => {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "workspace-row";
+  button.dataset.workspaceId = record.id;
+  button.title = record.name;
+  button.setAttribute("aria-current", String(record.id === tenant.workspaceId));
+  button.append(createDocumentFileIcon(), createPlainText(record.name));
+  button.addEventListener("click", () => enterWorkspace(record.id));
+  return button;
+};
+
+// Personal list organization is a browser preference, scoped by account and owner.
+const workspaceGroupsKey = () => `agentFactoryWorkspaceGroups:${activityUserId}:${tenant.organizationId || "personal"}`;
+const workspaceGroups = () => {
+  const groups = storedJson(workspaceGroupsKey(), []);
+  return Array.isArray(groups) ? groups.filter(group => group && typeof group.id === "string"
+    && typeof group.name === "string" && Array.isArray(group.workspaceIds)) : [];
+};
+const saveWorkspaceGroups = groups => {
+  try { localStorage.setItem(workspaceGroupsKey(), JSON.stringify(groups)); }
+  catch { listState.textContent = "그룹을 저장하지 못했습니다."; return false; }
+  return true;
+};
+const moveWorkspaceToGroup = (id, groupId) => {
+  if (!workspaceRows.some(row => row.id === id)) return;
+  const groups = workspaceGroups();
+  for (const group of groups) {
+    group.workspaceIds = group.workspaceIds.filter(value => value !== id);
+    if (group.id === groupId) group.workspaceIds.push(id);
   }
-  const workspaces = await api(`/api/organizations/${tenant.organizationId}/workspaces`);
-  populateSelect(workspaceSelect, workspaces);
-  const savedWorkspace = localStorage.getItem("agentFactoryWorkspaceId");
-  tenant.workspaceId = workspaces.some((item) => item.id === savedWorkspace)
-    ? savedWorkspace
-    : workspaces[0]?.id || null;
-  if (workspaceSelect) workspaceSelect.value = tenant.workspaceId || "";
-  if (accountWorkspace) accountWorkspace.textContent = workspaceSelect?.selectedOptions[0]?.textContent || "—";
+  if (saveWorkspaceGroups(groups)) renderWorkspaces();
+};
+const groupDropTarget = (element, groupId) => {
+  element.addEventListener("dragover", event => {
+    if (!event.dataTransfer.types.includes("application/x-agent-factory-workspace")) return;
+    event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = "move";
+    element.classList.add("is-drop-target");
+  });
+  element.addEventListener("dragleave", event => {
+    if (!element.contains(event.relatedTarget)) element.classList.remove("is-drop-target");
+  });
+  element.addEventListener("drop", event => {
+    element.classList.remove("is-drop-target");
+    const id = event.dataTransfer.getData("application/x-agent-factory-workspace");
+    if (!id) return;
+    event.preventDefault(); event.stopPropagation(); moveWorkspaceToGroup(id, groupId);
+  });
+};
+const renderWorkspaces = () => {
+  const list = document.querySelector("[data-workspace-list]");
+  const groups = workspaceGroups();
+  const grouped = new Set(groups.flatMap(group => group.workspaceIds));
+  const rowWithGroup = record => {
+    const row = document.createElement("div"); row.className = "workspace-group-row";
+    const button = workspaceRow(record);
+    button.draggable = true;
+    button.addEventListener("dragstart", event => {
+      button.classList.add("is-dragging");
+      event.dataTransfer.setData("application/x-agent-factory-workspace", record.id);
+      event.dataTransfer.effectAllowed = "move";
+    });
+    button.addEventListener("dragend", () => {
+      button.classList.remove("is-dragging");
+      document.querySelectorAll(".is-drop-target").forEach(target => target.classList.remove("is-drop-target"));
+    });
+    row.append(button);
+    return row;
+  };
+  list.replaceChildren();
+  groups.forEach(group => {
+    const section = document.createElement("details"); section.className = "workspace-group";
+    section.open = !group.collapsed;
+    const heading = document.createElement("summary"); heading.textContent = group.name;
+    section.append(heading, ...workspaceRows.filter(row => group.workspaceIds.includes(row.id)).map(rowWithGroup));
+    section.addEventListener("toggle", () => {
+      if (!section.isConnected) return;
+      const current = workspaceGroups();
+      const item = current.find(item => item.id === group.id);
+      if (item && item.collapsed !== !section.open) { item.collapsed = !section.open; saveWorkspaceGroups(current); }
+    });
+    groupDropTarget(section, group.id); list.append(section);
+  });
+  const ungrouped = document.createElement("div"); ungrouped.className = "workspace-ungrouped";
+  if (groups.length) { const label = document.createElement("p"); label.textContent = "그룹 없음"; ungrouped.append(label); }
+  ungrouped.append(...workspaceRows.filter(row => !grouped.has(row.id)).map(rowWithGroup));
+  groupDropTarget(ungrouped, ""); list.append(ungrouped);
+  listState.textContent = !workspaceRows.length ? "작업공간이 없습니다. 새로 만들어 시작하세요." : "";
+  document.querySelector("[data-recent-workspaces]").replaceChildren(...recentRows.map(workspaceRow));
+  document.querySelector("[data-recent-state]").hidden = recentRows.length > 0;
+};
+const groupForm = document.querySelector("[data-workspace-group-form]");
+document.querySelector("[data-create-workspace-group]").addEventListener("click", () => {
+  groupForm.hidden = false; groupForm.reset(); groupForm.querySelector("p").textContent = "";
+  groupForm.querySelector("input").focus();
+});
+groupForm.addEventListener("keydown", event => {
+  if (event.key === "Escape") { event.preventDefault(); groupForm.hidden = true; document.querySelector("[data-create-workspace-group]").focus(); }
+});
+groupForm.addEventListener("submit", event => {
+  event.preventDefault();
+  const name = groupForm.querySelector("input").value.trim();
+  const groups = workspaceGroups();
+  if (!name || groups.some(group => group.name === name)) {
+    groupForm.querySelector("p").textContent = name ? "같은 이름의 그룹이 있습니다." : "그룹 이름을 입력하세요."; return;
+  }
+  groups.push({ id: crypto.randomUUID(), name, workspaceIds: [], collapsed: false });
+  if (saveWorkspaceGroups(groups)) { groupForm.hidden = true; renderWorkspaces(); }
+});
+
+const enterWorkspace = async (id) => {
+  const record = workspaceRows.find((row) => row.id === id);
+  if (!record) return;
+  resetWorkspaceDocuments();
+  tenant.workspaceId = id;
+  document.querySelectorAll(".workspace-row[data-workspace-id]").forEach(button => button.setAttribute("aria-current", String(button.dataset.workspaceId === id)));
+  window.agentFactoryMCPConnection.open({ api, userId: activityUserId, organizationId: tenant.organizationId, workspaceId: id, name: record.name, rootPath });
+  window.agentFactoryPlanning?.open({ api, organizationId: tenant.organizationId, workspaceId: id });
+  const reportingOrganization = tenant.organizationId;
+  window.agentFactoryReporting?.open({ api, organizationId: reportingOrganization, workspaceId: id,
+    navigate: async (kind, targetId) => {
+      const current = () => tenant.organizationId === reportingOrganization && tenant.workspaceId === id;
+      if (!current()) return;
+      if (kind === "plan") {
+        const opened = await window.agentFactoryPlanning.openItem(targetId);
+        if (current() && opened) selectActivity("schedule");
+      } else {
+        await loadDocuments();
+        if (!current()) return;
+        const record = documentEditor.docs.get(targetId);
+        if (record?.href) { selectActivity("documents"); documentEditor.open(targetId); }
+        else {
+          // Original Documents use their authenticated immutable content endpoint.
+          const doc = await api(`/api/organizations/${reportingOrganization}/workspaces/${id}/documents/${encodeURIComponent(targetId)}`);
+          if (!current()) return;
+          if (!doc.current_revision_number) throw new Error("문서에 읽을 수 있는 리비전이 없습니다.");
+          location.assign(`${rootPath}/api/organizations/${reportingOrganization}/workspaces/${id}/documents/${encodeURIComponent(targetId)}/revisions/${doc.current_revision_number}/content`);
+        }
+      }
+    },
+  });
+  accountWorkspace.textContent = record.name;
+  headerWorkspace.textContent = record.name;
+  headerWorkspace.title = record.name;
+  headerWorkspace.hidden = false;
+  workspaceShell.dataset.mode = "workspace";
+  applyActivityOrder();
+  applyActivityVisibility();
+  selectActivity(null);
+  try {
+    const width = Number(localStorage.getItem(activityPreferenceKey("sidebarWidth")));
+    setSidebarWidth(width > 0 ? width : 268);
+    documentGroupToggles.forEach(toggle => {
+      const content = document.getElementById(toggle.getAttribute('aria-controls'));
+      if (!content) return;
+      const expanded = localStorage.getItem(activityPreferenceKey('expanded:' + content.id));
+      if (expanded !== null) { toggle.setAttribute('aria-expanded', expanded); content.hidden = expanded !== 'true'; }
+    });
+  } catch { /* Local UI preferences are optional. */ }
+  const organizationId = tenant.organizationId;
+  void api(`/api/organizations/${organizationId}/workspaces/${id}/visits`, { method: "POST" }).then(() => {
+    if (tenant.organizationId !== organizationId) return;
+    recentRows = [record, ...recentRows.filter((row) => row.id !== id)].slice(0, 20);
+    renderWorkspaces();
+  }).catch(() => {
+    document.querySelector("[data-recent-state]").textContent = "최근 사용 기록을 저장하지 못했습니다.";
+    document.querySelector("[data-recent-state]").hidden = false;
+  });
   await loadDocuments();
 };
 
+const loadWorkspaces = async () => {
+  renderOrganizationIdentity();
+  groupForm.hidden = true;
+  const saved = savedWorkspaceView();
+  const version = ++workspaceLoadVersion;
+  tenant.workspaceId = null;
+  headerWorkspace.textContent = ""; headerWorkspace.title = ""; headerWorkspace.hidden = true;
+  window.agentFactoryMCPConnection.reset();
+  window.agentFactoryPlanning?.reset();
+  window.agentFactoryReporting?.reset();
+  resetWorkspaceDocuments();
+  showWorkspaceList();
+  workspaceRows = [];
+  recentRows = [];
+  renderWorkspaces();
+  document.querySelector("[data-retry-workspaces]").hidden = true;
+  if (!tenant.organizationId) return;
+  listState.textContent = "작업공간을 불러오는 중입니다.";
+  const base = `/api/organizations/${tenant.organizationId}/workspaces`;
+  const [listed, recent] = await Promise.allSettled([api(base), api(`${base}/recent`)]);
+  if (version !== workspaceLoadVersion) return;
+  if (listed.status === "rejected") {
+    listState.textContent = "작업공간을 불러오지 못했습니다.";
+    document.querySelector("[data-retry-workspaces]").hidden = false;
+    return;
+  }
+  workspaceRows = listed.value.filter((row) => row.status !== "inactive");
+  recentRows = recent.status === "fulfilled" ? recent.value.filter((row) => workspaceRows.some((item) => item.id === row.id)) : [];
+  renderWorkspaces();
+  if (recent.status === "rejected") document.querySelector("[data-recent-state]").textContent = "최근 목록을 불러오지 못했습니다.";
+  if (saved && workspaceRows.some((row) => row.id === saved.workspaceId)) {
+    await enterWorkspace(saved.workspaceId);
+    if (version !== workspaceLoadVersion || tenant.workspaceId !== saved.workspaceId) return;
+    const target = Array.from(activityButtons).find((button) => button.dataset.activity === saved.activity && !button.hidden);
+    if (target) {
+      selectActivity(target.dataset.activity);
+      if (target.dataset.activity === "account") window.agentFactoryAdmin?.profile();
+      if (target.dataset.activity === "admin") window.agentFactoryAdmin?.open("dashboard");
+    }
+    const documentLink = Array.from(document.querySelectorAll("[data-processed-link], [data-specification-link]"))
+      .find((link) => (["processed-document", "document-editor"].includes(saved.documentView) && saved.processedId && link.dataset.processedLink === saved.processedId)
+        || (["specification-document", "document-editor"].includes(saved.documentView) && saved.specificationId && link.dataset.specificationLink === saved.specificationId));
+    if (saved.activity === "documents" && documentLink && ["processed-document", "specification-document", "document-editor"].includes(saved.documentView)) documentLink.click();
+    else if (saved.documentView && !["processed-document", "specification-document"].includes(saved.documentView)) selectDocumentView(saved.documentView);
+    if (saved.mode === "picker") showWorkspaceList();
+  } else if (saved) {
+    try { localStorage.removeItem(selectionStorageKey()); } catch { /* Storage may be unavailable. */ }
+  }
+};
+
+const renderOrganizationIdentity = () => {
+  const row = organizationRows.find(item => item.id === tenant.organizationId);
+  const header = document.querySelector("[data-header-organization]");
+  header.hidden = !row;
+  header.textContent = row ? (row.is_personal ? "개인" : row.name) : "";
+  header.title = row ? `${row.name} · 조직 코드: ${row.id}` : "";
+  document.querySelector("[data-organization-identity]").hidden = !row;
+  document.querySelector("[data-organization-code]").textContent = row?.id || "";
+  document.querySelector("[data-organization-copy-status]").textContent = "";
+};
+document.querySelector("[data-copy-organization-code]").addEventListener("click", async () => {
+  const id = tenant.organizationId;
+  if (!id) return;
+  const status = document.querySelector("[data-organization-copy-status]");
+  try {
+    await navigator.clipboard.writeText(id);
+    if (id === tenant.organizationId) status.textContent = "복사했습니다.";
+  } catch {
+    if (id === tenant.organizationId) status.textContent = "코드를 선택해 복사해 주세요.";
+  }
+});
+
+const renderOrganizations = () => {
+  const options = organizationRows.map((row) => ({ ...row, name: row.is_personal ? "개인" : row.name }));
+  if (!organizationRows.some((row) => row.is_personal)) options.unshift({ id: "", name: "개인" });
+  populateSelect(organizationSelect, options);
+  organizationSelect.disabled = options.length <= 1;
+  organizationSelect.title = "개인 또는 조직 선택";
+};
+
+const showCreateWorkspace = () => {
+  createForm.reset();
+  document.querySelector("[data-create-error]").textContent = "";
+  document.querySelector("[data-create-owner]").textContent = organizationSelect.selectedOptions[0]?.textContent || "개인";
+  createDialog.showModal();
+};
+
+document.querySelectorAll("[data-create-workspace]").forEach((button) => button.addEventListener("click", showCreateWorkspace));
+createForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const name = createForm.elements.name.value.trim();
+  if (!name) { document.querySelector("[data-create-error]").textContent = "이름을 입력해 주세요."; return; }
+  const submit = createForm.querySelector('[type="submit"]');
+  if (submit.disabled) return;
+  submit.disabled = true;
+  const startingOrganization = tenant.organizationId;
+  const startingVersion = workspaceLoadVersion;
+  try {
+    const path = tenant.organizationId ? `/api/organizations/${tenant.organizationId}/workspaces` : "/api/account/personal-workspaces";
+    const created = await api(path, { method: "POST", body: JSON.stringify({ name, slug: `workspace-${crypto.randomUUID()}` }) });
+    if (startingVersion !== workspaceLoadVersion || tenant.organizationId !== startingOrganization) return;
+    if (!startingOrganization) {
+      organizationRows = await api("/api/account/organizations");
+      if (startingVersion !== workspaceLoadVersion || tenant.organizationId !== startingOrganization) return;
+      tenant.organizationId = created.organization_id;
+      renderOrganizations();
+      organizationSelect.value = tenant.organizationId;
+      accountOrganization.textContent = organizationSelect.selectedOptions[0]?.textContent || "개인";
+    }
+    createDialog.close();
+    const createdOrganization = tenant.organizationId;
+    const expectedVersion = workspaceLoadVersion + 1;
+    await loadWorkspaces();
+    if (workspaceLoadVersion !== expectedVersion || tenant.organizationId !== createdOrganization) return;
+    if (!workspaceRows.some((row) => row.id === created.id)) workspaceRows.push(created);
+    renderWorkspaces();
+    await enterWorkspace(created.id);
+  } catch (error) {
+    if (startingVersion !== workspaceLoadVersion || tenant.organizationId !== startingOrganization) return;
+    document.querySelector("[data-create-error]").textContent = error.status === 403 ? "이 공간에 작업공간을 만들 권한이 없습니다." : "작업공간을 만들지 못했습니다. 다시 시도해 주세요.";
+  } finally { submit.disabled = false; }
+});
+const openOrganizationManagement = (view = "members") => {
+  workspaceShell.dataset.mode = "organization";
+  applyActivityVisibility();
+  window.agentFactoryOrganizations?.open({ api, organizationId: tenant.organizationId, userId: activityUserId,
+    changed: async (id) => {
+      organizationRows = await api("/api/account/organizations");
+      renderOrganizations();
+      tenant.organizationId = organizationRows.some(row => row.id === id) ? id
+        : organizationRows.find(row => row.is_personal)?.id || organizationRows[0]?.id || null;
+      organizationSelect.value = tenant.organizationId || "";
+      accountOrganization.textContent = organizationSelect.selectedOptions[0]?.textContent || "—";
+      if (tenant.organizationId) localStorage.setItem(`agentFactoryOrganizationId:${activityUserId}`, tenant.organizationId);
+      else localStorage.removeItem(`agentFactoryOrganizationId:${activityUserId}`);
+      await loadWorkspaces();
+      openOrganizationManagement(view);
+    },
+  }, view);
+};
+document.querySelector("[data-open-organizations]").addEventListener("click", () => {
+  workspaceShell.dataset.mode = "organization";
+  activityButtons.forEach(button => { button.classList.remove("is-active"); button.setAttribute("aria-pressed", "false"); });
+  applyActivityVisibility();
+  openOrganizationManagement();
+  organizationSelect.focus();
+});
+document.querySelectorAll("[data-open-workspaces]").forEach((button) => button.addEventListener("click", () => showWorkspaceList(true)));
+document.querySelector("[data-retry-workspaces]").addEventListener("click", () => bootAuthentication());
+document.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
+
+
 const openWorkspace = async (session) => {
+  activityUserId = session.user.id;
+  const initialHash = location.hash;
+  const invitationOrganization = new URLSearchParams(location.search).get("organization_invite");
+  const invitationToken = new URLSearchParams(initialHash.slice(1)).get("invitation");
+  if (invitationOrganization && invitationToken) {
+    // Save across a login redirect without leaving the capability in the address bar.
+    sessionStorage.setItem("agentFactoryPendingInvitation", JSON.stringify({organizationId:invitationOrganization, token:invitationToken}));
+    history.replaceState(null, "", location.pathname);
+  }
+  let pendingInvitation;
+  try { pendingInvitation = JSON.parse(sessionStorage.getItem("agentFactoryPendingInvitation") || "null"); } catch { /* Ignore invalid browser storage. */ }
+  if (pendingInvitation) {
+    try {
+      await api(`/api/organizations/${encodeURIComponent(pendingInvitation.organizationId)}/accept-invitation`, {method:"POST", body:JSON.stringify({token:pendingInvitation.token})});
+      localStorage.setItem(`agentFactoryOrganizationId:${activityUserId}`, pendingInvitation.organizationId);
+      sessionStorage.removeItem("agentFactoryPendingInvitation");
+    } catch (error) {
+      if (error.status === 409) sessionStorage.removeItem("agentFactoryPendingInvitation");
+      window.alert(error.message);
+    }
+  }
   if (currentUser) currentUser.textContent = session.user.display_name;
   if (currentUserEmail) currentUserEmail.textContent = session.user.email;
   if (profileName) profileName.textContent = session.user.display_name;
@@ -687,25 +937,24 @@ const openWorkspace = async (session) => {
   if (profileControl) profileControl.hidden = false;
   platformAdmin = session.user.is_platform_admin;
   applyActivityVisibility();
-  if (workspaceContext) workspaceContext.hidden = false;
 
   const organizations = await api("/api/account/organizations");
-  populateSelect(organizationSelect, organizations);
-  if (organizationSelect) {
-    organizationSelect.disabled = organizations.length <= 1;
-    organizationSelect.title = organizations.length > 1 ? "조직 변경" : "현재 조직";
-  }
-  const savedOrganization = localStorage.getItem("agentFactoryOrganizationId");
+  organizationRows = organizations;
+  renderOrganizations();
+  document.querySelectorAll("[data-create-workspace]").forEach((button) => { button.disabled = false; });
+  const savedOrganization = localStorage.getItem(`agentFactoryOrganizationId:${activityUserId}`);
   tenant.organizationId = organizations.some((item) => item.id === savedOrganization)
     ? savedOrganization
-    : organizations[0]?.id || null;
+    : organizations.find((row) => row.is_personal)?.id || organizations[0]?.id || null;
   if (organizationSelect) organizationSelect.value = tenant.organizationId || "";
   if (accountOrganization) accountOrganization.textContent = organizationSelect?.selectedOptions[0]?.textContent || "—";
   await loadWorkspaces();
-  if (session.user.is_platform_admin && location.hash === "#admin") {
+  if (session.user.is_platform_admin && initialHash === "#admin") {
+    workspaceShell.dataset.mode = "workspace";
     selectActivity("admin");
     window.agentFactoryAdmin?.open("dashboard");
-  } else if (location.hash === "#account") {
+  } else if (initialHash === "#account") {
+    workspaceShell.dataset.mode = "workspace";
     selectActivity("account");
     window.agentFactoryAdmin?.profile();
   }
@@ -717,6 +966,7 @@ const bootAuthentication = async () => {
     await openWorkspace(session);
   } catch (error) {
     if (error.status === 401) window.location.replace(`${rootPath}/login/`);
+    else { listState.textContent = "계정 정보를 불러오지 못했습니다."; document.querySelector("[data-retry-workspaces]").hidden = false; }
   }
 };
 
@@ -724,8 +974,29 @@ if (workspaceShell) {
   workspaceShell.dataset.ready = "true";
 }
 
+documentEditor = new window.AgentFactoryDocumentEditor({
+  host: document.querySelector("#document-editor"),
+  rootPath,
+  reveal: () => {
+    if (document.querySelector('[data-activity="documents"]')?.getAttribute("aria-pressed") !== "true") selectActivity("documents");
+    selectDocumentView("document-editor");
+  },
+  onSelection: () => rememberWorkspaceView(),
+});
+
 applyActivityOrder();
 applyActivityVisibility();
+document.querySelector("[data-configure-activities]").addEventListener("click", (event) => {
+  event.stopPropagation();
+  const bounds = activityBar.getBoundingClientRect();
+  openActivityContextMenu(bounds.right, bounds.top);
+});
+
+documentConnectorsButton?.addEventListener("click", () => {
+  setActivityVisibility("integrations", true);
+  selectActivity("integrations");
+  document.querySelector('[data-activity="integrations"]')?.focus();
+});
 
 activityButtons.forEach((button) => {
   button.draggable = true;
@@ -787,6 +1058,7 @@ activityBar?.addEventListener("contextmenu", (event) => {
 activityContextMenu?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-activity-visibility]");
   if (!button) return;
+  event.stopPropagation();
   const activity = button.dataset.activityVisibility;
   setActivityVisibility(activity, button.getAttribute("aria-checked") !== "true");
   openActivityContextMenu(Number.parseFloat(activityContextMenu.style.left), Number.parseFloat(activityContextMenu.style.top));
@@ -842,16 +1114,7 @@ documentGroupToggles.forEach((toggle) => {
     const isExpanded = toggle.getAttribute("aria-expanded") === "true";
     toggle.setAttribute("aria-expanded", String(!isExpanded));
     content.hidden = isExpanded;
-  });
-});
-
-documentExplorerToggles.forEach((toggle) => {
-  toggle.addEventListener("click", () => {
-    const content = document.getElementById(toggle.getAttribute("aria-controls"));
-    if (!content) return;
-    const isExpanded = toggle.getAttribute("aria-expanded") === "true";
-    toggle.setAttribute("aria-expanded", String(!isExpanded));
-    content.hidden = isExpanded;
+    try { localStorage.setItem(activityPreferenceKey("expanded:" + content.id), String(!isExpanded)); } catch {}
   });
 });
 
@@ -868,18 +1131,16 @@ logoutButton?.addEventListener("click", async () => {
 });
 
 organizationSelect?.addEventListener("change", async () => {
+  const wasOrganization = workspaceShell.dataset.mode === "organization";
+  window.agentFactoryOrganizations?.reset();
   tenant.organizationId = organizationSelect.value || null;
-  if (tenant.organizationId) localStorage.setItem("agentFactoryOrganizationId", tenant.organizationId);
+  if (tenant.organizationId) localStorage.setItem(`agentFactoryOrganizationId:${activityUserId}`, tenant.organizationId);
   if (accountOrganization) accountOrganization.textContent = organizationSelect.selectedOptions[0]?.textContent || "—";
   await loadWorkspaces();
+  if (wasOrganization) openOrganizationManagement();
 });
 
-workspaceSelect?.addEventListener("change", async () => {
-  tenant.workspaceId = workspaceSelect.value || null;
-  if (tenant.workspaceId) localStorage.setItem("agentFactoryWorkspaceId", tenant.workspaceId);
-  if (accountWorkspace) accountWorkspace.textContent = workspaceSelect.selectedOptions[0]?.textContent || "—";
-  await loadDocuments();
-});
+
 
 if (sidebarResizer) {
   sidebarResizer.addEventListener("pointerdown", (event) => {

@@ -6,6 +6,10 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
 WORKDIR /build
 COPY pyproject.toml README.md ./
 COPY app ./app
+COPY static ./static
+COPY template ./template
+COPY config ./config
+COPY docs ./docs
 RUN python -m pip wheel --wheel-dir /wheels .
 
 FROM python:3.12-slim-bookworm AS runtime
@@ -24,6 +28,8 @@ COPY --chown=agent-factory:agent-factory app ./app
 COPY --chown=agent-factory:agent-factory config ./config
 COPY --chown=agent-factory:agent-factory static ./static
 COPY --chown=agent-factory:agent-factory template ./template
+COPY --chown=agent-factory:agent-factory docs/external-agent-reporting.md ./docs/external-agent-reporting.md
+COPY --chown=agent-factory:agent-factory docs/planning-import.md ./docs/planning-import.md
 RUN mkdir -p .backup uploads feedback exports \
     && chown -R agent-factory:agent-factory /srv/agent-factory
 

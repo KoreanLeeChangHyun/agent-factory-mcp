@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.modules.auth.authorization import require_context
+
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
@@ -37,6 +39,7 @@ class DocumentSearchService:
         model: str,
         dimensions: int,
     ) -> EmbeddingProfile:
+        require_context(context, "document.update")
         if self.settings.embedding_provider == "disabled":
             raise ApplicationError(
                 "embedding_provider_unconfigured", "Embedding provider is not configured", 503
@@ -69,6 +72,7 @@ class DocumentSearchService:
             ) from exc
 
     async def list_profiles(self, context: AuthorizedContext) -> list[EmbeddingProfile]:
+        require_context(context, "document.read")
         return await self.repository.list_profiles(_workspace_id(context))
 
     async def index_document(
@@ -78,6 +82,7 @@ class DocumentSearchService:
         revision_id: UUID,
         profile_id: UUID,
     ) -> int:
+        require_context(context, "document.update")
         workspace_id = _workspace_id(context)
         profile = await self._profile(workspace_id, profile_id)
         revision = await self.repository.get_revision(workspace_id, document_id, revision_id)
@@ -126,6 +131,7 @@ class DocumentSearchService:
         query: str,
         limit: int,
     ) -> list[SearchHit]:
+        require_context(context, "document.read")
         workspace_id = _workspace_id(context)
         await self._profile(workspace_id, profile_id)
         vector = (await self.provider.embed([query.strip()]))[0]

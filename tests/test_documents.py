@@ -22,7 +22,7 @@ def context() -> AuthorizedContext:
     return AuthorizedContext(
         Principal(USER_ID, "member@example.com", "Member", False),
         AuthorizationScope(ORGANIZATION_ID, WORKSPACE_ID),
-        frozenset({"workspace.read", "document.manage"}),
+        frozenset({"document.read", "document.update"}),
     )
 
 

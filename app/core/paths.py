@@ -3,10 +3,14 @@
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-STATIC_ROOT = PROJECT_ROOT / "static"
-TEMPLATE_ROOT = PROJECT_ROOT / "template"
+ASSET_ROOT = PROJECT_ROOT if (PROJECT_ROOT / "static").is_dir() else (
+    Path(__file__).resolve().parents[1] / "resources" / "runtime"
+)
+STATIC_ROOT = ASSET_ROOT / "static"
+TEMPLATE_ROOT = ASSET_ROOT / "template"
+RUNTIME_ROOT = PROJECT_ROOT if ASSET_ROOT == PROJECT_ROOT else Path.cwd()
 RUNTIME_DIRECTORIES = tuple(
-    PROJECT_ROOT / name for name in (".backup", "uploads", "feedback", "exports")
+    RUNTIME_ROOT / name for name in (".backup", "uploads", "feedback", "exports")
 )
 
 

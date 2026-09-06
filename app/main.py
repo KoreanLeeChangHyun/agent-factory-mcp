@@ -2,10 +2,12 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -17,6 +19,7 @@ from app.core.observability import ObservabilityMiddleware, configure_tracing
 from app.core.paths import STATIC_ROOT, ensure_runtime_directories
 from app.core.security import RateLimitMiddleware, SecurityHeadersMiddleware
 from app.db.session import dispose_engine
+from app.mcp.scoped import WorkspaceMCPTransport
 from app.mcp.server import create_mcp_server
 from app.router import api_router
 
@@ -76,7 +79,25 @@ def create_app() -> FastAPI:
     application.mount("/static", StaticFiles(directory=STATIC_ROOT), name="static")
     application.mount(
         "/mcp",
-        mcp_server.streamable_http_app(streamable_http_path="/"),
+        WorkspaceMCPTransport(
+            mcp_server.streamable_http_app(
+                streamable_http_path="/",
+                # Requests can reach different workers; credentials authorize each request.
+                stateless_http=True,
+                transport_security=TransportSecuritySettings(
+                    allowed_hosts=[
+                        urlsplit(settings.public_base_url).netloc,
+                        "127.0.0.1:*",
+                        "localhost:*",
+                        "[::1]:*",
+                    ],
+                    allowed_origins=[
+                        f"{urlsplit(settings.public_base_url).scheme}://{urlsplit(settings.public_base_url).netloc}",
+                        *settings.cors_allowed_origins,
+                    ],
+                ),
+            )
+        ),
         name="mcp",
     )
     return application

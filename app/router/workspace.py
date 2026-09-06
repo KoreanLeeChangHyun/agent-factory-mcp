@@ -70,3 +70,11 @@ async def workspace(
             "X-Content-Type-Options": "nosniff",
         },
     )
+
+
+@router.get("/join/", include_in_schema=False)
+async def organization_invitation_entry() -> FileResponse:
+    return FileResponse(TEMPLATE_ROOT / "join" / "index.html", headers={
+        "Cache-Control": "no-store", "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+    })

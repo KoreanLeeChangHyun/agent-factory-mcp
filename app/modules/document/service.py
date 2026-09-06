@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.modules.auth.authorization import require_context
+
 from hashlib import sha256
 from pathlib import PurePath
 from uuid import UUID, uuid4
@@ -30,6 +32,10 @@ ALLOWED_MEDIA_TYPES = {
     "text/csv",
     "text/markdown",
     "text/plain",
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
 }
 
 
@@ -44,9 +50,14 @@ class DocumentService:
     async def list(
         self, context: AuthorizedContext, document_type: DocumentType | None = None
     ) -> list[Document]:
+        require_context(context, "document.read")
         return await self.repository.list(_workspace_id(context), document_type)
 
     async def get(self, context: AuthorizedContext, document_id: UUID) -> Document:
+        require_context(context, "document.read")
+        return await self._get(context, document_id)
+
+    async def _get(self, context: AuthorizedContext, document_id: UUID) -> Document:
         record = await self.repository.get(_workspace_id(context), document_id)
         if record is None:
             raise NotFoundError("document_not_found", "Document not found")
@@ -60,6 +71,7 @@ class DocumentService:
         document_type: DocumentType,
         metadata: dict[str, object],
     ) -> Document:
+        require_context(context, "document.create")
         try:
             record = await self.repository.create(
                 _workspace_id(context), title.strip(), slug, document_type, metadata
@@ -79,6 +91,12 @@ class DocumentService:
         metadata: dict[str, object],
         revision: int,
     ) -> Document:
+        require_context(context, "document.update")
+        current = await self._get(context, document_id)
+        metadata = dict(metadata)
+        metadata.pop("cloud_pair_revision", None)
+        if "cloud_pair_revision" in current.document_metadata:
+            metadata["cloud_pair_revision"] = current.document_metadata["cloud_pair_revision"]
         record = await self.repository.update(
             _workspace_id(context), document_id, title.strip(), status, metadata, revision
         )
@@ -96,7 +114,12 @@ class DocumentService:
         content: bytes,
         metadata: dict[str, object] | None = None,
     ) -> DocumentRevision:
-        await self.get(context, document_id)
+        require_context(context, "document.update")
+        document = await self._get(context, document_id)
+        if document.document_type == DocumentType.SPECIFICATION:
+            raise ApplicationError(
+                "pair_required", "Specification content requires cloud paired publication", 400
+            )
         safe_filename = PurePath(filename).name
         if not safe_filename or safe_filename in {".", ".."}:
             raise ApplicationError("invalid_filename", "A valid filename is required", 400)
@@ -138,12 +161,14 @@ class DocumentService:
     async def list_revisions(
         self, context: AuthorizedContext, document_id: UUID
     ) -> list[DocumentRevision]:
-        await self.get(context, document_id)
+        require_context(context, "document.read")
+        await self._get(context, document_id)
         return await self.repository.list_revisions(_workspace_id(context), document_id)
 
     async def download(
         self, context: AuthorizedContext, document_id: UUID, revision_number: int
     ) -> tuple[DocumentRevision, bytes]:
+        require_context(context, "document.export")
         record = await self.repository.get_revision(
             _workspace_id(context), document_id, revision_number
         )
@@ -159,12 +184,13 @@ class DocumentService:
         relation: ProvenanceRelation,
         metadata: dict[str, object],
     ) -> DocumentProvenance:
+        require_context(context, "document.update")
         if source_document_id == target_document_id:
             raise ApplicationError(
                 "invalid_provenance", "A document cannot derive from itself", 400
             )
-        source = await self.get(context, source_document_id)
-        target = await self.get(context, target_document_id)
+        source = await self._get(context, source_document_id)
+        target = await self._get(context, target_document_id)
         _validate_relation(source.document_type, target.document_type, relation)
         try:
             record = await self.repository.add_provenance(
@@ -185,10 +211,12 @@ class DocumentService:
     async def list_provenance(
         self, context: AuthorizedContext, document_id: UUID
     ) -> list[DocumentProvenance]:
-        await self.get(context, document_id)
+        require_context(context, "document.read")
+        await self._get(context, document_id)
         return await self.repository.list_provenance(_workspace_id(context), document_id)
 
     async def delete(self, context: AuthorizedContext, document_id: UUID) -> None:
+        require_context(context, "document.delete")
         if not await self.repository.soft_delete(_workspace_id(context), document_id):
             raise NotFoundError("document_not_found", "Document not found")
         await self.repository.commit()

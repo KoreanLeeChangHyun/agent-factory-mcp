@@ -3,7 +3,7 @@
     dashboard: "개요",
     users: "사용자",
     organizations: "조직",
-    workspaces: "워크스페이스",
+    workspaces: "작업공간",
     jobs: "작업",
     integrations: "연동",
     audit: "감사 로그",

@@ -40,7 +40,7 @@ def get_integration_service(
 async def list_providers(
     context: Annotated[
         AuthorizedContext,
-        Depends(require_permission("workspace.read")),
+        Depends(require_permission("integration.read")),
     ],
     service: Annotated[IntegrationService, Depends(get_integration_service)],
 ) -> list[ProviderResponse]:
@@ -56,7 +56,7 @@ async def list_providers(
     response_model=list[ConnectionResponse],
 )
 async def list_connections(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("integration.read"))],
     service: Annotated[IntegrationService, Depends(get_integration_service)],
 ) -> list[ConnectionResponse]:
     return [
@@ -73,7 +73,7 @@ async def list_connections(
 )
 async def create_connection(
     payload: ConnectionCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("integration.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("integration.create"))],
     service: Annotated[IntegrationService, Depends(get_integration_service)],
 ) -> ConnectionResponse:
     record = await service.create_connection(
@@ -89,7 +89,7 @@ async def create_connection(
 )
 async def disconnect(
     connection_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("integration.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("integration.delete"))],
     service: Annotated[IntegrationService, Depends(get_integration_service)],
 ) -> None:
     await service.disconnect(context, connection_id)
@@ -103,7 +103,7 @@ async def disconnect(
 async def update_cursor(
     connection_id: UUID,
     payload: CursorUpdate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("integration.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("integration.update"))],
     service: Annotated[IntegrationService, Depends(get_integration_service)],
 ) -> None:
     await service.update_cursor(context, connection_id, payload.cursor)
@@ -116,7 +116,7 @@ async def update_cursor(
 )
 async def begin_oauth(
     provider_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("integration.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("integration.create"))],
     service: Annotated[IntegrationService, Depends(get_integration_service)],
 ) -> OAuthBeginResponse:
     state, challenge, expires_at = await service.begin_oauth(context, provider_id)
@@ -131,7 +131,7 @@ async def begin_oauth(
 )
 async def create_webhook_endpoint(
     connection_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("integration.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("integration.update"))],
     service: Annotated[IntegrationService, Depends(get_integration_service)],
 ) -> WebhookEndpointCreated:
     public_id, signing_secret, url = await service.create_webhook_endpoint(context, connection_id)

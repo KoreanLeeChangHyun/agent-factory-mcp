@@ -44,7 +44,7 @@ def _response(record: object) -> DocumentResponse:
 
 @router.get("", response_model=list[DocumentResponse])
 async def list_documents(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.read"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
     document_type: Annotated[DocumentType | None, Query()] = None,
 ) -> list[DocumentResponse]:
@@ -56,7 +56,7 @@ async def list_documents(
 )
 async def create_document(
     payload: DocumentCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("document.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.create"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> DocumentResponse:
     return _response(
@@ -74,7 +74,7 @@ async def create_document(
 )
 async def create_provenance(
     payload: ProvenanceCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("document.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.update"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> ProvenanceResponse:
     record = await service.add_provenance(
@@ -90,7 +90,7 @@ async def create_provenance(
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.read"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> DocumentResponse:
     return _response(await service.get(context, document_id))
@@ -104,7 +104,7 @@ async def get_document(
 async def update_document(
     document_id: UUID,
     payload: DocumentUpdate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("document.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.update"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> DocumentResponse:
     return _response(
@@ -122,7 +122,7 @@ async def update_document(
 @router.delete("/{document_id}", status_code=204, dependencies=[Depends(require_csrf)])
 async def delete_document(
     document_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("document.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.delete"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> None:
     await service.delete(context, document_id)
@@ -136,7 +136,7 @@ async def delete_document(
 )
 async def upload_revision(
     document_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("document.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.update"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
     file: Annotated[UploadFile, File()],
 ) -> DocumentRevisionResponse:
@@ -154,7 +154,7 @@ async def upload_revision(
 @router.get("/{document_id}/revisions", response_model=list[DocumentRevisionResponse])
 async def list_revisions(
     document_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.read"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> list[DocumentRevisionResponse]:
     return [
@@ -167,7 +167,7 @@ async def list_revisions(
 async def download_revision(
     document_id: UUID,
     revision_number: int,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.export"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> Response:
     record, content = await service.download(context, document_id, revision_number)
@@ -181,7 +181,7 @@ async def download_revision(
 @router.get("/{document_id}/provenance", response_model=list[ProvenanceResponse])
 async def list_provenance(
     document_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.read"))],
     service: Annotated[DocumentService, Depends(get_document_service)],
 ) -> list[ProvenanceResponse]:
     return [

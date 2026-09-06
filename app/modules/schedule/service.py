@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.modules.auth.authorization import require_context
+
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 from uuid import UUID, uuid4
@@ -38,6 +40,7 @@ class ScheduleService:
         self.settings = settings
 
     async def list_schedules(self, context: AuthorizedContext) -> list[Schedule]:
+        require_context(context, "schedule.read")
         return await self.repository.list_schedules(_workspace_id(context))
 
     async def create_schedule(
@@ -51,6 +54,11 @@ class ScheduleService:
         interval_seconds: int | None,
         timezone: str,
     ) -> Schedule:
+        require_context(context, "schedule.create")
+        if task_type == "agent.run":
+            require_context(context, "agent.execute")
+        if task_type == "integration.sync":
+            require_context(context, "integration.use", "document.import")
         validate_task_queue(task_type, queue)
         now = datetime.now(UTC)
         next_run = calculate_next_run(now, cron_expression, interval_seconds, timezone)
@@ -66,6 +74,7 @@ class ScheduleService:
             timezone=timezone,
             next_run_at=next_run,
             created_by_user_id=context.principal.user_id,
+            execution_user_id=context.principal.user_id,
         )
         try:
             await self.repository.create_schedule(record)
@@ -74,6 +83,70 @@ class ScheduleService:
         except IntegrityError as exc:
             await self.repository.rollback()
             raise ConflictError("schedule_exists", "Schedule name already exists") from exc
+
+    async def change_schedule(
+        self, context, schedule_id, *, payload=None, enabled=None, revision=None, remove=False
+    ):
+        from sqlalchemy import select
+
+        permission = (
+            "schedule.delete"
+            if remove
+            else "schedule.toggle"
+            if enabled is not None
+            else "schedule.update"
+        )
+        require_context(context, permission)
+        record = await self.repository.session.scalar(
+            select(Schedule)
+            .where(
+                Schedule.id == schedule_id,
+                Schedule.workspace_id == _workspace_id(context),
+                Schedule.deleted_at.is_(None),
+            )
+            .with_for_update()
+        )
+        if record is None:
+            raise NotFoundError("schedule_not_found", "일정을 찾을 수 없습니다.")
+        if revision is not None and record.revision != revision:
+            raise ConflictError("schedule_revision_conflict", "일정이 변경되었습니다.")
+        task_type = payload.task_type if payload else record.task_type
+        if not remove and enabled is not False:
+            if task_type == "agent.run":
+                require_context(context, "agent.execute")
+            if task_type == "integration.sync":
+                require_context(context, "integration.use", "document.import")
+        if payload:
+            validate_task_queue(payload.task_type, payload.queue)
+            next_run = calculate_next_run(
+                datetime.now(UTC),
+                payload.cron_expression,
+                payload.interval_seconds,
+                payload.timezone,
+            )
+            for key, value in payload.model_dump(exclude={"revision"}).items():
+                setattr(record, key, value)
+            record.next_run_at = next_run
+        if enabled is not None:
+            record.is_enabled = enabled
+            if enabled:
+                record.next_run_at = calculate_next_run(
+                    datetime.now(UTC),
+                    record.cron_expression,
+                    record.interval_seconds,
+                    record.timezone,
+                )
+        if payload or enabled is True:
+            record.execution_user_id = context.principal.user_id
+        if remove:
+            record.is_enabled, record.deleted_at = False, datetime.now(UTC)
+        record.revision += 1
+        try:
+            await self.repository.commit()
+        except IntegrityError as exc:
+            await self.repository.rollback()
+            raise ConflictError("schedule_exists", "일정 이름이 중복됩니다.") from exc
+        return record
 
     async def enqueue(
         self,
@@ -84,6 +157,7 @@ class ScheduleService:
         idempotency_key: str,
         priority: int = 5,
     ) -> Job:
+        require_context(context, "agent.execute" if task_type == "agent.run" else "job.create")
         validate_task_queue(task_type, queue)
         workspace_id = _workspace_id(context)
         existing = await self.repository.find_job(workspace_id, idempotency_key)
@@ -114,16 +188,26 @@ class ScheduleService:
         return job
 
     async def list_jobs(self, context: AuthorizedContext) -> list[Job]:
+        require_context(context, "job.read")
         return await self.repository.list_jobs(_workspace_id(context))
 
     async def get_job(self, context: AuthorizedContext, job_id: UUID) -> Job:
+        require_context(context, "job.read")
+        return await self._job(context, job_id)
+
+    async def _job(self, context: AuthorizedContext, job_id: UUID) -> Job:
         job = await self.repository.get_job(_workspace_id(context), job_id)
         if job is None:
             raise NotFoundError("job_not_found", "Job not found")
         return job
 
-    async def cancel(self, context: AuthorizedContext, job_id: UUID) -> Job:
-        job = await self.get_job(context, job_id)
+    async def cancel(
+        self, context: AuthorizedContext, job_id: UUID, *, ignore_terminal: bool = False
+    ) -> Job:
+        require_context(context, "job.cancel")
+        job = await self.repository.get_job(_workspace_id(context), job_id, lock=True)
+        if job is None:
+            raise NotFoundError("job_not_found", "Job not found")
         if job.status in {JobStatus.QUEUED, JobStatus.RETRY}:
             job.status = JobStatus.CANCELLED
             job.finished_at = datetime.now(UTC)
@@ -131,13 +215,14 @@ class ScheduleService:
         elif job.status == JobStatus.RUNNING:
             job.status = JobStatus.CANCEL_REQUESTED
             await self.repository.append_event(job, "job.cancel_requested", {})
-        else:
+        elif not ignore_terminal:
             raise ConflictError("job_not_cancellable", "Job is not cancellable")
         await self.repository.commit()
         return job
 
     async def retry(self, context: AuthorizedContext, job_id: UUID) -> Job:
-        original = await self.get_job(context, job_id)
+        require_context(context, "job.retry")
+        original = await self._job(context, job_id)
         if original.status not in {JobStatus.FAILED, JobStatus.DEAD, JobStatus.CANCELLED}:
             raise ConflictError("job_not_retryable", "Job is not retryable")
         return await self.enqueue(

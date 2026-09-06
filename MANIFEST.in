@@ -1,0 +1,8 @@
+recursive-include static *
+recursive-include template *
+recursive-include config *
+recursive-include docs *.md
+include app/modules/document/preview_runtime.js
+recursive-include app/resources *.md
+recursive-include app/resources/document_template *
+include app/resources/document_template_inventory.json

@@ -25,6 +25,17 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 
 
+class AccessQueryFilter(logging.Filter):
+    """Remove query strings before Uvicorn interpolates its access-log arguments."""
+
+    def filter(self, record):
+        if isinstance(record.args, tuple) and len(record.args) == 5:
+            args = list(record.args)
+            args[2] = str(args[2]).split('?', 1)[0]
+            record.args = tuple(args)
+        return True
+
+
 def configure_logging(level: str) -> None:
     """Configure the root logger once for API, worker, and scheduler processes."""
 
@@ -34,3 +45,9 @@ def configure_logging(level: str) -> None:
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(level)
+    access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(item, AccessQueryFilter) for item in access.filters):
+        access.addFilter(AccessQueryFilter())
+    # Provider request URLs can contain short-lived signed download credentials.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)

@@ -1,0 +1,34 @@
+[data-organization-navigation] { display: grid; gap: 3px; padding: 10px; }
+[data-organization-navigation] button { text-align: left; border: 0; background: transparent; padding: 8px; border-radius: 3px; color: var(--explorer-foreground); }
+.organization-view { font-size: 12px; }
+.organization-view h1 { font-size: 16px; margin: 0 0 18px; }
+.organization-view h2 { font-size: 13px; margin-top: 24px; }
+.organization-view h3 { font-size: 13px; margin: 0 0 8px; }
+
+
+
+
+.organization-form { display: grid; gap: 10px; max-width: 760px; margin: 18px 0; padding: 16px; border: 1px solid #3a3a3a; border-radius: 3px; }
+.organization-form label { display: grid; gap: 6px; }
+.organization-form > button { justify-self: start; }
+.organization-form [role="alert"], .organization-error { color: #ffa9a9; white-space: pre-wrap; }
+.organization-form [role="alert"]:empty, .organization-error:empty { display: none; }
+.organization-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.organization-table-scroll { overflow-x: auto; }
+.organization-view table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+.organization-view th, .organization-view td { padding: 10px; border-bottom: 1px solid #363636; text-align: left; overflow-wrap: anywhere; }
+.organization-view th { font-weight: 500; color: var(--explorer-muted); }
+.organization-permissions { display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 10px; }
+.organization-permissions fieldset { border: 1px solid #444; border-radius: 3px; min-width: 0; }
+.organization-permissions label { display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: center; margin: 8px 0; }
+.organization-detail { border-top: 1px solid #444; margin-top: 20px; }
+.organization-detail:empty { display: none; }
+
+.organization-identity { display: grid; gap: 6px; padding: 10px 16px; font-size: 12px; }
+.organization-identity[hidden] { display: none; }
+.organization-identity code { overflow-wrap: anywhere; user-select: all; }
+.organization-identity button { justify-self: start; }
+.organization-permission-choice { margin-bottom: 12px; }
+.organization-permission-choice code { font-size: 11px; color: var(--explorer-muted); overflow-wrap: anywhere; }
+.organization-permission-choice p { margin: 5px 0; color: #bbb; line-height: 1.5; }
+[data-header-organization] { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -131,6 +131,8 @@ async def create_api_token(
         name=payload.name,
         scopes=payload.scopes,
         expires_in_days=payload.expires_in_days,
+        organization_id=payload.organization_id,
+        workspace_id=payload.workspace_id,
     )
     return ApiTokenCreatedResponse(
         id=record.id,

@@ -42,6 +42,9 @@ class Schedule(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, RevisionMix
     next_run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by_user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    execution_user_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="RESTRICT")
+    )
 
 
 class Job(UUIDPrimaryKeyMixin, TimestampMixin, Base):

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.modules.auth.authorization import require_context
+
 import base64
 import hmac
 import json
@@ -38,6 +40,7 @@ class IntegrationService:
         return await self.repository.list_providers()
 
     async def list_connections(self, context: AuthorizedContext) -> list[IntegrationConnection]:
+        require_context(context, "integration.read")
         return await self.repository.list_connections(_workspace_id(context))
 
     async def create_connection(
@@ -47,6 +50,7 @@ class IntegrationService:
         name: str,
         credentials: dict[str, object] | None,
     ) -> IntegrationConnection:
+        require_context(context, "integration.create")
         if await self.repository.get_provider(provider_id) is None:
             raise NotFoundError("integration_provider_not_found", "Integration provider not found")
         encrypted = self.cipher.encrypt(credentials) if credentials else None
@@ -67,22 +71,27 @@ class IntegrationService:
             ) from exc
 
     async def disconnect(self, context: AuthorizedContext, connection_id: UUID) -> None:
-        if not await self.repository.disconnect(_workspace_id(context), connection_id):
-            raise NotFoundError(
-                "integration_connection_not_found", "Integration connection not found"
-            )
-        await self.repository.commit()
+        require_context(context, "integration.delete")
+        from app.modules.integration.cloud_repository import CloudRepository
+        async with CloudRepository(self.repository.session, context).guard(connection_id):
+            if not await self.repository.disconnect(_workspace_id(context), connection_id):
+                raise NotFoundError("integration_connection_not_found", "Integration connection not found")
+            await self.repository.commit()
 
     async def update_cursor(
         self, context: AuthorizedContext, connection_id: UUID, cursor: dict[str, object]
     ) -> None:
-        if not await self.repository.update_cursor(_workspace_id(context), connection_id, cursor):
-            raise ConflictError("integration_not_active", "Integration connection is not active")
-        await self.repository.commit()
+        require_context(context, "integration.update")
+        from app.modules.integration.cloud_repository import CloudRepository
+        async with CloudRepository(self.repository.session, context).guard(connection_id):
+            if not await self.repository.update_cursor(_workspace_id(context), connection_id, cursor):
+                raise ConflictError("integration_not_active", "Integration connection is not active")
+            await self.repository.commit()
 
     async def begin_oauth(
         self, context: AuthorizedContext, provider_id: UUID
     ) -> tuple[str, str, datetime]:
+        require_context(context, "integration.create")
         provider = await self.repository.get_provider(provider_id)
         if provider is None or provider.auth_type.value != "oauth2":
             raise NotFoundError("oauth_provider_not_found", "OAuth provider not found")
@@ -116,6 +125,7 @@ class IntegrationService:
     async def create_webhook_endpoint(
         self, context: AuthorizedContext, connection_id: UUID
     ) -> tuple[str, str, str]:
+        require_context(context, "integration.update")
         connection = await self.repository.get_connection(_workspace_id(context), connection_id)
         if connection is None:
             raise NotFoundError(

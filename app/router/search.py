@@ -43,7 +43,7 @@ def get_search_service(
 
 @router.get("/profiles", response_model=list[EmbeddingProfileResponse])
 async def list_profiles(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.read"))],
     service: Annotated[DocumentSearchService, Depends(get_search_service)],
 ) -> list[EmbeddingProfileResponse]:
     return [
@@ -60,7 +60,7 @@ async def list_profiles(
 )
 async def create_profile(
     payload: EmbeddingProfileCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("document.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.update"))],
     service: Annotated[DocumentSearchService, Depends(get_search_service)],
 ) -> EmbeddingProfileResponse:
     record = await service.create_profile(
@@ -78,7 +78,7 @@ async def index_document(
     profile_id: UUID,
     document_id: UUID,
     payload: IndexDocumentRequest,
-    context: Annotated[AuthorizedContext, Depends(require_permission("document.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.update"))],
     service: Annotated[DocumentSearchService, Depends(get_search_service)],
 ) -> IndexDocumentResponse:
     count = await service.index_document(
@@ -90,7 +90,7 @@ async def index_document(
 @router.post("", response_model=list[SearchHit])
 async def hybrid_search(
     payload: SearchRequest,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("document.read"))],
     service: Annotated[DocumentSearchService, Depends(get_search_service)],
 ) -> list[SearchHit]:
     return await service.search(context, payload.embedding_profile_id, payload.query, payload.limit)

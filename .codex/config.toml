@@ -1,0 +1,3 @@
+[mcp_servers.agent-factory-d3a0aea5-984d-4a47-9d53-0d99536c2b11]
+url = "https://lchserver.com/factory/mcp/workspaces/d3a0aea5-984d-4a47-9d53-0d99536c2b11/"
+bearer_token_env_var = "AF_MCP_D3A0AEA5_984D_4A47_9D53_0D99536C2B11_CODEX_CLI"

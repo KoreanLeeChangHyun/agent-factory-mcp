@@ -36,7 +36,7 @@ def require_permission(
         workspace_header: Annotated[str | None, Header(alias="X-Workspace-ID")] = None,
     ) -> AuthorizedContext:
         organization_value = request.path_params.get("organization_id") or organization_header
-        workspace_value = request.path_params.get("workspace_id") or workspace_header
+        workspace_value = (request.path_params.get("workspace_id") or workspace_header) if workspace_required else None
         if organization_value is None:
             raise ApplicationError(
                 "organization_scope_required", "Organization scope is required", 400

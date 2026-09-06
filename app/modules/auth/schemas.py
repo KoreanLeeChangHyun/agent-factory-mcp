@@ -43,8 +43,10 @@ class AuthSessionResponse(BaseModel):
 
 
 class ApiTokenCreateRequest(BaseModel):
+    organization_id: UUID | None = None
+    workspace_id: UUID | None = None
     name: str = Field(min_length=1, max_length=120)
-    scopes: list[str] = Field(min_length=1, max_length=20)
+    scopes: list[str] = Field(min_length=1, max_length=200)
     expires_in_days: int | None = Field(default=90, ge=1, le=365)
 
 

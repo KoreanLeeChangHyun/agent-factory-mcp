@@ -1,0 +1,19 @@
+{
+  "servers": {
+    "agent-factory-d3a0aea5-984d-4a47-9d53-0d99536c2b11": {
+      "type": "http",
+      "url": "https://lchserver.com/factory/mcp/workspaces/d3a0aea5-984d-4a47-9d53-0d99536c2b11/",
+      "headers": {
+        "Authorization": "Bearer ${input:agentFactoryToken-d3a0aea5-984d-4a47-9d53-0d99536c2b11-068ccbc8-18e0-4c9b-9de7-0a6855df33b7}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "id": "agentFactoryToken-d3a0aea5-984d-4a47-9d53-0d99536c2b11-068ccbc8-18e0-4c9b-9de7-0a6855df33b7",
+      "type": "promptString",
+      "description": "agent-factory MCP 연결용 토큰",
+      "password": true
+    }
+  ]
+}

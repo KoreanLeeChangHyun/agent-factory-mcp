@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.modules.auth.authorization import require_context
+
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID
@@ -10,7 +12,11 @@ from sqlalchemy.exc import IntegrityError
 
 from app.common.errors import ApplicationError, ConflictError, NotFoundError
 from app.core.config import Settings
-from app.modules.auth.authorization import AuthorizedContext
+from app.modules.auth.authorization import (
+    AuthorizationRepository,
+    AuthorizationScope,
+    AuthorizedContext,
+)
 from app.modules.identity.models import User
 from app.modules.organization.system_roles import WORKSPACE_OWNER_ROLE_ID
 from app.modules.workspace.models import Workspace, WorkspaceRepository
@@ -23,14 +29,30 @@ class WorkspaceService:
         self.settings = settings
 
     async def list(self, context: AuthorizedContext) -> list[Workspace]:
-        return await self.repository.list(context.scope.organization_id)
+        require_context(context, "organization.read")
+        rows = await self.repository.list(context.scope.organization_id)
+        return await self._visible(context, rows)
 
     async def recent(self, context: AuthorizedContext) -> list[Workspace]:
-        return await self.repository.recent(
+        require_context(context, "organization.read")
+        rows = await self.repository.recent(
             context.scope.organization_id, context.principal.user_id
         )
+        return await self._visible(context, rows)
+
+    async def _visible(self, context, rows):
+        authorizer = AuthorizationRepository(self.repository.session)
+        result = []
+        for row in rows:
+            keys = await authorizer.permission_keys(
+                context.principal, AuthorizationScope(context.scope.organization_id, row.id)
+            )
+            if "workspace.read" in keys:
+                result.append(row)
+        return result
 
     async def get(self, context: AuthorizedContext) -> Workspace:
+        require_context(context, "workspace.read")
         workspace_id = _workspace_id(context)
         workspace = await self.repository.get(context.scope.organization_id, workspace_id)
         if workspace is None:
@@ -42,6 +64,7 @@ class WorkspaceService:
         await self.repository.commit()
 
     async def create(self, context: AuthorizedContext, name: str, slug: str) -> Workspace:
+        require_context(context, "workspace.create")
         try:
             workspace = await self.repository.create(
                 context.scope.organization_id, name.strip(), slug
@@ -57,6 +80,7 @@ class WorkspaceService:
             raise ConflictError("workspace_slug_conflict", "Workspace slug already exists") from exc
 
     async def update(self, context: AuthorizedContext, name: str, revision: int) -> Workspace:
+        require_context(context, "workspace.update")
         workspace = await self.repository.update(
             context.scope.organization_id,
             _workspace_id(context),
@@ -69,6 +93,7 @@ class WorkspaceService:
         return workspace
 
     async def deactivate(self, context: AuthorizedContext) -> None:
+        require_context(context, "workspace.delete")
         changed = await self.repository.deactivate(
             context.scope.organization_id, _workspace_id(context)
         )
@@ -83,6 +108,7 @@ class WorkspaceService:
         remote_url: str | None,
         metadata: dict[str, object],
     ) -> WorkspaceRepository:
+        require_context(context, "repository.create")
         canonical = canonical_repository_location(location, self.settings.environment)
         try:
             record = await self.repository.add_repository(
@@ -96,45 +122,58 @@ class WorkspaceService:
                 "repository_already_registered", "Repository is already registered"
             ) from exc
 
+    async def delete_repository(self, context: AuthorizedContext, repository_id: UUID) -> None:
+        from datetime import UTC, datetime
+        from sqlalchemy import select
+
+        require_context(context, "repository.delete")
+        record = await self.repository.session.scalar(
+            select(WorkspaceRepository)
+            .where(
+                WorkspaceRepository.id == repository_id,
+                WorkspaceRepository.workspace_id == _workspace_id(context),
+                WorkspaceRepository.deleted_at.is_(None),
+            )
+            .with_for_update()
+        )
+        if record is None:
+            raise NotFoundError("repository_not_found", "저장소를 찾을 수 없습니다.")
+        record.deleted_at = datetime.now(UTC)
+        await self.repository.commit()
+
     async def list_repositories(self, context: AuthorizedContext) -> list[WorkspaceRepository]:
+        require_context(context, "repository.read")
         return await self.repository.list_repositories(_workspace_id(context))
 
     async def usage(self, context: AuthorizedContext) -> tuple[int, int]:
         return await self.repository.usage(_workspace_id(context))
 
     async def list_members(self, context: AuthorizedContext) -> list[tuple[User, str]]:
+        require_context(context, "workspace.manage_members")
         return await self.repository.list_members(_workspace_id(context))
 
     async def add_member(self, context: AuthorizedContext, email: str, role_name: str) -> None:
+        from app.modules.organization.service import OrganizationService
+
         user = await self.repository.resolve_organization_user(
             context.scope.organization_id, email.strip().casefold()
         )
         role = await self.repository.resolve_workspace_role(role_name)
-        if user is None:
-            raise NotFoundError("organization_member_not_found", "Organization member not found")
-        if role is None:
-            raise ApplicationError("invalid_workspace_role", "Invalid Workspace role", 400)
-        try:
-            await self.repository.add_member(_workspace_id(context), user.id, role.id)
-            await self.repository.commit()
-        except IntegrityError as exc:
-            await self.repository.rollback()
-            raise ConflictError(
-                "workspace_member_exists", "Workspace member already exists"
-            ) from exc
+        if user is None or role is None:
+            raise NotFoundError(
+                "organization_member_not_found", "구성원 또는 역할을 찾을 수 없습니다."
+            )
+        await OrganizationService(
+            self.repository.session, context.principal, context.scope.organization_id
+        ).set_workspace_member(_workspace_id(context), user.id, role.id)
+        await self.repository.commit()
 
     async def remove_member(self, context: AuthorizedContext, user_id: UUID) -> None:
-        members = await self.repository.list_members(_workspace_id(context))
-        target = next((item for item in members if item[0].id == user_id), None)
-        if target and target[1] == "workspace_owner":
-            owners = sum(role == "workspace_owner" for _, role in members)
-            if owners == 1:
-                raise ConflictError(
-                    "last_workspace_owner", "Last Workspace owner cannot be removed"
-                )
-        removed = await self.repository.remove_member(_workspace_id(context), user_id)
-        if not removed:
-            raise NotFoundError("workspace_member_not_found", "Workspace member not found")
+        from app.modules.organization.service import OrganizationService
+
+        await OrganizationService(
+            self.repository.session, context.principal, context.scope.organization_id
+        ).set_workspace_member(_workspace_id(context), user_id, None)
         await self.repository.commit()
 
 

@@ -10,6 +10,7 @@ from app.modules.auth.crypto import hash_password, new_opaque_token, token_diges
 from app.modules.auth.models import ApiToken, AuthSession
 from app.modules.auth.repository import AuthRepository
 from app.modules.identity.models import User, UserStatus
+from app.modules.organization.permissions import WORKSPACE_PERMISSIONS, TOKEN_ALIASES, token_permissions
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,20 +28,7 @@ class LoginResult:
 
 
 class AuthService:
-    API_TOKEN_SCOPES = frozenset(
-        {
-            "workspace:read",
-            "document:read",
-            "document:write",
-            "agent:read",
-            "agent:execute",
-            "schedule:read",
-            "schedule:write",
-            "integration:read",
-            "logs:read",
-            "tests:read",
-        }
-    )
+    API_TOKEN_SCOPES = frozenset(key.replace(".", ":") for key in WORKSPACE_PERMISSIONS) | TOKEN_ALIASES.keys()
 
     def __init__(self, repository: AuthRepository, settings: Settings) -> None:
         self.repository = repository
@@ -137,11 +125,24 @@ class AuthService:
         name: str,
         scopes: list[str],
         expires_in_days: int | None,
+        organization_id: UUID | None = None,
+        workspace_id: UUID | None = None,
     ) -> tuple[ApiToken, str]:
         normalized_scopes = sorted(set(scopes))
         unsupported = set(normalized_scopes) - self.API_TOKEN_SCOPES
         if unsupported:
             raise AuthenticationError("unsupported_token_scope")
+        if organization_id is None or workspace_id is None:
+            raise AuthenticationError("token_workspace_required", "토큰을 적용할 조직과 작업공간을 선택하세요.")
+        from app.modules.auth.authorization import AuthorizationRepository, AuthorizationScope, AuthorizationService
+        user = await self.repository.find_user_by_id(user_id)
+        if user is None or user.status != UserStatus.ACTIVE:
+            raise AuthenticationError("account_inactive")
+        authorizer = AuthorizationService(AuthorizationRepository(self.repository.session))
+        context = await authorizer.authorize(_principal(user), AuthorizationScope(organization_id, workspace_id), "token.create")
+        if not token_permissions(normalized_scopes) <= context.permissions:
+            from app.common.errors import PermissionDeniedError
+            raise PermissionDeniedError("token_scope_exceeds_permissions", "보유한 권한 범위에서만 토큰을 발급할 수 있습니다.")
         plaintext = f"afm_{new_opaque_token()}"
         expires_at = (
             datetime.now(UTC) + timedelta(days=expires_in_days)
@@ -155,6 +156,9 @@ class AuthService:
             scopes=normalized_scopes,
             expires_at=expires_at,
         )
+        from app.modules.mcp_connection.models import MCPConnection
+        self.repository.session.add(MCPConnection(user_id=user_id, organization_id=organization_id,
+            workspace_id=workspace_id, token_id=record.id, name=name.strip()))
         await self.repository.commit()
         return record, plaintext
 

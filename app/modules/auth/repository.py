@@ -18,9 +18,7 @@ from app.modules.identity.models import User
 from app.modules.organization.models import Organization, OrganizationMembership
 from app.modules.organization.system_roles import (
     ORGANIZATION_OWNER_ROLE_ID,
-    WORKSPACE_OWNER_ROLE_ID,
 )
-from app.modules.workspace.models import Workspace, WorkspaceMembership
 
 
 @dataclass(slots=True)
@@ -144,28 +142,12 @@ class AuthRepository:
             self.session.add_all([user, organization])
             await self.session.flush()
 
-            workspace = Workspace(
-                id=uuid4(),
-                organization_id=organization.id,
-                name="Personal Workspace",
-                slug="personal",
-            )
-            self.session.add(workspace)
-            await self.session.flush()
-
-            self.session.add_all(
-                [
-                    OrganizationMembership(
-                        organization_id=organization.id,
-                        user_id=user.id,
-                        role_id=ORGANIZATION_OWNER_ROLE_ID,
-                    ),
-                    WorkspaceMembership(
-                        workspace_id=workspace.id,
-                        user_id=user.id,
-                        role_id=WORKSPACE_OWNER_ROLE_ID,
-                    ),
-                ]
+            self.session.add(
+                OrganizationMembership(
+                    organization_id=organization.id,
+                    user_id=user.id,
+                    role_id=ORGANIZATION_OWNER_ROLE_ID,
+                )
             )
         self.session.add(
             ExternalIdentity(

@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String
+from sqlalchemy import JSON, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, UUIDPrimaryKeyMixin
@@ -11,6 +11,7 @@ from app.db.base import Base, UUIDPrimaryKeyMixin
 
 class AuditEvent(UUIDPrimaryKeyMixin, Base):
     __tablename__ = "audit_events"
+    __table_args__ = (UniqueConstraint("workspace_id", "id", name="uq_audit_workspace_identity"),)
 
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     actor_user_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))

@@ -8,7 +8,9 @@ from uuid import UUID
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.organization.models import Organization
 from app.modules.schedule.models import Job, JobEvent, JobStatus, Schedule
+from app.modules.workspace.models import Workspace, WorkspaceStatus
 
 
 class ScheduleRepository:
@@ -32,13 +34,19 @@ class ScheduleRepository:
         return list(
             await self.session.scalars(
                 select(Schedule)
+                .join(Workspace, Workspace.id == Schedule.workspace_id)
+                .join(Organization, Organization.id == Schedule.organization_id)
                 .where(
+                    Workspace.organization_id == Organization.id,
+                    Organization.deleted_at.is_(None),
+                    Workspace.deleted_at.is_(None),
+                    Workspace.status == WorkspaceStatus.ACTIVE,
                     Schedule.is_enabled.is_(True),
                     Schedule.deleted_at.is_(None),
                     Schedule.next_run_at <= now,
                 )
                 .order_by(Schedule.next_run_at)
-                .with_for_update(skip_locked=True)
+                .with_for_update(of=Schedule, skip_locked=True)
                 .limit(limit)
             )
         )
@@ -68,7 +76,9 @@ class ScheduleRepository:
     async def get_job(self, workspace_id: UUID, job_id: UUID, *, lock: bool = False) -> Job | None:
         statement = select(Job).where(Job.id == job_id, Job.workspace_id == workspace_id)
         if lock:
-            statement = statement.with_for_update()
+            # A prior unlocked read may already have cached this Job. Transition
+            # decisions must use the persisted state observed under the row lock.
+            statement = statement.with_for_update().execution_options(populate_existing=True)
         return await self.session.scalar(statement)
 
     async def claim_job(self, workspace_id: UUID, job_id: UUID) -> Job | None:

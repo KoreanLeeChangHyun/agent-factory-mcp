@@ -8,24 +8,20 @@
     <link rel="icon" type="image/svg+xml" href="../static/images/agent-factory.svg" />
     <link rel="stylesheet" href="../static/vendor/tabulator/6.5.2/tabulator.min.css" />
     <link rel="stylesheet" href="../static/css/workspace.css" />
+    <link rel="stylesheet" href="../static/css/organizations.css" />
+    <link rel="stylesheet" href="../static/css/document-editor.css" />
+      <link rel="stylesheet" href="../static/css/planning.css" />
+      <link rel="stylesheet" href="../static/css/agent-reporting.css">
+    <link rel="stylesheet" href="../static/css/ui.css" />
   </head>
   <body>
-    <div class="workspace-shell" data-workspace-shell>
-      <header class="workspace-title-bar">
+    <div class="workspace-shell" data-workspace-shell data-mode="picker">
+      <header class="workspace-title-bar" aria-label="작업공간 도구 모음" data-region="title-bar">
         <div class="workspace-title-bar__brand">
           <img src="../static/images/agent-factory.svg" alt="" width="18" height="18" />
           <span>Agent Factory</span>
-        </div>
-        <div class="workspace-context" data-workspace-context hidden>
-          <label class="organization-context">
-            <span class="sr-only">조직</span>
-            <select aria-label="조직" data-organization-select></select>
-          </label>
-          <span class="workspace-context__separator" aria-hidden="true">/</span>
-          <label class="workspace-context__workspace">
-            <span class="sr-only">워크스페이스</span>
-            <select aria-label="워크스페이스" data-workspace-select></select>
-          </label>
+          <span class="workspace-title-bar__workspace" data-header-organization aria-label="현재 조직" hidden></span>
+          <span class="workspace-title-bar__workspace" data-header-workspace aria-label="현재 작업공간" aria-live="polite" hidden></span>
         </div>
         <div class="workspace-title-bar__actions">
           <div class="profile-control" data-profile-control hidden>
@@ -42,72 +38,102 @@
         </div>
       </header>
 
+      <aside class="organization-sidebar" aria-label="조직">
+        <h2>조직</h2>
+        <label class="workspace-owner-select"><span>개인 또는 조직</span><select aria-label="개인 또는 조직" data-organization-select></select></label>
+        <div class="organization-identity" data-organization-identity hidden><span>조직 코드 (ID)</span><code data-organization-code></code><button type="button" data-copy-organization-code>코드 복사</button><span role="status" data-organization-copy-status></span></div>
+        <nav aria-label="조직 관리" data-organization-navigation>
+          <button type="button" data-org-view="members">구성원</button>
+          <button type="button" data-org-view="teams">팀</button>
+          <button type="button" data-org-view="roles">역할 및 권한</button>
+          <button type="button" data-org-view="settings">설정</button>
+        </nav>
+      </aside>
+      <section class="organization-view" aria-label="조직 화면" data-organization-content><h1>조직</h1><p>개인 또는 조직을 선택하세요.</p></section>
+      <aside class="workspace-picker-sidebar" aria-label="작업공간 목록">
+        <header><span>작업공간</span><div class="workspace-list-actions"><button type="button" class="workspace-new-group" data-create-workspace-group>새 그룹</button><button class="title-action" type="button" aria-label="작업공간 만들기" title="작업공간 만들기" data-create-workspace disabled><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></div></header>
+        <form data-workspace-group-form hidden><input aria-label="새 그룹 이름" maxlength="60" placeholder="그룹 이름" required /><p role="alert"></p></form>
+        <p class="workspace-picker-state" role="status" data-workspace-list-state>작업공간을 불러오는 중입니다.</p>
+        <button type="button" class="text-action" data-retry-workspaces hidden>다시 시도</button>
+        <nav aria-label="내 작업공간" data-workspace-list></nav>
+      </aside>
+      <section class="workspace-picker" aria-label="작업공간 목록 보기">
+        <div class="workspace-picker__content">
+          <img class="workspace-picker-logo" src="../static/images/agent-factory.svg" alt="" width="160" height="160" />
+          <h1>Agent Factory</h1>
+          <p>작업공간을 열어 작업을 시작하세요.</p>
+          <div class="workspace-picker-links"><button type="button" data-create-workspace disabled>작업공간 만들기</button><button type="button" data-open-workspaces>작업공간 열기</button></div>
+          <h2>최근 작업공간</h2>
+          <p class="workspace-picker-state" data-recent-state>최근 사용한 작업공간이 없습니다.</p>
+          <nav aria-label="최근 작업공간" data-recent-workspaces></nav>
+        </div>
+      </section>
+
       <nav class="activity-bar" aria-label="작업 표시줄" data-region="activity-bar">
+        <button class="activity-button" type="button" aria-label="조직" title="조직" aria-pressed="false" data-open-organizations><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 21V3h14v18M3 21h18M9 7h1M14 7h1M9 11h1M14 11h1M10 21v-5h4v5"/></svg><span class="activity-button__label" aria-hidden="true">조직</span></button>
+        <button class="activity-button is-active" type="button" aria-label="작업공간 목록" title="작업공간 목록" aria-pressed="true" data-workspace-picker-toggle data-open-workspaces><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7V5h7l2 2h9v13H3ZM3 10h18"/></svg><span class="activity-button__label" aria-hidden="true">작업공간</span></button>
         <button class="activity-button" type="button" aria-label="일정" aria-pressed="false" data-activity="schedule">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.75" y="5.25" width="16.5" height="15" rx="2"/><path d="M7.5 3.75v3M16.5 3.75v3M3.75 9h16.5"/><circle cx="7.5" cy="12.5" r="0.55" fill="currentColor" stroke="none"/><circle cx="12" cy="12.5" r="0.55" fill="currentColor" stroke="none"/><circle cx="16.5" cy="12.5" r="0.55" fill="currentColor" stroke="none"/><circle cx="7.5" cy="16.5" r="0.55" fill="currentColor" stroke="none"/><circle cx="12" cy="16.5" r="0.55" fill="currentColor" stroke="none"/></svg>
-        </button>
+        <span class="activity-button__label" aria-hidden="true">일정</span></button>
         <button class="activity-button" type="button" aria-label="에이전트" aria-pressed="false" data-activity="agents">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="4.25" r="0.75"/><path d="M12 5v2M5.75 12h-2M18.25 12h2M10.25 17v2.75M13.75 17v2.75M9 19.75h6"/><rect x="5.75" y="7" width="12.5" height="10" rx="2.5"/><circle cx="9.5" cy="11.5" r="0.65" fill="currentColor" stroke="none"/><circle cx="14.5" cy="11.5" r="0.65" fill="currentColor" stroke="none"/><path d="M9.25 14h5.5"/></svg>
-        </button>
+        <span class="activity-button__label" aria-hidden="true">에이전트</span></button>
         <button class="activity-button is-active" type="button" aria-label="문서" aria-pressed="true" data-activity="documents">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.75 3.75h8l3.5 3.5v10.5a2 2 0 0 1-2 2h-9.5a2 2 0 0 1-2-2v-12a2 2 0 0 1 2-2Z"/><path d="M14.75 3.75v3.5h3.5M8.5 11h6.5M8.5 14.25h6.5M8.5 17.5h4.25M4.75 6.25H4.5a1.75 1.75 0 0 0-1.75 1.75v10.25A3 3 0 0 0 5.75 21h8.5"/></svg>
-        </button>
+        <span class="activity-button__label" aria-hidden="true">문서</span></button>
         <!-- Tabler History icon; see ../static/vendor/THIRD_PARTY_NOTICES.txt for its source and complete MIT notice. -->
         <button class="activity-button" type="button" aria-label="로그" aria-pressed="false" data-activity="logs">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8l0 4l2 2"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>
-        </button>
+        <span class="activity-button__label" aria-hidden="true">로그</span></button>
         <button class="activity-button" type="button" aria-label="테스트" aria-pressed="false" data-activity="tests">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.75 3.75h6.5M10.25 3.75v5.1l-5.4 8.95a1.65 1.65 0 0 0 1.4 2.45h11.5a1.65 1.65 0 0 0 1.4-2.45l-5.4-8.95v-5.1M7.25 14h9.5"/><path d="m9 16.5 1.75 1.75L15 14.5"/></svg>
-        </button>
+        <span class="activity-button__label" aria-hidden="true">테스트</span></button>
         <button class="activity-button" type="button" aria-label="연동" aria-pressed="false" data-activity="integrations">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 3.75v4M15.5 3.75v4M6.25 7.75h11.5v2.5A5.75 5.75 0 0 1 12 16v4.25M8.5 20.25h7"/></svg>
-        </button>
+        <span class="activity-button__label" aria-hidden="true">연동</span></button>
         <button class="activity-button" type="button" aria-label="DB" aria-pressed="false" data-activity="database">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><ellipse cx="12" cy="5.5" rx="7.5" ry="3"/><path d="M4.5 5.5v6c0 1.65 3.35 3 7.5 3s7.5-1.35 7.5-3v-6M4.5 11.5v6c0 1.65 3.35 3 7.5 3s7.5-1.35 7.5-3v-6"/></svg>
-        </button>
+        <span class="activity-button__label" aria-hidden="true">DB</span></button>
         <button class="activity-button" type="button" aria-label="계정" aria-pressed="false" data-activity="account">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="3.25"/><path d="M5.5 20c.5-4 2.7-6 6.5-6s6 2 6.5 6"/></svg>
-        </button>
+        <span class="activity-button__label" aria-hidden="true">계정</span></button>
         <button class="activity-button" type="button" aria-label="관리자" aria-pressed="false" data-activity="admin" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.5 19 6.75v5.5c0 4.25-2.9 7.05-7 8-4.1-.95-7-3.75-7-8v-5.5L12 3.5Z"/><path d="M9.25 12.25 11 14l3.75-4"/></svg>
-        </button>
+        <span class="activity-button__label" aria-hidden="true">관리자</span></button>
       </nav>
 
       <aside class="primary-sidebar" aria-label="현재 작업 영역의 기본 사이드바" data-region="primary-sidebar" data-sidebar-host>
         <header class="primary-sidebar__header">
           <span data-sidebar-title>문서</span>
+          <div class="plan-header-actions" data-plan-header-actions hidden>
+            <button class="sidebar-header-button" type="button" data-plan-action="refresh" aria-label="새로고침" title="새로고침"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M13 6a5 5 0 1 0 0 4M13 2v4H9"/></svg></button>
+            <button class="sidebar-header-button" type="button" data-plan-action="add" data-kind="domain" aria-label="작업 추가" title="작업 추가" hidden><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 3v10M3 8h10"/></svg></button>
+          </div>
+          <button class="sidebar-header-button" type="button" aria-label="문서 커넥터" title="문서 커넥터" data-document-connectors>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 3.75v4M15.5 3.75v4M6.25 7.75h11.5v2.5A5.75 5.75 0 0 1 12 16v4.25M8.5 20.25h7"/></svg>
+          </button>
         </header>
         <div class="primary-sidebar__content" data-sidebar-content>
-          <div class="sidebar-view oversight-sidebar" data-sidebar-view="schedule" hidden><span class="source-state">정의 대기</span><p>Primary Sidebar 정보 구조는 Human 결정을 기다리고 있습니다.</p></div>
-          <div class="sidebar-view oversight-sidebar" data-sidebar-view="agents" hidden><span class="source-state">정의 대기</span><p>Primary Sidebar 정보 구조는 Human 결정을 기다리고 있습니다.</p></div>
+          <div class="sidebar-view planning-sidebar" data-sidebar-view="schedule" hidden><p>작업공간의 개발 일정을 불러옵니다.</p></div>
+          <div class="sidebar-view reporting-sidebar" data-sidebar-view="agents" data-reporting-sidebar hidden><p>워크스페이스를 열면 외부 에이전트 보고를 표시합니다.</p></div>
           <div class="sidebar-view document-sidebar" data-sidebar-view="documents">
             <section class="document-group" aria-labelledby="original-group-label">
-              <button class="document-group__toggle" type="button" aria-expanded="true" aria-controls="original-group-content" data-document-group-toggle>
-                <svg class="document-group__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg>
-                <span id="original-group-label">원본 문서</span>
-              </button>
-              <div class="document-group__content" id="original-group-content">
-                <nav class="document-navigation" aria-label="원본 문서 보기">
-                  <a class="document-navigation__item is-selected" href="#document-original-overview" aria-current="page" data-document-target="original-overview"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 5.25h6M5 8h6M5 10.75h4"/></svg><span>개요</span></a>
-                  <a class="document-navigation__item" href="#document-original-search" data-document-target="original-search"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><circle cx="7" cy="7" r="4.25"/><path d="m10.25 10.25 3.25 3.25"/></svg><span>문서검색</span></a>
-                </nav>
-              </div>
+              <header class="de-document-header">
+                <span class="de-document-title" id="original-group-label">원본 문서</span>
+                <a class="de-search-link" href="#document-original-search" title="원본 문서 검색" aria-label="원본 문서 검색" data-document-target="original-search"><span>검색</span></a>
+                <a class="de-button is-selected" href="#document-original-overview" aria-current="page" title="원본 문서 개요" aria-label="원본 문서 개요" data-document-target="original-overview"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 2v12h12M5 11V8M8 11V5M11 11V3"/></svg></a>
+              </header>
             </section>
             <section class="document-group" aria-labelledby="processed-group-label">
-              <button class="document-group__toggle" type="button" aria-expanded="true" aria-controls="processed-group-content" data-document-group-toggle>
+              <header class="de-document-header">
+              <button class="document-group__toggle" type="button" title="가공 문서 펼치기·접기" aria-expanded="true" aria-controls="processed-group-content" data-document-group-toggle>
                 <svg class="document-group__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg>
                 <span id="processed-group-label">가공 문서</span>
               </button>
+                <a class="de-button" href="#document-processed-overview" title="가공 문서 개요" aria-label="가공 문서 개요" data-document-target="processed-overview"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 2v12h12M5 11V8M8 11V5M11 11V3"/></svg></a>
+              </header>
               <div class="document-group__content" id="processed-group-content">
-                <nav class="document-navigation" aria-label="가공 문서 보기">
-                  <a class="document-navigation__item" href="#document-processed-overview" data-document-target="processed-overview"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 5.25h6M5 8h6M5 10.75h4"/></svg><span>개요</span></a>
-                </nav>
                 <div class="document-explorer" data-document-explorer>
-                  <button class="document-explorer__toggle" type="button" aria-expanded="true" aria-controls="processed-explorer-content" data-document-explorer-toggle>
-                    <svg class="document-explorer__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg>
-                    <svg class="document-explorer__folder" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1.75 4.25h4l1.5 1.5h7v6.75a1.25 1.25 0 0 1-1.25 1.25H3a1.25 1.25 0 0 1-1.25-1.25Z"/><path d="M1.75 6h12.5"/></svg>
-                    <span>탐색기</span>
-                  </button>
                   <div id="processed-explorer-content" data-document-explorer-content>
                     <p class="document-tree__state" id="processed-tree-state" role="status" aria-live="polite">가공 문서를 불러오는 중입니다.</p>
                     <nav class="document-tree__list" aria-label="가공 문서 탐색기" role="tree" data-processed-list hidden></nav>
@@ -116,20 +142,15 @@
               </div>
             </section>
             <section class="document-group" aria-labelledby="specification-group-label">
-              <button class="document-group__toggle" type="button" aria-expanded="true" aria-controls="specification-group-content" data-document-group-toggle>
+              <header class="de-document-header">
+              <button class="document-group__toggle" type="button" title="명세 문서 펼치기·접기" aria-expanded="true" aria-controls="specification-group-content" data-document-group-toggle>
                 <svg class="document-group__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg>
                 <span id="specification-group-label">명세 문서</span>
               </button>
+                <a class="de-button" href="#document-specification-overview" title="명세 문서 개요" aria-label="명세 문서 개요" data-document-target="specification-overview"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2 2v12h12M5 11V8M8 11V5M11 11V3"/></svg></a>
+              </header>
               <div class="document-group__content" id="specification-group-content">
-                <nav class="document-navigation" aria-label="명세 문서 보기">
-                  <a class="document-navigation__item" href="#document-specification-overview" data-document-target="specification-overview"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 5.25h6M5 8h6M5 10.75h4"/></svg><span>개요</span></a>
-                </nav>
                 <div class="document-explorer" data-document-explorer>
-                  <button class="document-explorer__toggle" type="button" aria-expanded="true" aria-controls="specification-explorer-content" data-document-explorer-toggle>
-                    <svg class="document-explorer__chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg>
-                    <svg class="document-explorer__folder" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M1.75 4.25h4l1.5 1.5h7v6.75a1.25 1.25 0 0 1-1.25 1.25H3a1.25 1.25 0 0 1-1.25-1.25Z"/><path d="M1.75 6h12.5"/></svg>
-                    <span>탐색기</span>
-                  </button>
                   <div id="specification-explorer-content" data-document-explorer-content>
                     <p class="document-tree__state" id="specification-tree-state" role="status" aria-live="polite">명세 문서를 불러오는 중입니다.</p>
                     <nav class="document-tree__list" aria-label="명세 문서 탐색기" role="tree" data-specification-list hidden></nav>
@@ -152,7 +173,7 @@
               <button type="button" data-admin-view="dashboard">개요</button>
               <button type="button" data-admin-view="users">사용자</button>
               <button type="button" data-admin-view="organizations">조직</button>
-              <button type="button" data-admin-view="workspaces">워크스페이스</button>
+              <button type="button" data-admin-view="workspaces">작업공간</button>
               <button type="button" data-admin-view="jobs">작업</button>
               <button type="button" data-admin-view="integrations">연동</button>
               <button type="button" data-admin-view="audit">감사 로그</button>
@@ -163,11 +184,79 @@
         </div>
       </aside>
 
-      <div class="sidebar-resizer" role="separator" aria-label="기본 사이드바 너비 조절" aria-orientation="vertical" aria-valuemin="180" aria-valuemax="520" aria-valuenow="252" tabindex="0" data-sidebar-resizer></div>
+      <div class="sidebar-resizer" role="separator" aria-label="기본 사이드바 너비 조절" aria-orientation="vertical" aria-valuemin="180" aria-valuemax="520" aria-valuenow="268" tabindex="0" data-sidebar-resizer></div>
 
       <main class="workspace" aria-label="작업영역" data-region="workspace">
-        <section class="workspace-view" data-workspace-view="schedule" hidden><div class="oversight-introduction"><span class="source-state">정의 대기</span><h1>일정</h1><p>이 Activity의 상세 기능, 내부 구조, source와 control은 Human 결정을 기다리고 있습니다.</p></div></section>
-        <section class="workspace-view" data-workspace-view="agents" hidden><div class="oversight-introduction"><span class="source-state">정의 대기</span><h1>에이전트</h1><p>이 Activity의 상세 기능, 내부 구조, source와 control은 Human 결정을 기다리고 있습니다.</p></div></section>
+        <section class="mcp-onboarding" data-mcp-onboarding hidden aria-labelledby="mcp-title">
+          <div class="mcp-onboarding-canvas">
+            <div class="mcp-columns">
+              <section class="mcp-setup" aria-label="MCP 설정 및 연결 안내">
+                <header class="mcp-panel-header">
+                  <div class="mcp-heading"><h1 id="mcp-title">MCP 연결</h1><span class="mcp-workspace-name" data-mcp-workspace></span><span role="status" aria-live="polite" data-mcp-status>연결 상태 확인 중</span></div>
+                  <div class="mcp-actions"><button type="button" data-mcp-refresh>상태 확인</button><button type="button" data-mcp-dismiss hidden>작업 화면으로</button></div>
+                </header>
+                <div class="mcp-panel-body">
+                  <section class="mcp-ai-connect" aria-label="AI로 MCP 연결">
+                    <div class="mcp-connect-controls">
+                      <label>클라이언트<select data-mcp-client></select></label>
+                      <label data-mcp-variant-label hidden>사용 환경<select data-mcp-variant></select></label>
+                      <label>연결 토큰<select data-mcp-token-select aria-label="연결 토큰 선택"></select></label>
+                      <button type="button" data-mcp-download>설정 파일 다운로드</button><button type="button" data-mcp-copy-ai>AI 지침 복사</button>
+                    </div>
+                    <p>설정 파일을 다운로드해 로컬 AI에게 첨부하고, 연결 지침을 붙여넣으세요.</p>
+                    <p class="mcp-token-caption" data-mcp-ai-help>사용할 토큰을 선택하세요. 새 토큰은 오른쪽에서 발급합니다.</p>
+                    <p role="status" aria-live="polite" data-mcp-ai-message></p>
+                    <label data-mcp-ai-fallback hidden>파일 전달용 AI 연결 지침<textarea readonly spellcheck="false" rows="8" data-mcp-ai-text></textarea></label>
+                  </section>
+                  <div class="mcp-server-row">
+                    <label for="mcp-server-url">서버 주소</label>
+                    <input id="mcp-server-url" readonly data-mcp-url />
+                    <button type="button" data-mcp-copy-url>복사</button>
+                  </div>
+                  <section class="mcp-manual-setup" aria-label="직접 설정하기"><h2>직접 설정하기</h2>
+                  <div class="mcp-manual-body">
+                  <ol data-mcp-steps></ol>
+                  <section class="mcp-extra-help" aria-label="인증 및 추가 안내"><h3>인증 및 추가 안내</h3><p data-mcp-auth-help></p><p data-mcp-notes></p></section>
+                  <div class="mcp-actions"><a data-mcp-install hidden>설정 추가</a><a data-mcp-docs target="_blank" rel="noopener noreferrer">공식 연결 문서</a></div>
+                  <section class="mcp-code-section" aria-label="클라이언트 설정">
+                    <div class="mcp-field-header"><label for="mcp-client-config" data-mcp-config-label>클라이언트 설정</label><div class="mcp-actions"><button type="button" data-mcp-copy-config>복사</button></div></div>
+                    <textarea id="mcp-client-config" rows="17" wrap="off" readonly spellcheck="false" data-mcp-config></textarea>
+                  </section>
+                  <div data-mcp-command-label hidden>
+                    <div class="mcp-field-header"><label for="mcp-register-command">등록 명령 · POSIX 셸</label><button type="button" data-mcp-copy-command hidden>명령 복사</button></div>
+                    <textarea id="mcp-register-command" rows="3" wrap="off" readonly spellcheck="false" data-mcp-command></textarea>
+                  </div>
+                  <p role="status" data-mcp-message></p>
+                  </div></section>
+                </div>
+              </section>
+              <aside class="mcp-token-panel" aria-labelledby="mcp-tokens-title">
+                <header class="mcp-panel-header">
+                  <h2 id="mcp-tokens-title">연결 토큰</h2>
+                  <div class="mcp-actions">
+                    <button type="button" data-mcp-enroll>토큰 발급</button>
+                    <button type="button" class="mcp-icon-button" data-mcp-token-refresh aria-label="토큰 목록 새로고침" title="토큰 목록 새로고침"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 6a5 5 0 1 0 0 4M13 2v4H9"/></svg></button>
+                  </div>
+                </header>
+                <div class="mcp-panel-body">
+                  <p class="mcp-token-caption">이 작업공간에서 내가 발급한 토큰</p>
+                  <p class="mcp-token-caption" data-mcp-token-client></p>
+                  <div data-mcp-secret hidden>
+                    <div class="mcp-field-header"><label for="mcp-issued-token">선택한 토큰</label><button type="button" data-mcp-copy-token>복사</button></div>
+                    <input id="mcp-issued-token" type="password" readonly autocomplete="off" data-mcp-token />
+                    <p class="mcp-token-caption">본인에게 발급된 유효한 토큰은 새로고침 후에도 조회할 수 있습니다.</p>
+                  </div>
+                  <p role="status" aria-live="polite" data-mcp-token-message></p>
+                  <p role="status" data-mcp-token-list-state>토큰 목록을 불러오는 중입니다.</p>
+                  <ul data-mcp-connections aria-label="발급한 연결 토큰"></ul>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </section>
+        <section class="no-activities" data-no-activities hidden><p>표시할 작업 아이콘이 없습니다.</p><button type="button" class="text-action" data-configure-activities>작업 표시줄 설정</button></section>
+        <section class="workspace-view planning-panel" data-workspace-view="schedule" hidden aria-label="일정"><p>작업과 하위 작업의 일정을 관리합니다. JavaScript를 활성화하면 일정을 조회할 수 있습니다.</p></section>
+        <section class="workspace-view reporting-panel" data-workspace-view="agents" data-reporting-panel hidden><h1>에이전트</h1><p>외부 에이전트의 구성과 작업 보고를 표시합니다. 보고를 불러오려면 JavaScript가 필요합니다.</p></section>
         <section class="workspace-view document-workspace" data-workspace-view="documents">
           <article class="document-view" id="document-original-overview" data-document-view="original-overview">
             <div class="document-view__canvas"><p class="document-view__status">상세 정의 대기</p><h1>원본 문서 개요</h1><p>원본 문서는 source fidelity, identity, provenance, collection context를 보존하는 source-faithful evidence입니다.</p><p>개요의 세부 내용은 Human 정의를 기다리고 있습니다.</p></div>
@@ -197,17 +286,12 @@
             <header class="editor-header"><span class="editor-header__tab">가공 문서 / 개요</span></header>
             <div class="document-view__canvas"><p class="document-view__status">상세 정의 대기</p><h1>가공 문서 개요</h1><p>가공 문서는 transformation과 derived working knowledge를 담는 non-authoritative 문서입니다.</p><p>개요의 세부 내용은 Human 정의를 기다리고 있습니다.</p></div>
           </article>
-          <article class="document-view processed-document-view" id="document-processed-document" data-document-view="processed-document" hidden>
-            <header class="editor-header"><span class="editor-header__tab" data-processed-tab>가공 문서</span></header>
-            <div class="processed-document-canvas"><p class="processed-document__state" role="status" aria-live="polite" data-processed-content-state>문서를 선택해 주세요.</p><pre data-processed-content hidden></pre></div>
-          </article>
           <article class="document-view" id="document-specification-overview" data-document-view="specification-overview">
             <header class="editor-header"><span class="editor-header__tab">명세 문서 / 개요</span></header>
             <div class="document-view__canvas"><p class="document-view__status">상세 정의 대기</p><h1>명세 문서 개요</h1><p>명세 문서는 Human이 수락·조정한 Specification 지식이며, Human-facing 문서와 AI-facing Skill의 faithful pair를 유지합니다.</p><p>개요의 세부 내용은 Human 정의를 기다리고 있습니다.</p></div>
           </article>
-          <article class="document-view specification-document-view" id="document-specification-document" data-document-view="specification-document" hidden>
-            <header class="editor-header"><span class="editor-header__tab" data-specification-tab>명세 문서</span></header>
-            <iframe class="specification-document-frame" title="선택한 명세 문서" data-specification-frame></iframe>
+          <article class="document-view de-workbench" id="document-editor" data-document-view="document-editor" aria-label="문서 에디터" hidden>
+            <p>탐색기에서 문서를 선택해 주세요.</p>
           </article>
         </section>
         <section class="workspace-view" data-workspace-view="logs" hidden><div class="oversight-introduction"><span class="source-state">정의 대기</span><h1>로그</h1><p>이 Activity의 상세 기능, 내부 구조, source와 control은 Human 결정을 기다리고 있습니다.</p></div></section>
@@ -218,7 +302,7 @@
           <header class="editor-header"><span class="editor-header__tab">계정 / 프로필</span></header>
           <div class="account-canvas">
             <div class="account-avatar" aria-hidden="true" data-account-avatar></div>
-            <div><p class="account-eyebrow">Signed in account</p><h1 data-account-name></h1><p data-account-email></p><dl><div><dt>조직</dt><dd data-account-organization></dd></div><div><dt>워크스페이스</dt><dd data-account-workspace></dd></div></dl></div>
+            <div><p class="account-eyebrow">Signed in account</p><h1 data-account-name></h1><p data-account-email></p><dl><div><dt>조직</dt><dd data-account-organization></dd></div><div><dt>작업공간</dt><dd data-account-workspace></dd></div></dl></div>
           </div>
         </section>
         <section class="workspace-view admin-workspace" data-workspace-view="admin" hidden>
@@ -231,6 +315,24 @@
     <div class="activity-context-menu" role="menu" aria-label="작업 표시줄 표시 설정" data-activity-context-menu hidden></div>
 
     <script src="../static/vendor/tabulator/6.5.2/tabulator.min.js"></script>
+    <dialog class="workspace-dialog" data-create-dialog aria-labelledby="create-workspace-title">
+      <form data-create-form>
+        <h2 id="create-workspace-title">작업공간 만들기</h2>
+        <p data-create-owner></p>
+        <label for="workspace-name">작업공간 이름</label>
+        <input id="workspace-name" name="name" required maxlength="200" autocomplete="off" />
+        <p role="alert" data-create-error></p>
+        <footer><button type="button" data-close-dialog>취소</button><button class="primary-action" type="submit">만들기</button></footer>
+      </form>
+    </dialog>
+    <noscript>작업공간 선택과 생성에는 JavaScript가 필요합니다.</noscript>
+    <script src="../static/js/planning.js"></script>
+    <script src="../static/js/agent-reporting.js"></script>
+    <script src="../static/js/mcp-clients.js"></script>
+    <script src="../static/js/mcp-handoff.js"></script>
+    <script src="../static/js/mcp-connection.js"></script>
+    <script src="../static/js/document-editor.js"></script>
+    <script src="../static/js/organizations.js"></script>
     <script src="../static/js/workspace.js"></script>
     <script src="../static/js/admin.js"></script>
   </body>

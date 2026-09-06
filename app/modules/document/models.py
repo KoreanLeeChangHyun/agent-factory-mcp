@@ -30,7 +30,7 @@ class ProvenanceRelation(StrEnum):
 
 class Document(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, RevisionMixin, Base):
     __tablename__ = "documents"
-    __table_args__ = (UniqueConstraint("workspace_id", "slug"),)
+    __table_args__ = (UniqueConstraint("workspace_id", "slug"), UniqueConstraint("workspace_id", "id", name="uq_documents_workspace_identity"))
 
     workspace_id: Mapped[UUID] = mapped_column(
         ForeignKey("workspaces.id", ondelete="CASCADE"), index=True

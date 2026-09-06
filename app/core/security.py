@@ -21,11 +21,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         response = await call_next(request)
+        # Match the resolved endpoint, status and trusted header values together.
+        from app.router.cloud_documents import package_preview
+        from app.modules.document.preview import PREVIEW_HEADERS
+        preview = (
+            request.scope.get("endpoint") is package_preview
+            and request.method == "GET" and response.status_code == 200
+            and all(response.headers.get(key) == value for key, value in PREVIEW_HEADERS.items())
+        )
         response.headers.update(
             {
                 "Content-Security-Policy": (
                     "default-src 'self'; script-src 'self'; style-src 'self'; "
-                    "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; "
+                    "img-src 'self' data: blob:; object-src 'none'; "
+                    "connect-src 'self'; frame-ancestors 'none'; "
                     "base-uri 'none'; form-action 'self'"
                 ),
                 "Referrer-Policy": "no-referrer",
@@ -35,6 +44,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "Cross-Origin-Opener-Policy": "same-origin",
             }
         )
+        if preview:
+            response.headers.update(PREVIEW_HEADERS)
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response

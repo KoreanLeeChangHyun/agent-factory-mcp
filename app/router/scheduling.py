@@ -30,7 +30,7 @@ def get_schedule_service(
 
 @router.get("/schedules", response_model=list[ScheduleResponse])
 async def list_schedules(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("schedule.read"))],
     service: Annotated[ScheduleService, Depends(get_schedule_service)],
 ) -> list[ScheduleResponse]:
     return [
@@ -47,7 +47,7 @@ async def list_schedules(
 )
 async def create_schedule(
     payload: ScheduleCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.manage"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("schedule.create"))],
     service: Annotated[ScheduleService, Depends(get_schedule_service)],
 ) -> ScheduleResponse:
     record = await service.create_schedule(
@@ -65,7 +65,7 @@ async def create_schedule(
 
 @router.get("/jobs", response_model=list[JobResponse])
 async def list_jobs(
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("job.read"))],
     service: Annotated[ScheduleService, Depends(get_schedule_service)],
 ) -> list[JobResponse]:
     return [
@@ -79,7 +79,7 @@ async def list_jobs(
 )
 async def enqueue_job(
     payload: JobCreate,
-    context: Annotated[AuthorizedContext, Depends(require_permission("agent.execute"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("job.create"))],
     service: Annotated[ScheduleService, Depends(get_schedule_service)],
 ) -> JobResponse:
     record = await service.enqueue(
@@ -96,7 +96,7 @@ async def enqueue_job(
 @router.get("/jobs/{job_id}", response_model=JobResponse)
 async def get_job(
     job_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("workspace.read"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("job.read"))],
     service: Annotated[ScheduleService, Depends(get_schedule_service)],
 ) -> JobResponse:
     return JobResponse.model_validate(await service.get_job(context, job_id), from_attributes=True)
@@ -109,7 +109,7 @@ async def get_job(
 )
 async def cancel_job(
     job_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("agent.execute"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("job.cancel"))],
     service: Annotated[ScheduleService, Depends(get_schedule_service)],
 ) -> JobResponse:
     return JobResponse.model_validate(await service.cancel(context, job_id), from_attributes=True)
@@ -123,7 +123,31 @@ async def cancel_job(
 )
 async def retry_job(
     job_id: UUID,
-    context: Annotated[AuthorizedContext, Depends(require_permission("agent.execute"))],
+    context: Annotated[AuthorizedContext, Depends(require_permission("job.retry"))],
     service: Annotated[ScheduleService, Depends(get_schedule_service)],
 ) -> JobResponse:
     return JobResponse.model_validate(await service.retry(context, job_id), from_attributes=True)
+
+
+from app.modules.schedule.schemas import ScheduleUpdate, ScheduleToggle
+
+
+@router.put("/schedules/{schedule_id}", response_model=ScheduleResponse, dependencies=[Depends(require_csrf)])
+async def update_schedule(schedule_id: UUID, payload: ScheduleUpdate,
+    context: Annotated[AuthorizedContext, Depends(require_permission("schedule.update"))],
+    service: Annotated[ScheduleService, Depends(get_schedule_service)]):
+    return ScheduleResponse.model_validate(await service.change_schedule(context, schedule_id, payload=payload, revision=payload.revision), from_attributes=True)
+
+
+@router.patch("/schedules/{schedule_id}/enabled", response_model=ScheduleResponse, dependencies=[Depends(require_csrf)])
+async def toggle_schedule(schedule_id: UUID, payload: ScheduleToggle,
+    context: Annotated[AuthorizedContext, Depends(require_permission("schedule.toggle"))],
+    service: Annotated[ScheduleService, Depends(get_schedule_service)]):
+    return ScheduleResponse.model_validate(await service.change_schedule(context, schedule_id, enabled=payload.is_enabled, revision=payload.revision), from_attributes=True)
+
+
+@router.delete("/schedules/{schedule_id}", status_code=204, dependencies=[Depends(require_csrf)])
+async def delete_schedule(schedule_id: UUID,
+    context: Annotated[AuthorizedContext, Depends(require_permission("schedule.delete"))],
+    service: Annotated[ScheduleService, Depends(get_schedule_service)]):
+    await service.change_schedule(context, schedule_id, remove=True)

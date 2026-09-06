@@ -9,5 +9,7 @@
     request_body { max_size 30MB }
   }
   handle { respond "Not Found" 404 }
+  @oauth_callback path /factory/api/integrations/oauth/*/callback
+  log_skip @oauth_callback
   log { output stdout; format json }
 }

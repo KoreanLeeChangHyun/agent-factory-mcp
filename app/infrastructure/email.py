@@ -25,6 +25,13 @@ class EmailSender:
             f"{self.settings.public_base_url}/reset-password?token={token}",
         )
 
+    async def send_organization_invitation(self, recipient: str, organization_id, token: str) -> None:
+        await self._send(
+            recipient,
+            "Agent Factory 조직 초대",
+            f"{self.settings.public_base_url}/join/?organization_invite={organization_id}#invitation={token}",
+        )
+
     async def _send(self, recipient: str, subject: str, body: str) -> None:
         message = EmailMessage()
         message["From"] = self.settings.smtp_from_address
