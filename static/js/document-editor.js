@@ -126,7 +126,7 @@
       const header = list.closest(".document-group").querySelector(".de-document-header");
       const toggle = header.querySelector("[data-document-group-toggle]");
       toggle.after(query);
-      header.append(collapse);
+      header.querySelector('[data-document-target]').before(collapse);
       list.setAttribute("aria-multiselectable", "true");
       list.classList.add("de-tree");
       const tree = { list, status, query, selected: new Set(), collapsed: new Set(), rows: [], anchor: null };

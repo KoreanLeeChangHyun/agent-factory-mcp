@@ -198,7 +198,7 @@ contract stays 4 MiB/256 entries/100:1; all cloud import, indexing and delivery 
 explicitly supply configured limits.
 
 Read-only source inventory on 2026-09-06 of sibling `../plugin/skills/<id>` plus
-`../plugin/.agent-factory/document/specification/<id>` found Document: 28 files,
+`../plugin/docs/specifications/<id>` found Document: 28 files,
 8,189,698 expanded bytes; Agent: 24 files, 4,598,001 bytes. The largest observed member
 is `vendor/mermaid/11.17.2/mermaid.min.js` (3,572,661 bytes). No required file was removed
 or rewritten to fit a fixture. These are local inventory measurements, not evidence

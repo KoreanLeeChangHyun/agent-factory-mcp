@@ -3,7 +3,15 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -22,12 +30,20 @@ class CloudConnectionState(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class CloudCollection(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = 'integration_collections'
-    __table_args__ = (UniqueConstraint('workspace_id', 'connection_id', 'name'),)
+    __table_args__ = (
+        UniqueConstraint('workspace_id', 'connection_id', 'name'),
+        CheckConstraint("mode IN ('content', 'reference')", name='collection_mode'),
+    )
     workspace_id: Mapped[UUID] = mapped_column(ForeignKey('workspaces.id', ondelete='CASCADE'), index=True)
     connection_id: Mapped[UUID] = mapped_column(ForeignKey('integration_connections.id', ondelete='RESTRICT'))
     provider: Mapped[str] = mapped_column(String(30))
     name: Mapped[str] = mapped_column(String(160))
     selection: Mapped[dict] = mapped_column(JSON)
+    mode: Mapped[str] = mapped_column(String(20), default='content')
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_refresh_status: Mapped[str | None] = mapped_column(String(30))
+    last_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error_code: Mapped[str | None] = mapped_column(String(100))
     created_by_user_id: Mapped[UUID] = mapped_column(ForeignKey('users.id', ondelete='RESTRICT'))
 
 
@@ -52,10 +68,18 @@ class CloudCollectionRun(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 class CloudSourceMapping(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = 'integration_source_mappings'
-    __table_args__ = (UniqueConstraint('workspace_id', 'collection_id', 'source_id'),)
+    __table_args__ = (
+        UniqueConstraint('workspace_id', 'collection_id', 'source_id'),
+        CheckConstraint("source_status IN ('active', 'missing', 'inaccessible')", name='source_mapping_status'),
+    )
     workspace_id: Mapped[UUID] = mapped_column(ForeignKey('workspaces.id', ondelete='CASCADE'), index=True)
     collection_id: Mapped[UUID] = mapped_column(ForeignKey('integration_collections.id', ondelete='RESTRICT'))
     source_id: Mapped[str] = mapped_column(String(500))
     document_id: Mapped[UUID] = mapped_column(ForeignKey('documents.id', ondelete='RESTRICT'))
     content_hash: Mapped[str | None] = mapped_column(String(64))
     revision_number: Mapped[int | None]
+    source_url: Mapped[str | None] = mapped_column(String(2048))
+    source_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    metadata_hash: Mapped[str | None] = mapped_column(String(64))
+    source_status: Mapped[str] = mapped_column(String(30), default='active')
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

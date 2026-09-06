@@ -183,7 +183,7 @@ def test_actual_distributable_source_inventories_fit_without_omissions():
     assert (plugin / 'skills/document').is_dir(), 'Final gate requires the plugin source checkout'
     for identity in ('document', 'agent', 'template'):
         files = template_source_files() if identity == 'template' else git_source_files(
-            plugin, f'skills/{identity}', f'.agent-factory/document/specification/{identity}')
+            plugin, f'skills/{identity}', f'docs/specifications/{identity}')
         # Real packages exercise binary delivery above the inline limit without padding.
         # The separate synthetic 10 MiB test above protects large-capacity bounds.
         assert sum(map(len, files.values())) > 256 * 1024

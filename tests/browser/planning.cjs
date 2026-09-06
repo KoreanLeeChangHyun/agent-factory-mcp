@@ -90,7 +90,18 @@ const server=http.createServer(async(req,res)=>{
     await panel.getByRole('button',{name:'전체 일정',exact:true}).click();
     assert.equal(await page.locator('.primary-sidebar__header').getByRole('button',{name:'작업 추가',exact:true}).count(),1);
     assert.equal(await nav.getByRole('button',{name:'새로고침',exact:true}).count(),0);
-    await create('작업','결제',{'시작일':'2025-12-01','목표일':'2027-12-31'});
+    await create('작업','결제');
+    const unscheduled=panel.getByRole('button',{name:'결제 기간 설정',exact:true});
+    await unscheduled.waitFor();
+    assert((await panel.locator('.plan-time-group').boundingBox()).height<=46);
+    await unscheduled.focus(); await page.keyboard.press('Enter');
+    const periodDialog=page.locator('.plan-dialog');
+    assert(await periodDialog.getByLabel('시작일',{exact:true}).evaluate(el=>document.activeElement===el));
+    await periodDialog.getByLabel('시작일',{exact:true}).fill('2025-12-01');
+    await periodDialog.getByLabel('목표일',{exact:true}).fill('2027-12-31');
+    await periodDialog.getByRole('button',{name:'저장',exact:true}).click();
+    await periodDialog.waitFor({state:'hidden'});
+
     await panel.locator('.plan-origin').filter({hasText:'직접 지정'}).waitFor();
     assert.equal(await panel.locator('.plan-summary-bar').count(),1);
     assert.equal(await panel.locator('.plan-time-track').getByText('기간 미정',{exact:true}).count(),0);
@@ -99,7 +110,9 @@ const server=http.createServer(async(req,res)=>{
     for(let i=1;i<ticks.length;i++)assert(ticks[i].left>=ticks[i-1].right,'Date ticks must not overlap under CSP');
     const headerGeometry=await panel.evaluate(el=>{const caption=el.querySelector('.plan-marker-caption').getBoundingClientRect();const group=el.querySelector('.plan-time-group').getBoundingClientRect();return {captionBottom:caption.bottom,groupTop:group.top,chartWidth:getComputedStyle(el.querySelector('.plan-timeline')).getPropertyValue('--plan-chart-width')};});
     assert(headerGeometry.captionBottom<=headerGeometry.groupTop);
-    assert.equal(headerGeometry.chartWidth,'784px');
+    assert(parseFloat(headerGeometry.chartWidth)>784,headerGeometry.chartWidth);
+    const defaultOverflow=await panel.locator('.plan-timeline-scroll').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}));
+    assert(defaultOverflow.scroll>defaultOverflow.client,JSON.stringify(defaultOverflow));
 
     await nav.getByRole('button',{name:'결제',exact:true}).click();
     await create('하위 작업','카드 결제',{'시작일':'2026-01-01','목표일':'2027-03-01','완료 조건':'카드 승인 성공'});
@@ -145,6 +158,12 @@ const server=http.createServer(async(req,res)=>{
     assert.equal(await panel.locator('.plan-summary-bar').count(),1);
     assert(await panel.locator('.plan-bar').first().evaluate(el=>el.getBoundingClientRect().width>10));
     assert(await panel.locator('.plan-time-header span').count()<20);
+    const verticalFit=await panel.evaluate(el=>{
+      const panelBox=el.getBoundingClientRect(),scroll=el.querySelector('.plan-timeline-scroll'),scrollBox=scroll.getBoundingClientRect();
+      return {bottomGap:panelBox.bottom-scrollBox.bottom,timelineHeight:scroll.firstElementChild.getBoundingClientRect().height,viewportHeight:scroll.clientHeight};
+    });
+    assert(verticalFit.bottomGap<=17,JSON.stringify(verticalFit));
+    assert(verticalFit.timelineHeight>=verticalFit.viewportHeight,JSON.stringify(verticalFit));
     await panel.getByRole('button',{name:'출시 목표일',exact:true}).click();
     await page.locator('.plan-dialog').getByLabel('목표일',{exact:true}).fill('2027-03-10');
     await page.locator('.plan-dialog').getByRole('button',{name:'저장',exact:true}).click();
@@ -172,7 +191,7 @@ const server=http.createServer(async(req,res)=>{
     readOnly=true;await page.locator('[data-plan-header-actions]').getByRole('button',{name:'새로고침'}).click();await page.waitForFunction(()=>!document.querySelector('[data-plan-header-actions] [data-plan-action="add"]:not([hidden])'));
     await nav.getByRole('button',{name:'카드 결제',exact:true}).click();assert.equal(await panel.getByRole('button',{name:'수정',exact:true}).count(),0);
     await chooseWorkspace('two');await page.locator('[data-activity="schedule"]').click();await panel.getByText('하위 작업에 목표 기간을 입력하면 전체 일정이 표시됩니다.').waitFor();assert.equal(await nav.getByRole('button',{name:'카드 결제',exact:true}).count(),0);
-    assert.deepEqual(errors,[]);assert.equal(mutations,8); // Four creates, two domain updates, one issue update, one launch-date update.
+    assert.deepEqual(errors,[]);assert.equal(mutations,9); // Four creates, three domain updates, one issue update, one launch-date update.
     console.log('PASS planning browser: hierarchy CRUD entry, issue draft/save, bounds adjustment, timeline fit/week/month/launch, mobile, reload, errors/retry, viewer, tenant switching, CSRF, prefixed deployment.');
   } catch(error) { await fs.writeFile('/tmp/planning-failure.html',await page.content()); await page.screenshot({path:'/tmp/planning-failure.png'}); console.error(errors); throw error; } finally {await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exit(1);});

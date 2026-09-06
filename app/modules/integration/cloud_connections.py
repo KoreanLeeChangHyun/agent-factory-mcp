@@ -1,7 +1,5 @@
 """Encrypted cloud credential lifecycle with explicit scope observations."""
 
-from app.modules.auth.authorization import require_context
-
 import base64
 import time
 from datetime import UTC, datetime, timedelta
@@ -10,11 +8,15 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.common.errors import ApplicationError
+from app.modules.auth.authorization import require_context
 from app.modules.auth.crypto import new_opaque_token, token_digest
 from app.modules.integration.cloud_http import ProviderError
-from app.modules.integration.cloud_models import CloudConnectionState
-from app.modules.integration.cloud_oauth import OAUTH_SCOPES, authorization_url, scope_observation, token_request
+from app.modules.integration.cloud_oauth import (
+    OAUTH_SCOPES,
+    authorization_url,
+    scope_observation,
+    token_request,
+)
 from app.modules.integration.cloud_providers import CloudDriver
 from app.modules.integration.models import ConnectionStatus, IntegrationOAuthState
 
@@ -88,6 +90,16 @@ class CloudConnections:
                     connection.external_account_id = str(observation['account_id'])
                 await self.repository.save(state)
             return self.project(connection, provider, state)
+
+    async def browse_drive(self, connection_id, parent_id='root', page_token=None):
+        require_context(self.repository.context, "integration.read")
+        connection, provider = await self.resolve(connection_id)
+        if provider != 'google-drive':
+            raise ProviderError('provider_unsupported')
+        if connection.status != ConnectionStatus.ACTIVE:
+            raise ProviderError('connection_not_active')
+        credentials = await self.refresh(connection, provider)
+        return await CloudDriver(provider, self.http, credentials).drive_folders(parent_id, page_token)
 
     @staticmethod
     def project(connection, provider, state):

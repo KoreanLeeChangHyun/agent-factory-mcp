@@ -1,7 +1,10 @@
 # Cloud integrations and gathering
 
-This adapter stores connection secrets on the MCP server and collects read-only
-provider evidence into the authorized workspace's Original Documents. It does
+This adapter stores connection secrets on the MCP server and supports two explicit
+collection modes. The existing `content` mode collects read-only provider evidence
+into immutable Original revisions. The Workspace Google Drive UI uses `reference`
+mode, which stores only provider links and metadata and never downloads file bodies.
+Neither mode
 not execute local provider scripts, mutate provider sources, delete gathered
 Originals, or promote evidence to Processed or Specification truth.
 
@@ -12,6 +15,31 @@ create another collection to change it. Multiple collections can share one
 connection. Each start has a durable request key and independent run cursor.
 Repeating the key recovers the same run/job; a new key starts a fresh bounded
 scan and adds a revision only when the latest content or source metadata differs.
+
+## Workspace Google Drive reference workflow
+
+The Integration Activity lists workspace connections in the Primary Sidebar and
+opens a Status, Scope, or Settings panel. Google Drive is the first catalog entry.
+The browser creates a credential-free workspace connection and then starts the
+server-owned OAuth authorization-code flow. Requested and observed scopes, account
+identity, authentication health, and collection refresh state remain separate.
+
+An authorized Human can browse Drive folders through the first-party API, select
+the current folder, choose recursive traversal, and create an immutable bounded
+`reference` collection. A manual refresh uses the existing durable Job/run path.
+Drive listing requests ask only for IDs, names, MIME type, timestamps, checksums,
+size, extension, parent IDs, and `webViewLink`; they never request `alt=media` or
+native export bytes. The resulting Original has no content revision. It stores the
+stable source ID, source URL, provider metadata, collection IDs, last-seen time,
+and `body_stored=false` for search and later Agent retrieval through the connector.
+
+Refreshes update changed metadata, deduplicate the same Drive source across
+overlapping collections on one connection, mark sources missing after a complete
+scan, and mark a scope inaccessible when Drive returns forbidden/not-found. A
+bounded scan does not infer deletion. Disabling a collection stops future refreshes
+for that workspace while retaining registered Originals. Disconnecting account
+authentication clears the workspace's encrypted credential separately; revoking
+the Google account grant itself remains an explicit Google Account action.
 
 ## Shared application integration
 
@@ -182,8 +210,10 @@ bounds are not connection configuration. No local destination path is accepted.
 
 ## Fidelity, replay, and remaining limits
 
-One stable source unit maps to one Original per collection. Overlapping
-collections intentionally retain separate selection provenance. Original
+In `content` mode, one stable source unit maps to one Original per collection and
+overlapping collections retain separate selection provenance. In Google Drive
+`reference` mode, the same connection/source identity maps to one Original while
+each collection retains its own source mapping. Original
 metadata records provider, connection, collection, source ID, selection, source
 metadata, and limitations. Revision metadata additionally records run ID and
 retrieval time. No Document-to-Document derivation relationship is invented for
@@ -242,9 +272,10 @@ Limitations are explicit:
   nonretryable rather than being reclassified from their unknown health state. A
   provider pagination token can expire between job retries; this is reported as
   a provider rejection, not permission to widen or restart a selection silently.
-- Original cloud storage and application encryption settings must be configured.
-  No live credentials, authentication, synchronization, migrations, deployment,
-  or restart were performed by Work.
+- Content-mode Original cloud storage and application encryption settings must be
+  configured. Reference mode does not require object storage for file bodies, but
+  still requires application encryption for OAuth credentials. No live credentials,
+  authentication, synchronization, deployment, or restart are performed by tests.
 
 Independent Verification should run only
 `tests/test_cloud_integrations_providers.py` and

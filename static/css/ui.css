@@ -6,11 +6,106 @@
   --ui-drop-border: var(--focus-border);
   --ui-drop-background: color-mix(in srgb, var(--ui-drop-border) 20%, transparent);
   --ui-disabled-opacity: .5;
+  --ui-sidebar-header-height: 35px;
+  --ui-sidebar-row-height: 28px;
 }
 
+/* One Primary Sidebar grammar shared by every Workspace domain. */
+.app-sidebar {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--primary-sidebar-background);
+  color: var(--explorer-foreground);
+  font-size: var(--ui-font-body);
+  line-height: var(--ui-line-body);
+}
+
+.app-sidebar__header {
+  display: flex;
+  height: var(--ui-sidebar-header-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+  padding-inline: var(--ui-space-4) var(--ui-space-2);
+  color: var(--explorer-foreground);
+  font-size: var(--ui-font-caption);
+  font-weight: var(--ui-weight-heading);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.app-sidebar__header > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sidebar__content {
+  height: calc(100% - var(--ui-sidebar-header-height));
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.app-sidebar__view { min-height: 100%; }
+.app-sidebar__view[hidden] { display: none; }
+.app-sidebar__nav { display: grid; gap: 1px; padding: var(--ui-space-1) var(--ui-space-2) var(--ui-space-3); }
+.app-sidebar__nav--flush { padding-inline: var(--ui-space-2); }
+
+.app-sidebar__row {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--ui-sidebar-row-height);
+  align-items: center;
+  gap: var(--ui-space-1);
+  padding: 0 var(--ui-space-2);
+  border: 0;
+  border-radius: var(--ui-control-radius);
+  background: transparent;
+  color: var(--explorer-foreground);
+  font: inherit;
+  font-size: var(--ui-font-body);
+  line-height: var(--ui-line-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-sidebar__row > :is(span, strong) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sidebar__row:hover { background: var(--explorer-row-hover); }
+.app-sidebar__row:is(.is-selected, [aria-current="page"], [aria-selected="true"]) {
+  background: var(--explorer-row-selected);
+  color: var(--ui-color-selected-text);
+}
+.app-sidebar__nav:focus-within .app-sidebar__row:is(.is-selected, [aria-current="page"], [aria-selected="true"]) {
+  background: var(--explorer-row-active-selected);
+}
+
+.app-sidebar__row--detail {
+  display: grid;
+  min-height: 48px;
+  align-content: center;
+  gap: 0;
+}
+.app-sidebar__state {
+  margin: 0;
+  padding: var(--ui-space-2) var(--ui-space-3);
+  color: var(--explorer-muted);
+  font-size: var(--ui-font-body);
+  line-height: var(--ui-line-body);
+}
+.plan-domain-row > .app-sidebar__row:first-child { width: var(--ui-sidebar-row-height); padding: 0; }
+
 :is(.workspace-shell, .workspace-dialog, .plan-dialog) :is(input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"])), select, textarea),
-.original-search .tabulator .tabulator-header-filter :is(input, select),
-.de-search-link {
+.original-search .tabulator .tabulator-header-filter :is(input, select) {
   box-sizing: border-box;
   min-width: 0;
   height: var(--ui-control-height);
@@ -27,9 +122,8 @@
 }
 :is(.workspace-shell, .workspace-dialog, .plan-dialog) textarea { height: auto; }
 :is(.de-document-header, .tabulator-header-filter) { --ui-control-height: var(--ui-control-compact-height); }
-.de-document-header input, .de-search-link,
+.de-document-header input,
 .original-search .tabulator .tabulator-header-filter :is(input, select) { padding: 0 var(--ui-space-1); }
-.de-search-link,
 :is(.workspace-shell, .workspace-dialog, .plan-dialog) input::placeholder,
 :is(.workspace-shell, .workspace-dialog, .plan-dialog) textarea::placeholder { color: var(--explorer-muted); opacity: 1; }
 :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option { background: var(--ui-control-background); color: var(--explorer-foreground); }
@@ -115,3 +209,70 @@
 }
 .plan-marker-caption { line-height: var(--ui-line-code); }
 :is(.workspace-row, .activity-button, .de-tab, .de-tree-row).is-dragging { opacity: .4; }
+
+/* Keep the native select contract while theming its popup in supporting browsers. */
+@supports (appearance: base-select) {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select:where(:not([multiple]):not([size]), [size="1"]),
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select:where(:not([multiple]):not([size]), [size="1"])::picker(select) {
+    appearance: base-select;
+  }
+
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select::picker(select) {
+    min-inline-size: max(anchor-size(self-inline), 100px);
+    max-inline-size: calc(100vw - 24px);
+    max-block-size: min(320px, 60dvh);
+    margin-block: var(--ui-space-1);
+    padding: var(--ui-space-1);
+    border: 1px solid var(--ui-control-border);
+    border-radius: var(--ui-control-radius);
+    background: var(--primary-sidebar-background);
+    color: var(--explorer-foreground);
+    box-shadow: var(--ui-notice-shadow);
+    font: inherit;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ui-scroll-thumb) transparent;
+  }
+
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select::picker-icon {
+    color: var(--explorer-muted);
+    margin-inline-start: var(--ui-space-2);
+  }
+
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select:open {
+    border-color: var(--focus-border);
+  }
+
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option {
+    min-block-size: var(--ui-control-height);
+    padding: var(--ui-space-1) var(--ui-space-2);
+    gap: var(--ui-space-2);
+    border: 0;
+    border-radius: var(--ui-control-radius);
+    background: transparent;
+    color: var(--explorer-foreground);
+    font: inherit;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option:checked {
+    background: var(--explorer-row-selected);
+    color: var(--ui-color-selected-text);
+  }
+
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option:enabled:hover {
+    background: var(--explorer-row-hover);
+  }
+
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option:focus-visible {
+    background: var(--explorer-row-active-selected);
+    outline: var(--ui-focus-width) solid var(--focus-border);
+    outline-offset: var(--ui-focus-offset);
+  }
+
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option:disabled {
+    color: var(--explorer-muted);
+    cursor: not-allowed;
+  }
+}

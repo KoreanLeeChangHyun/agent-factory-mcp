@@ -249,6 +249,7 @@ const server = http.createServer(async (req, res) => {
     const actualClipboard = await page.evaluate(() => navigator.clipboard.readText());
     assert(actualClipboard.includes('첨부한 agent-factory-one-codex-'));
     assert(actualClipboard.includes('credentials.json'));
+    assert(await page.locator('[data-mcp-command]').evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight));
     assert(await page.locator('[data-mcp-ai-fallback]').isHidden());
     assert.equal(await page.locator('[data-mcp-ai-message]').textContent(), '클립보드에 복사되었습니다.');
     assert(!actualClipboard.includes('fixture-secret'));

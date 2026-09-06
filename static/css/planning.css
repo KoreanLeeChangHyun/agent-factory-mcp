@@ -54,6 +54,13 @@
 .plan-dialog h2 { font-size: 17px; margin: 0 0 16px; }
 .plan-dialog::backdrop { background: #0008; }
 .plan-timeline-scroll { overflow: auto; max-height: calc(100vh - 260px); border: 1px solid var(--region-border); }
+.planning-panel.is-timeline { display: flex; height: 100%; min-height: 0; flex-direction: column; overflow: hidden; box-sizing: border-box; }
+.planning-panel.is-timeline > .plan-header,
+.planning-panel.is-timeline > .plan-message,
+.planning-panel.is-timeline > .plan-muted { flex: 0 0 auto; }
+.planning-panel.is-timeline > .plan-timeline-scroll { flex: 1 1 auto; min-height: 180px; max-height: none; }
+.planning-panel.is-timeline .plan-timeline { min-height: 100%; }
+.planning-panel.is-timeline .plan-time-body { min-height: calc(100% - 52px); }
 .planning-panel { --plan-label-width: 280px; }
 .plan-timeline { min-width: calc(var(--plan-label-width) + var(--plan-chart-width)); position: relative; }
 .plan-time-header, .plan-time-row, .plan-time-group { display: grid; grid-template-columns: var(--plan-label-width) minmax(0,1fr); }
@@ -62,9 +69,9 @@
 .plan-time-header > div { position: relative; overflow: hidden; }
 .plan-time-header > div > span { position: absolute; top: 12px; white-space: nowrap; font-size: 12px; border-left: 1px solid #555; padding-left: 5px; }
 .plan-time-body { position: relative; }
-.plan-time-row, .plan-time-group { min-height: 52px; border-top: 1px solid var(--region-border); }
-.plan-time-group { background: #202020; min-height: 52px; }
-.plan-time-label { position: sticky; left: 0; z-index: 3; background: #1f1f1f; padding: 8px 12px; border-right: 1px solid #444; display: flex; flex-direction: column; align-items: stretch; justify-content: center; min-width: 0; }
+.plan-time-row, .plan-time-group { min-height: 44px; border-top: 1px solid var(--region-border); }
+.plan-time-group { background: #202020; min-height: 44px; }
+.plan-time-label { position: sticky; left: 0; z-index: 3; background: #1f1f1f; padding: 3px 12px; border-right: 1px solid #444; display: flex; flex-direction: column; align-items: stretch; justify-content: center; min-width: 0; }
 .plan-time-group .plan-time-label { background: #202020; }
 .plan-time-label button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; border: 0; background: transparent; text-align: left; }
 .plan-time-label svg { margin-right: 5px; }
@@ -91,7 +98,7 @@
 
 .plan-task-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .plan-task-title > button { flex: 1; min-width: 0; padding: 0; }
-.plan-task-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 11px; color: #999; min-width: 0; }
+.plan-task-meta { display: flex; align-items: center; gap: 8px; margin-top: 0; font-size: 11px; color: #999; min-width: 0; }
 .plan-task-meta > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plan-origin { font-size: 10px; flex-shrink: 0; color: var(--explorer-muted); }
 .plan-time-label.is-child { padding-left: 28px; }
@@ -105,3 +112,8 @@
 
 .plan-message:empty { display: none; }
 .plan-actions { gap: 8px; }
+
+.planning-panel .plan-task-title > button { min-height: 20px; line-height: 20px; padding: 0; border: 0; }
+.plan-task-meta { min-height: 18px; line-height: 18px; }
+.planning-panel .plan-period-edit { min-height: 18px; line-height: 18px; padding: 0; border: 0; background: transparent; color: #999; font-size: 11px; }
+.planning-panel .plan-period-edit:hover { color: #ccc; text-decoration: underline; }

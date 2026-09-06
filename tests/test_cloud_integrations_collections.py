@@ -26,7 +26,8 @@ class MemoryRepository:
         self.workspace_id = uuid4()
         self.context = N(scope=N(workspace_id=self.workspace_id, organization_id=uuid4()),
                          principal=N(user_id=uuid4(), is_platform_admin=False),
-                         permissions={'workspace.read', 'integration.read', 'integration.use', 'integration.update', 'document.import'})
+                         permissions={'workspace.read', 'integration.read', 'integration.use', 'integration.update',
+                                      'document.read', 'document.create', 'document.update', 'document.import'})
         self.records, self.docs, self.mappings = {}, {}, {}
         self.conn = N(id=uuid4(), workspace_id=self.workspace_id, provider_id=uuid4(),
                       status=ConnectionStatus.ACTIVE, encrypted_credentials=None, encryption_key_version=1,
@@ -34,6 +35,7 @@ class MemoryRepository:
         self.cloud_state = N(requested_scopes=['https://www.googleapis.com/auth/gmail.readonly'],
                              granted_scopes=['https://www.googleapis.com/auth/gmail.readonly'], inspection={}, inspected_at=None)
         self.force_cancel = False
+        self.provider_key = 'gmail'
 
     async def scope(self):
         pass
@@ -47,7 +49,7 @@ class MemoryRepository:
         return self.conn
 
     async def get_provider(self, identifier):
-        return N(key='gmail')
+        return N(key=self.provider_key)
 
     async def state(self, identifier):
         return self.cloud_state
@@ -64,6 +66,13 @@ class MemoryRepository:
 
     async def mapping(self, collection_id, source_id):
         return self.mappings.get((collection_id, source_id))
+
+    async def list_mappings(self, collection_id):
+        return [row for (owner, _), row in self.mappings.items() if owner == collection_id]
+
+    async def has_active_mapping(self, document_id, excluding_id):
+        return any(row.document_id == document_id and row.id != excluding_id and row.source_status == 'active'
+                   for row in self.mappings.values())
 
     async def document_by_slug(self, slug):
         return next((d for d in self.docs.values() if d.slug == slug), None)
@@ -90,8 +99,18 @@ class MemoryDocuments:
 
     async def create(self, context, title, slug, document_type, metadata):
         document = N(id=uuid4(), title=title, slug=slug, document_type=document_type,
-                     document_metadata=metadata, deleted_at=None)
+                     document_metadata=metadata, deleted_at=None, revision=1)
         self.repository.docs[document.id] = document
+        return document
+
+    async def get(self, context, document_id):
+        return self.repository.docs[document_id]
+
+    async def update(self, context, document_id, title, status, metadata, revision):
+        document = self.repository.docs[document_id]
+        assert document.revision == revision
+        document.title, document.document_metadata = title, metadata
+        document.revision += 1
         return document
 
     async def list_revisions(self, context, document_id):
@@ -199,6 +218,58 @@ async def test_two_independent_selections_share_one_connection():
         await service.execute(run2, job_id=job2, cancelled=no_cancel)
         assert first != second and len(repo.mappings) == 2 and len(repo.docs) == 2
         assert repo.records[first].connection_id == repo.records[second].connection_id
+
+
+@pytest.mark.asyncio
+async def test_drive_reference_collection_persists_link_metadata_without_revision_body():
+    repository = MemoryRepository()
+    repository.provider_key = 'google-drive'
+    repository.cloud_state.requested_scopes = ['https://www.googleapis.com/auth/drive.readonly']
+    repository.cloud_state.granted_scopes = ['https://www.googleapis.com/auth/drive.readonly']
+    cipher = SecretCipher('test-secret', 1)
+    repository.conn.encrypted_credentials = cipher.encrypt({
+        'access_token': 'private-access', 'scope': 'https://www.googleapis.com/auth/drive.readonly',
+    })
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        if request.url.path.endswith('/about'):
+            return httpx.Response(200, json={'user': {'permissionId': 'drive-account'}})
+        assert request.url.path.endswith('/files') and request.url.params.get('alt') is None
+        return httpx.Response(200, json={'files': [{
+            'id': 'file-1', 'name': 'Design.pdf', 'mimeType': 'application/pdf',
+            'fileExtension': 'pdf', 'modifiedTime': '2026-09-06T00:00:00Z',
+            'webViewLink': 'https://drive.google.com/file/d/file-1/view',
+        }]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        connections = CloudConnections(repository, cipher, Settings(environment='test'), ProviderHTTP(client), {})
+        documents, schedules = MemoryDocuments(repository), MemorySchedules()
+        service = CloudCollectionService(repository, connections, documents, schedules)
+        created = await service.create(CollectionCreate(
+            connection_id=repository.conn.id, name='Design links', mode='reference',
+            selection=Selection(folder_id='folder', recursive=True, attachments=False),
+        ))
+        from uuid import UUID
+        collection_id = UUID(created['collection_id'])
+        started = await service.start(collection_id, 'drive-reference')
+        result = await service.execute(UUID(started['run_id']), job_id=UUID(started['job_id']), cancelled=no_cancel)
+        overlapping = await service.create(CollectionCreate(
+            connection_id=repository.conn.id, name='Overlapping links', mode='reference',
+            selection=Selection(folder_id='other-folder', attachments=False),
+        ))
+        second = await service.start(UUID(overlapping['collection_id']), 'drive-reference-overlap')
+        await service.execute(UUID(second['run_id']), job_id=UUID(second['job_id']), cancelled=no_cancel)
+
+    assert result['status'] == 'succeeded' and result['results'][0]['body_stored'] is False
+    assert documents.revisions == {}
+    assert len(repository.docs) == 1
+    document = next(iter(repository.docs.values()))
+    assert document.document_metadata['source_url'].endswith('/file-1/view')
+    assert document.document_metadata['gather']['body_stored'] is False
+    assert len(document.document_metadata['gather']['collection_ids']) == 2
+    assert all(request.url.params.get('alt') is None for request in requests)
 
 
 @pytest.mark.asyncio

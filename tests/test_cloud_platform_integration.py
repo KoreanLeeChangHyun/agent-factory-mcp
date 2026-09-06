@@ -230,9 +230,9 @@ async def test_large_git_inventory_binary_upload_expiry_digest_and_preview(platf
                  'index.html': '<html lang="ko"><body>합성 용량 시험</body></html>'.encode()}
         assert sum(map(len, files.values())) > 8 * 1024 * 1024
     else:
-        files = git_source_files(root, f'skills/{skill}', f'.agent-factory/document/specification/{skill}')
+        files = git_source_files(root, f'skills/{skill}', f'docs/specifications/{skill}')
         assert f'skills/{skill}/SKILL.md' in files
-        assert f'.agent-factory/document/specification/{skill}/index.html' in files
+        assert f'docs/specifications/{skill}/index.html' in files
     assert sum(map(len, files.values())) > 256 * 1024
     # Exact source inventory only. Original snapshot ingestion is not pair acceptance.
     stream = io.BytesIO()
@@ -283,7 +283,7 @@ async def test_large_git_inventory_binary_upload_expiry_digest_and_preview(platf
         # A raw Git snapshot has no top-level entry or accepted pair metadata.
         # Preserve its exact bytes rather than adding a fake preview document.
         assert preview.status_code == 422
-        member_path = f'.agent-factory/document/specification/{skill}/index.html'
+        member_path = f'docs/specifications/{skill}/index.html'
     member = await p.client.get(base + '/member', params={'path': member_path})
     assert member.status_code == 200
     assert_same_bytes(member.content, files[member_path], member_path)

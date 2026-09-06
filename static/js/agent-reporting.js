@@ -23,7 +23,7 @@
     const branch=(parent,depth=0)=>(children.get(parent)||[]).map(a=>{
       if(seen.has(a.id))return '';seen.add(a.id);
       const active=snapshot.tasks.filter(t=>t.agent_id===a.id&&!terminal.has(t.status));
-      return `<li><button type="button" data-reporting-action="agent" data-id="${esc(a.id)}" ${selected===a.id?'aria-current="page"':''} title="${esc(a.name+' · '+a.role)}"><strong>${esc(a.name)}</strong><span>${esc(a.role)}</span><small>${active.length?esc(active.map(t=>`${t.name} · ${labels[t.status]}`).join(', ')):'현재 작업 없음'}</small></button>${depth<64?`<ul>${branch(a.id,depth+1)}</ul>`:''}</li>`;
+      return `<li><button class="app-sidebar__row app-sidebar__row--detail" type="button" data-reporting-action="agent" data-id="${esc(a.id)}" ${selected===a.id?'aria-current="page"':''} title="${esc(a.name+' · '+a.role)}"><strong>${esc(a.name)}</strong><span>${esc(a.role)}</span><small>${active.length?esc(active.map(t=>`${t.name} · ${labels[t.status]}`).join(', ')):'현재 작업 없음'}</small></button>${depth<64?`<ul>${branch(a.id,depth+1)}</ul>`:''}</li>`;
     }).join('');
     return `<ul class="reporting-tree">${branch(null)}</ul>`;
   }
@@ -58,7 +58,7 @@
     const focus=document.activeElement?.closest('[data-reporting-action]');
     const focusKey=focus&&[focus.dataset.reportingAction,focus.dataset.id];
     const tree=hierarchy();
-    sidebar.innerHTML=button('overall','전체 에이전트')+tree+(!received&&loading?'<p role="status">에이전트 불러오는 중…</p>':!received&&error?'<p role="alert">에이전트를 불러오지 못했습니다.</p>'+button('refresh','다시 시도'):!snapshot.agents.length?'<p class="reporting-muted">등록된 에이전트 없음</p>':'');
+    sidebar.innerHTML=`<nav class="app-sidebar__nav" aria-label="에이전트 탐색"><button class="app-sidebar__row" type="button" data-reporting-action="overall" data-id="" ${selected===null?'aria-current="page"':''}>전체 에이전트</button>${tree}</nav>`+(!received&&loading?'<p class="app-sidebar__state" role="status">에이전트 불러오는 중…</p>':!received&&error?'<p class="app-sidebar__state" role="alert">에이전트를 불러오지 못했습니다.</p>'+button('refresh','다시 시도'):!snapshot.agents.length?'<p class="app-sidebar__state reporting-muted">등록된 에이전트 없음</p>':'');
     const agent=snapshot.agents.find(a=>a.id===selected);
     const tasks=selected?snapshot.tasks.filter(t=>t.agent_id===selected):snapshot.tasks;
     panel.innerHTML=`<header><h1>${esc(agent?.name||'전체 에이전트')}</h1>${button('refresh','새로고침')}</header><p class="reporting-muted">외부 에이전트가 MCP로 보고한 구성과 작업입니다. AI 실행은 연결한 도구에서 수행합니다.</p>

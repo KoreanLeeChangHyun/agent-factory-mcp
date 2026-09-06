@@ -37,7 +37,9 @@
       }
     });
     const sidebar = document.querySelector('.primary-sidebar');
-    if (sidebar) sidebar.inert = locked;
+    sidebar?.querySelectorAll('[data-sidebar-view]').forEach(section => {
+      section.inert = locked && !['organization', 'workspaces'].includes(section.dataset.sidebarView);
+    });
 
   };
   const reset = () => {
@@ -179,23 +181,26 @@
     el('token-client').textContent = `발급 대상 · ${clientName()}`;
     el('url').value = url;
     el('config').value = result.config;
-    const lines = result.config.split('\n');
-    el('config').rows = lines.length + 1;
+    const lines = result.config.trimEnd().split('\n');
+    el('config').rows = Math.max(2, lines.length);
     el('url').title = url;
     el('config-label').textContent = `설정 위치 · ${result.path}`;
-    el('auth-help').textContent = result.authHelp;
-    el('notes').textContent = result.notes.join(' ');
+    el('auth-help').textContent = result.client.auth === 'env'
+      ? '설정에 지정된 환경변수에 토큰을 저장하고 클라이언트를 실행하세요. 토큰 변경 후에는 클라이언트를 재시작하세요.'
+      : result.authHelp;
+    el('notes').textContent = el('client').value === 'codex' && el('variant').value === 'cli'
+      ? '설정 파일은 현재 프로젝트에, 등록 명령은 사용자 전체에 적용됩니다.'
+      : result.notes.join(' ');
     const instructions = [
-      '연결 토큰 영역에서 토큰을 발급하고 위 인증 방법에 따라 입력하세요.',
-      `${result.path}에 아래 설정을 반영하세요. 다른 서버 설정은 유지하세요.`,
-      `${result.client.label}에서 MCP 서버를 시작하거나 다시 불러오세요. 도구 목록을 불러오면 연결이 자동 확인됩니다.`,
+      '토큰을 발급하고 아래 인증 안내에 따라 설정하세요.',
+      `아래 설정을 기존 설정에 병합한 뒤 ${result.client.label}에서 MCP 서버를 시작하세요. 도구 조회 시 연결이 확인됩니다.`,
     ];
     el('steps').replaceChildren(...instructions.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
     el('install').hidden = !result.install;
     if (result.install) { el('install').href = result.install; el('install').textContent = `${result.client.label}에서 설정 추가`; }
     else el('install').removeAttribute('href');
     el('command').value = result.command;
-    el('command').rows = result.command.split('\n').length + 1;
+    el('command').rows = Math.max(1, result.command.trimEnd().split('\n').length);
     el('command-label').hidden = !result.command;
     el('copy-command').hidden = !result.command;
     el('docs').href = result.client.docs;
@@ -365,5 +370,5 @@
   el('dismiss').addEventListener('click', dismiss);
   document.addEventListener('visibilitychange', () => { clearTimeout(timer); if (!document.hidden) void refresh(); });
   window.addEventListener('pagehide', reset);
-  window.agentFactoryMCPConnection = { open, reset, dismiss, show: () => { manual = true; rememberClient(); display(); void refresh(); } };
+  window.agentFactoryMCPConnection = { open, reset, dismiss, rename: name => { if (!current) return; current.name = name; el('workspace').textContent = name; el('workspace').title = name; configure(current, selectedId); invalidateFile(); display(); }, show: () => { manual = true; rememberClient(); display(); void refresh(); } };
 })();

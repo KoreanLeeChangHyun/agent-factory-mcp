@@ -8,7 +8,11 @@ from sqlalchemy import event, select, text
 from app.common.errors import ConflictError, NotFoundError
 from app.db.tenant import TenantContext, apply_tenant_context
 from app.modules.document.models import Document
-from app.modules.integration.cloud_models import CloudCollection, CloudCollectionRun, CloudConnectionState, CloudSourceMapping
+from app.modules.integration.cloud_models import (
+    CloudCollectionRun,
+    CloudConnectionState,
+    CloudSourceMapping,
+)
 from app.modules.integration.repository import IntegrationRepository
 
 
@@ -77,6 +81,20 @@ class CloudRepository(IntegrationRepository):
             CloudSourceMapping.workspace_id == self.workspace_id,
             CloudSourceMapping.collection_id == collection_id, CloudSourceMapping.source_id == source_id))
 
+    async def list_mappings(self, collection_id):
+        await self.scope()
+        return list(await self.session.scalars(select(CloudSourceMapping).where(
+            CloudSourceMapping.workspace_id == self.workspace_id,
+            CloudSourceMapping.collection_id == collection_id)))
+
+    async def has_active_mapping(self, document_id, excluding_id):
+        await self.scope()
+        return bool(await self.session.scalar(select(CloudSourceMapping.id).where(
+            CloudSourceMapping.workspace_id == self.workspace_id,
+            CloudSourceMapping.document_id == document_id,
+            CloudSourceMapping.id != excluding_id,
+            CloudSourceMapping.source_status == 'active').limit(1)))
+
     async def document_by_slug(self, slug):
         await self.scope()
         return await self.session.scalar(select(Document).where(
@@ -97,9 +115,8 @@ class CloudRepository(IntegrationRepository):
         # A dedicated transaction holds the lock while DocumentService commits
         # independently. It is automatically released on process/connection loss.
         key = int.from_bytes(sha256(f'{self.workspace_id}:{connection_id}'.encode()).digest()[:8], 'big', signed=True)
-        async with self.session.bind.connect() as lock_connection:
-            async with lock_connection.begin():
-                acquired = await lock_connection.scalar(text('SELECT pg_try_advisory_xact_lock(:key)'), {'key': key})
-                if not acquired:
-                    raise ConflictError('integration_busy', 'Connection has an operation in progress')
-                yield
+        async with self.session.bind.connect() as lock_connection, lock_connection.begin():
+            acquired = await lock_connection.scalar(text('SELECT pg_try_advisory_xact_lock(:key)'), {'key': key})
+            if not acquired:
+                raise ConflictError('integration_busy', 'Connection has an operation in progress')
+            yield

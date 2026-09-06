@@ -11,11 +11,15 @@ from uuid import uuid4
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
-from app.common.errors import ApplicationError, ConflictError, PermissionDeniedError
-from app.modules.document.models import DocumentType
+from app.common.errors import ConflictError, PermissionDeniedError
+from app.modules.document.models import DocumentStatus, DocumentType
 from app.modules.document.service import ALLOWED_MEDIA_TYPES
 from app.modules.integration.cloud_http import CollectionCancelled, ProviderError
-from app.modules.integration.cloud_models import CloudCollection, CloudCollectionRun, CloudSourceMapping
+from app.modules.integration.cloud_models import (
+    CloudCollection,
+    CloudCollectionRun,
+    CloudSourceMapping,
+)
 from app.modules.integration.cloud_providers import CloudDriver, evidence
 from app.modules.integration.cloud_schemas import Selection, required_scopes
 from app.modules.integration.models import ConnectionStatus
@@ -66,11 +70,16 @@ class CloudCollectionService:
         require(self.context, 'integration.use', 'document.import')
         connection, provider = await self.connections.resolve(request.connection_id)
         selection = request.selection.for_provider(provider)
+        if request.mode == 'reference' and provider != 'google-drive':
+            raise ProviderError('reference_mode_unsupported')
+        if request.mode == 'reference':
+            require(self.context, 'document.create', 'document.update')
         if not request.name.strip():
             raise ProviderError('invalid_collection_name')
         record = CloudCollection(id=uuid4(), workspace_id=self.repository.workspace_id,
                                  connection_id=connection.id, provider=provider, name=request.name.strip(),
                                  selection=selection.model_dump(exclude_unset=True),
+                                 mode=request.mode, is_enabled=True,
                                  created_by_user_id=self.context.principal.user_id)
         try:
             await self.repository.save(record)
@@ -82,7 +91,11 @@ class CloudCollectionService:
     @staticmethod
     def collection_projection(record):
         return {'collection_id': str(record.id), 'connection_id': str(record.connection_id), 'provider': record.provider,
-                'name': record.name, 'selection': record.selection, 'destination': f'workspace:{record.workspace_id}:original'}
+                'name': record.name, 'selection': record.selection, 'mode': record.mode,
+                'enabled': record.is_enabled, 'last_refresh_status': record.last_refresh_status,
+                'last_refreshed_at': record.last_refreshed_at.isoformat() if record.last_refreshed_at else None,
+                'last_error_code': record.last_error_code,
+                'destination': f'workspace:{record.workspace_id}:original'}
 
     async def list(self):
         require(self.context, 'integration.read')
@@ -91,11 +104,26 @@ class CloudCollectionService:
             CloudCollection.workspace_id == self.repository.workspace_id).order_by(CloudCollection.created_at).limit(1000))
         return {'collections': [self.collection_projection(record) for record in records]}
 
+    async def sources(self, collection_id):
+        require(self.context, 'integration.read', 'document.read')
+        await self.repository.one(CloudCollection, collection_id)
+        rows = await self.repository.list_mappings(collection_id)
+        return {'sources': [{
+            'source_id': row.source_id, 'document_id': str(row.document_id),
+            'source_url': row.source_url, 'metadata': row.source_metadata,
+            'status': row.source_status,
+            'last_seen_at': row.last_seen_at.isoformat() if row.last_seen_at else None,
+        } for row in rows]}
+
     async def start(self, collection_id, request_key):
         require(self.context, 'integration.use', 'document.import')
         if not isinstance(request_key, str) or not 1 <= len(request_key) <= 160:
             raise ProviderError('invalid_request_key')
         collection = await self.repository.one(CloudCollection, collection_id)
+        if not collection.is_enabled:
+            raise ConflictError('collection_unlinked', 'Collection is unlinked from this workspace')
+        if collection.mode == 'reference':
+            require(self.context, 'document.create', 'document.update')
         async with self.repository.guard(collection.connection_id):
             run = await self.repository.find_run(collection_id, request_key)
             if run is None:
@@ -113,6 +141,13 @@ class CloudCollectionService:
                 run.job_id = job.id
                 await self.repository.save(run)
             return self.run_projection(run)
+
+    async def set_enabled(self, collection_id, enabled):
+        require(self.context, 'integration.update')
+        collection = await self.repository.one(CloudCollection, collection_id)
+        collection.is_enabled = bool(enabled)
+        await self.repository.save(collection)
+        return self.collection_projection(collection)
 
     @staticmethod
     def run_projection(run, *, results=False):
@@ -196,6 +231,100 @@ class CloudCollectionService:
                 'revision_number': revision.revision_number, 'sha256': digest,
                 'changed': changed, 'limitations': item.limitations}
 
+    async def persist_reference(self, collection, run, item):
+        source = evidence(item.metadata)
+        link = source.get('webViewLink') or f'https://drive.google.com/open?id={item.source_id}'
+        digest_source = {key: source.get(key) for key in (
+            'id', 'name', 'mimeType', 'createdTime', 'modifiedTime', 'md5Checksum',
+            'size', 'fileExtension', 'webViewLink', 'parents'
+        ) if source.get(key) is not None}
+        digest = sha256(json.dumps(digest_source, sort_keys=True).encode()).hexdigest()
+        extension = source.get('fileExtension') or (item.title.rsplit('.', 1)[-1] if '.' in item.title else '')
+        identity = sha256(f'{collection.connection_id}:{item.source_id}'.encode()).hexdigest()
+        slug = 'gather-' + identity
+        mapping = await self.repository.mapping(collection.id, item.source_id)
+        document = None
+        metadata: dict[str, object]
+        if mapping is None:
+            document = await self.repository.document_by_slug(slug)
+            if document is not None and (document.deleted_at is not None or document.document_type != DocumentType.ORIGINAL
+                                        or document.document_metadata.get('gather', {}).get('source_id') != item.source_id
+                                        or document.document_metadata.get('gather', {}).get('connection_id') != str(collection.connection_id)):
+                raise ProviderError('source_document_conflict')
+            collection_ids = set(document.document_metadata.get('gather', {}).get('collection_ids', [])) if document else set()
+            collection_ids.add(str(collection.id))
+            metadata = {
+                'documentType': 'original', 'classification': '원본 문서', 'provider': 'Google Drive',
+                'tags': [], 'extension': extension, 'source_url': link,
+                'gather': {
+                    'provider': collection.provider, 'connection_id': str(collection.connection_id),
+                    'collection_ids': sorted(collection_ids), 'source_id': item.source_id,
+                    'source': digest_source, 'mode': 'reference', 'body_stored': False,
+                    'source_status': 'active', 'last_seen_at': datetime.now(UTC).isoformat(),
+                },
+            }
+            if document is None:
+                await self.repository.scope()
+                document = await self.documents.create(self.context, item.title[:300] or item.source_id,
+                                                       slug, DocumentType.ORIGINAL, metadata)
+            mapping = CloudSourceMapping(workspace_id=self.repository.workspace_id, collection_id=collection.id,
+                                         source_id=item.source_id, document_id=document.id)
+        else:
+            document = await self.documents.get(self.context, mapping.document_id)
+            collection_ids = set(document.document_metadata.get('gather', {}).get('collection_ids', []))
+            collection_ids.add(str(collection.id))
+            metadata = {
+                'documentType': 'original', 'classification': '원본 문서', 'provider': 'Google Drive',
+                'tags': [], 'extension': extension, 'source_url': link,
+                'gather': {
+                    'provider': collection.provider, 'connection_id': str(collection.connection_id),
+                    'collection_ids': sorted(collection_ids), 'source_id': item.source_id,
+                    'source': digest_source, 'mode': 'reference', 'body_stored': False,
+                    'source_status': 'active', 'last_seen_at': datetime.now(UTC).isoformat(),
+                },
+            }
+        changed = mapping.metadata_hash != digest or document.title != item.title or mapping.source_status != 'active'
+        if changed and document.document_metadata != metadata:
+            await self.documents.update(self.context, document.id, item.title[:300] or item.source_id,
+                                        DocumentStatus.ACTIVE, metadata, document.revision)
+        mapping.source_url, mapping.source_metadata = link, digest_source
+        mapping.metadata_hash, mapping.source_status = digest, 'active'
+        mapping.last_seen_at = datetime.now(UTC)
+        await self.repository.save(mapping)
+        return {'source_id': item.source_id, 'document_id': str(mapping.document_id), 'source_url': link,
+                'revision_number': None, 'sha256': None, 'changed': changed, 'body_stored': False,
+                'limitations': item.limitations}
+
+    async def mark_missing_references(self, collection, seen):
+        for mapping in await self.repository.list_mappings(collection.id):
+            if mapping.source_id in seen or mapping.source_status == 'missing':
+                continue
+            mapping.source_status = 'missing'
+            await self.repository.save(mapping)
+            if await self.repository.has_active_mapping(mapping.document_id, mapping.id):
+                continue
+            document = await self.documents.get(self.context, mapping.document_id)
+            metadata = dict(document.document_metadata)
+            gather = dict(metadata.get('gather', {}))
+            gather['source_status'] = 'missing'
+            metadata['gather'] = gather
+            await self.documents.update(self.context, document.id, document.title, DocumentStatus.ACTIVE,
+                                        metadata, document.revision)
+
+    async def mark_inaccessible_references(self, collection):
+        for mapping in await self.repository.list_mappings(collection.id):
+            mapping.source_status = 'inaccessible'
+            await self.repository.save(mapping)
+            if await self.repository.has_active_mapping(mapping.document_id, mapping.id):
+                continue
+            document = await self.documents.get(self.context, mapping.document_id)
+            metadata = dict(document.document_metadata)
+            gather = dict(metadata.get('gather', {}))
+            gather['source_status'] = 'inaccessible'
+            metadata['gather'] = gather
+            await self.documents.update(self.context, document.id, document.title, DocumentStatus.ACTIVE,
+                                        metadata, document.revision)
+
     async def execute(self, run_id, *, job_id, cancelled):
         require(self.context, 'integration.use', 'document.import')
         run = await self.repository.one(CloudCollectionRun, run_id)
@@ -211,6 +340,10 @@ class CloudCollectionService:
                 or job.idempotency_key != f'collection:{run_id}' or (run.job_id and run.job_id != job_id)):
             raise PermissionDeniedError('job_context_mismatch', 'Worker job does not match collection run')
         collection = await self.repository.one(CloudCollection, run.collection_id)
+        if not collection.is_enabled:
+            raise ConflictError('collection_unlinked', 'Collection is unlinked from this workspace')
+        if collection.mode == 'reference':
+            require(self.context, 'document.create', 'document.update')
         async with self.repository.guard(collection.connection_id):
             run = await self.repository.one(CloudCollectionRun, run_id)
             if run.status in TERMINAL:
@@ -259,14 +392,17 @@ class CloudCollectionService:
                     await http.check_cancelled()
                     # Refresh between pages as well; credentials stay server-side.
                     credentials = await self.connections.refresh(connection, provider)
-                    page = await CloudDriver(provider, http, credentials).page(selection, run.cursor,
-                                                                             selection.max_items - run.examined)
+                    page = await CloudDriver(provider, http, credentials).page(
+                        selection, run.cursor, selection.max_items - run.examined,
+                        metadata_only=collection.mode == 'reference')
                     if page.examined > selection.max_items - run.examined:
                         raise ProviderError('provider_exceeded_page_bound')
                     page_results = []
                     for item in page.items:
                         await http.check_cancelled()
-                        persisted = await self.persist_item(collection, run, item)
+                        persisted = (await self.persist_reference(collection, run, item)
+                                     if collection.mode == 'reference'
+                                     else await self.persist_item(collection, run, item))
                         page_results.append(persisted)
                         # Expose committed Originals even when cancellation interrupts
                         # a page. The cursor stays at the last complete page.
@@ -293,11 +429,15 @@ class CloudCollectionService:
                         break
                 if run.status == 'running':
                     run.status, run.finished_at = 'bounded', datetime.now(UTC)
+                if collection.mode == 'reference' and run.status == 'succeeded':
+                    await self.mark_missing_references(collection, {row['source_id'] for row in run.results})
             except CollectionCancelled:
                 run.status, run.finished_at = 'cancelled', datetime.now(UTC)
             except ProviderError as exc:
                 run.status = 'retry' if exc.retryable else 'failed'
                 run.error_code = exc.code
+                if collection.mode == 'reference' and exc.code in ('provider_forbidden', 'provider_not_found'):
+                    await self.mark_inaccessible_references(collection)
                 if not exc.retryable:
                     run.finished_at = datetime.now(UTC)
                 raise
@@ -311,5 +451,9 @@ class CloudCollectionService:
                 # Request settlement already persists bytes. Do not refund a
                 # reservation after persistence failure or add the count twice.
                 http.account_bytes = None
+                collection.last_refresh_status = run.status
+                collection.last_refreshed_at = run.finished_at
+                collection.last_error_code = run.error_code
+                await self.repository.save(collection)
                 await self.repository.save(run)
             return self.run_projection(run, results=True)

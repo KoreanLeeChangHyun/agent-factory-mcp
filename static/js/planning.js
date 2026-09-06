@@ -23,15 +23,16 @@
   const status = r => `<span class="plan-status status-${r.status}">${icon(r.status)}${statuses[r.status]}</span>`;
   const flags = r => `${r.blocked_reason ? '<span class="plan-warning">막힘</span>' : ''}${r.target_date && r.target_date < today() && r.status !== 'done' ? '<span class="plan-warning">기한 초과</span>' : ''}`;
   const button = (action, label, extra = '') => `<button type="button" data-plan-action="${action}" ${extra}>${label}</button>`;
+  const sidebarButton = (action, label, extra = '') => `<button class="app-sidebar__row" type="button" data-plan-action="${action}" ${extra}>${label}</button>`;
   const editButton = r => snapshot.can_edit ? button('edit', '수정', `data-id="${r.id}"`) : '';
   const addButton = (kind, parent = '') => snapshot.can_edit ? button('add', `${icon('add')}${kinds[kind]} 추가`, `data-kind="${kind}" data-parent="${parent}"`) : '';
-  const navButton = r => `<button type="button" data-plan-action="select" data-id="${r.id}" title="${esc(r.name)}" ${selected === r.id ? 'aria-current="page" class="is-selected"' : ''}>${icon(r.status)}<span>${esc(r.name)}</span></button>`;
+  const navButton = r => `<button type="button" class="app-sidebar__row${selected === r.id ? ' is-selected' : ''}" data-plan-action="select" data-id="${r.id}" title="${esc(r.name)}" ${selected === r.id ? 'aria-current="page"' : ''}>${icon(r.status)}<span>${esc(r.name)}</span></button>`;
   function renderSidebar() {
     headerActions.querySelector('[data-plan-action="add"]').hidden = !snapshot.can_edit;
-    sidebar.innerHTML = `<nav aria-label="일정 탐색">${button('select','전체 일정', `data-id="" ${selected === null ? 'aria-current="page" class="is-selected"' : ''}`)}
-      ${domains().map(r => `<div class="plan-domain-row">${button('collapse',icon(collapsed.has(r.id)?'right':'down'),`data-id="${r.id}" aria-label="${esc(r.name)} ${collapsed.has(r.id)?'펼치기':'접기'}" aria-expanded="${!collapsed.has(r.id)}"`)}${navButton(r)}</div>
+    sidebar.innerHTML = `<nav class="app-sidebar__nav" aria-label="일정 탐색">${sidebarButton('select','전체 일정', `data-id="" ${selected === null ? 'aria-current="page" class="is-selected"' : ''}`)}
+      ${domains().map(r => `<div class="plan-domain-row">${sidebarButton('collapse',icon(collapsed.has(r.id)?'right':'down'),`data-id="${r.id}" aria-label="${esc(r.name)} ${collapsed.has(r.id)?'펼치기':'접기'}" aria-expanded="${!collapsed.has(r.id)}"`)}${navButton(r)}</div>
       <div class="plan-feature-nav" ${collapsed.has(r.id)?'hidden':''}>${children(r.id).map(navButton).join('')}</div>`).join('')}</nav>
-      ${!domains().length ? '<p class="plan-muted">작업을 추가해 일정을 시작하세요.</p>' : ''}`;
+      ${!domains().length ? '<p class="app-sidebar__state plan-muted">작업을 추가해 일정을 시작하세요.</p>' : ''}`;
   }
   function header(title, actions = '') {
     return `<header class="plan-header"><h1 tabindex="-1">${esc(title)}</h1><div class="plan-actions">${actions}</div></header><p class="plan-message" role="status" aria-live="polite"></p>`;
@@ -57,6 +58,7 @@
     }).join('')}</tbody></table></div>`;
   }
   function renderDomain(r) {
+    panel.classList.remove('is-timeline');
     const rows = children(r.id);
     panel.innerHTML = header(r.name,`${editButton(r)}${addButton('feature',r.id)}`) + `<div class="plan-summary">${status(r)}<span>${esc(period(r))}</span><span class="plan-muted">${dateOrigin(r)}</span></div><p class="plan-description">${esc(r.description)}</p>${rows.length?featureTable(rows):'<p class="plan-empty">하위 작업을 추가하면 요약 일정이 표시됩니다.</p>'}`;
   }
@@ -71,6 +73,7 @@
     return outside ? `<span class="plan-warning">상위 작업 기간 밖</span>${snapshot.can_edit ? button('edit','상위 작업 기간 조정',`data-id="${parent.id}"`) : ''}` : '';
   }
   function renderFeature(r) {
+    panel.classList.remove('is-timeline');
     const rows = children(r.id);
     panel.innerHTML = header(r.name,`${editButton(r)}${addButton('issue',r.id)}`) + `<div class="plan-summary">${status(r)}${flags(r)}${issueWarning(r,item(r.parent_id))}<span>담당자 ${esc(r.assignee || '미지정')}</span><span>${esc(period(r))}</span></div>
       ${r.blocked_reason?`<p class="plan-warning">막힘: ${esc(r.blocked_reason)}</p>`:''}
@@ -80,14 +83,21 @@
       ${rows.length?`<div class="plan-table-scroll"><table class="plan-table"><thead><tr><th>작업 이름</th><th>담당자</th><th>상태</th><th>목표일</th></tr></thead><tbody>${rows.map(i=>`<tr><td>${button('expand',`${icon(expanded.has(i.id)?'down':'right')}${esc(i.name)}`,`data-id="${i.id}" aria-expanded="${expanded.has(i.id)}" aria-controls="issue-${i.id}"`)}</td><td>${esc(i.assignee || '미지정')}</td><td>${status(i)}${flags(i)}</td><td>${esc(i.target_date || '미정')} ${issueWarning(i,r)}</td></tr><tr id="issue-${i.id}" ${expanded.has(i.id)?'':'hidden'}><td colspan="4"><div class="plan-issue-detail">${snapshot.can_edit?(expanded.has(i.id)?editor(i):''):`<p class="plan-description">${esc(i.description || '설명이 없습니다.')}</p>${i.blocked_reason?`<p>막힘: ${esc(i.blocked_reason)}</p>`:''}`}</div></td></tr>`).join('')}</tbody></table></div>`:'<p class="plan-empty">하위 작업을 추가하세요. 목표일은 필요한 작업에만 입력합니다.</p>'}`;
   }
   function renderTimeline() {
+    panel.classList.add('is-timeline');
     const rows = features();
     const dates = [...rows,...domains()].flatMap(r=>[r.start_date,r.target_date]).filter(Boolean);
     if (snapshot.settings.launch_date) dates.push(snapshot.settings.launch_date);
     let start, end;
     if (fitted && dates.length) { start = Math.min(...dates.map(day))-3; end = Math.max(...dates.map(day))+4; }
-    else { start = day(anchor)-7; end = start+(scale==='week'?56:180); }
+    else {
+      const windowStart=day(anchor)-7, windowDays=scale==='week'?56:180;
+      start=dates.length?Math.min(windowStart,Math.min(...dates.map(day))-3):windowStart;
+      end=Math.max(windowStart+windowDays,dates.length?Math.max(...dates.map(day))+4:windowStart+windowDays);
+    }
     const labelWidth = parseFloat(getComputedStyle(panel).getPropertyValue('--plan-label-width')) || 280;
-    const chartWidth = fitted ? Math.max(120, panel.clientWidth - labelWidth - 34) : scale==='week'?784:900;
+    const chartWidth = fitted
+      ? Math.max(120, panel.clientWidth - labelWidth - 34)
+      : Math.max(scale==='week'?784:900,(end-start)*(scale==='week'?14:5));
     const maxLabels = Math.max(1, Math.floor(chartWidth / 88));
     const tickInterval = Math.max(1, Math.ceil((end-start) / (scale==='week'?7:30) / maxLabels));
     const ticks = [];
@@ -123,7 +133,7 @@
         if(position(date)>=0 && position(date)<=100) bar=`<button type="button" class="plan-date-point status-${r.status}" data-plan-left="${position(date)}" data-plan-action="select" data-id="${r.id}" aria-label="${esc(label)}" title="${esc(label)}">${icon('milestone')}</button>`;
         else bar=button('locate','날짜로 이동',`data-date="${date}"`);
       }
-      return `<div class="${summary?'plan-time-group':'plan-time-row'}"><div class="plan-time-label${summary?'':' is-child'}"><div class="plan-task-title">${button('select',`${icon(r.status)}${esc(r.name)}`,`data-id="${r.id}" title="${esc(r.name)}"`)}${flags(r)}</div><div class="plan-task-meta"><span title="${esc(period(r))}">${esc(period(r))}</span>${originLabel(r)}</div>${issueWarning(r,item(r.parent_id))}</div><div class="plan-time-track">${bar}</div></div>`;
+      return `<div class="${summary?'plan-time-group':'plan-time-row'}"><div class="plan-time-label${summary?'':' is-child'}"><div class="plan-task-title">${button('select',`${icon(r.status)}${esc(r.name)}`,`data-id="${r.id}" title="${esc(r.name)}"`)}${flags(r)}</div><div class="plan-task-meta">${snapshot.can_edit && !r.start_date && !r.target_date ? button('edit-period','기간 미정',`class="plan-period-edit" data-id="${r.id}" aria-label="${esc(r.name)} 기간 설정" title="날짜 입력"`) : `<span title="${esc(period(r))}">${esc(period(r))}</span>`}${originLabel(r)}</div>${issueWarning(r,item(r.parent_id))}</div><div class="plan-time-track">${bar}</div></div>`;
     };
     panel.innerHTML = header('전체 일정', `${button('imports','가져오기')}${button('today','오늘')}${button('fit','전체 맞춤',`aria-pressed="${fitted}"`)}<label>단위 <select data-plan-scale aria-label="타임라인 단위"><option value="week" ${scale==='week'?'selected':''}>주</option><option value="month" ${scale==='month'?'selected':''}>월</option></select></label>${snapshot.can_edit?button('launch','출시 목표일'):''}`) +
       `<p class="plan-muted">${iso(start)} – ${iso(end)}${snapshot.settings.launch_date?` · 출시 목표 ${snapshot.settings.launch_date}`:''}</p>
@@ -137,6 +147,7 @@
     if(scroller) { scroller.scrollLeft=timelineScroll; scroller.addEventListener('scroll',()=>{timelineScroll=scroller.scrollLeft;}); }
   }
   async function renderImports(id = null) {
+    panel.classList.remove('is-timeline');
     if (!scope) return;
     const own=epoch, version=++importVersion, current=scope;
     panel.innerHTML=header('일정 가져오기',button('select','전체 일정', 'data-id=""'))+'<p role="status">가져오기 내역 불러오는 중…</p>';
@@ -203,6 +214,7 @@
     } catch(error) {
       if(own!==epoch || requestVersion!==loadVersion) return;
       rememberDrafts();
+      panel.classList.remove('is-timeline');
       sidebar.innerHTML=button('refresh','다시 시도');
       panel.innerHTML=header('일정')+`<p role="alert">일정을 불러오지 못했습니다. ${esc(error.message)}</p>${button('refresh','다시 시도')}`;
     }
@@ -235,6 +247,7 @@
       case 'collapse': collapsed.has(id)?collapsed.delete(id):collapsed.add(id); renderSidebar(); sidebar.querySelector(`[data-plan-action="collapse"][data-id="${id}"]`)?.focus(); break;
       case 'expand': expanded.has(id)?expanded.delete(id):expanded.add(id); render(); panel.querySelector(`[data-plan-action="expand"][data-id="${id}"]`)?.focus(); break;
       case 'add': openEditor({kind:b.dataset.kind,parent_id:b.dataset.parent,status:'pending'},true); break;
+      case 'edit-period': openEditor(record); dialog.querySelector('[name="start_date"],[name="target_date"]')?.focus(); break;
       case 'edit': openEditor(record); break;
       case 'cancel': if(dialog.open) {drafts.delete(dialog.querySelector('form')?.dataset.id); dialog.close();} else { event.target.closest('form')?.remove(); drafts.delete(id); expanded.delete(id);render();} break;
       case 'delete':
@@ -288,7 +301,7 @@
       else panel.querySelector('h1')?.focus();
       return true;
     },
-    reset() { importView=false; importVersion++; epoch++;scope=null;snapshot={items:[],settings:{},can_edit:false};selected=null;collapsed=new Set();expanded=new Set();drafts=new Map();loadVersion++;busy=false;timelineScroll=0;anchor=today();fitted=false;if(dialog.open)dialog.close(); sidebar.replaceChildren();panel.replaceChildren();headerActions.querySelector('[data-plan-action="add"]').hidden=true; },
+    reset() { importView=false; importVersion++; epoch++;scope=null;snapshot={items:[],settings:{},can_edit:false};selected=null;collapsed=new Set();expanded=new Set();drafts=new Map();loadVersion++;busy=false;timelineScroll=0;anchor=today();fitted=false;if(dialog.open)dialog.close(); panel.classList.remove('is-timeline');sidebar.replaceChildren();panel.replaceChildren();headerActions.querySelector('[data-plan-action="add"]').hidden=true; },
     open({api,organizationId,workspaceId}) {this.reset();scope={api,path:`/api/organizations/${organizationId}/workspaces/${workspaceId}/plan`};sidebar.innerHTML='<p role="status">일정 불러오는 중…</p>';panel.innerHTML='<p role="status">일정 불러오는 중…</p>';void reload();},
   };
 })();

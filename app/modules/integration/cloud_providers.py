@@ -5,7 +5,7 @@ import copy
 import email
 import json
 from dataclasses import dataclass, field
-from urllib.parse import quote, urlsplit, parse_qs, parse_qsl, urlunsplit, urlencode
+from urllib.parse import parse_qs, parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 from app.modules.integration.cloud_http import ProviderError, ProviderHTTP
 from app.modules.integration.cloud_schemas import Selection
@@ -162,9 +162,28 @@ class CloudDriver:
                     'account_id': None, 'granted_scopes': None, 'scope_support': 'unknown', 'error_code': exc.code,
                     'retryable': exc.retryable, 'retry_after': exc.retry_after}
 
-    async def page(self, selection: Selection, cursor: dict, remaining: int) -> Page:
+    async def page(self, selection: Selection, cursor: dict, remaining: int, *, metadata_only: bool = False) -> Page:
         await self.http.check_cancelled()
+        if metadata_only:
+            if self.provider != 'google-drive':
+                raise ProviderError('reference_mode_unsupported')
+            return await self._google_drive(selection, copy.deepcopy(cursor), remaining, metadata_only=True)
         return await getattr(self, '_' + self.provider.replace('-', '_'))(selection, copy.deepcopy(cursor), remaining)
+
+    async def drive_folders(self, parent_id='root', page_token=None):
+        if self.provider != 'google-drive':
+            raise ProviderError('provider_unsupported')
+        body = await self.get(
+            DRIVE + '/files',
+            q=f"'{parent_id}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'",
+            fields='nextPageToken,files(id,name,modifiedTime,webViewLink)', pageSize=100,
+            pageToken=page_token, supportsAllDrives='true', includeItemsFromAllDrives='true',
+            orderBy='name',
+        )
+        return {
+            'folders': [evidence(item) for item in bounded_rows(body, 'files', 100)],
+            'next_page_token': body.get('nextPageToken'),
+        }
 
     async def _drive_item(self, item):
         identifier, mime = item['id'], item['mimeType']
@@ -182,13 +201,14 @@ class CloudDriver:
         _, _, content = await self.http.request('GET', path, headers=self.headers, params=params)
         return SourceItem(identifier, name, [Artifact(name, mime, content)], evidence(item))
 
-    async def _google_drive(self, s, c, remaining):
-        fields = 'id,name,mimeType,modifiedTime,md5Checksum,size,webViewLink'
+    async def _google_drive(self, s, c, remaining, metadata_only=False):
+        fields = 'id,name,mimeType,createdTime,modifiedTime,md5Checksum,size,fileExtension,webViewLink,parents'
         if s.file_id:
             item = await self.get(f'{DRIVE}/files/{component(s.file_id)}', fields=fields, supportsAllDrives='true')
             if item['mimeType'] == 'application/vnd.google-apps.folder':
                 raise ProviderError('selection_requires_folder_id')
-            return Page([await self._drive_item(item)], {}, True, 1)
+            source = SourceItem(item['id'], item.get('name', item['id']), [], evidence(item)) if metadata_only else await self._drive_item(item)
+            return Page([source], {}, True, 1)
         queue = c.get('queue', [s.folder_id])
         seen = c.get('seen', [])
         folder = queue[0]
@@ -203,7 +223,8 @@ class CloudDriver:
                 if s.recursive and item['id'] not in seen and item['id'] not in queue:
                     queue.append(item['id'])
             else:
-                items.append(await self._drive_item(item))
+                items.append(SourceItem(item['id'], item.get('name', item['id']), [], evidence(item))
+                             if metadata_only else await self._drive_item(item))
         token = body.get('nextPageToken')
         if not token:
             seen.append(queue.pop(0))

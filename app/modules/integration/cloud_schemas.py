@@ -93,6 +93,12 @@ class CollectionCreate(BaseModel):
     connection_id: UUID
     name: str = Field(min_length=1, max_length=160)
     selection: Selection
+    mode: Literal['content', 'reference'] = 'content'
+
+
+class CollectionEnabled(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    enabled: bool
 
 
 class OAuthRequest(BaseModel):

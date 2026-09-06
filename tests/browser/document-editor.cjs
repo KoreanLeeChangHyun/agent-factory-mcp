@@ -99,7 +99,7 @@ const docs = [
       const search = header.getByRole('searchbox');
       const overview = header.locator('[data-document-target]');
       const collapse = header.getByRole('button', { name: /모두 접기/ });
-      assert.deepEqual(await header.evaluate(el => [...el.children].map(child => child.tagName)), ['BUTTON', 'INPUT', 'A', 'BUTTON']);
+      assert.deepEqual(await header.evaluate(el => [...el.children].map(child => child.tagName)), ['BUTTON', 'INPUT', 'BUTTON', 'A']);
       assert(await overview.locator('svg').count());
       assert.equal(await overview.textContent(), '');
       await toggle.click();
@@ -111,8 +111,8 @@ const docs = [
       assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
       await search.fill('');
       await search.fill(kind === 'processed' ? 'c.json' : 'spec.md');
-      await search.focus(); await page.keyboard.press('Tab'); assert(await overview.evaluate(el => el === document.activeElement));
-      await page.keyboard.press('Tab'); assert(await collapse.evaluate(el => el === document.activeElement));
+      await search.focus(); await page.keyboard.press('Tab'); assert(await collapse.evaluate(el => el === document.activeElement));
+      await page.keyboard.press('Tab'); assert(await overview.evaluate(el => el === document.activeElement));
       await collapse.press('Enter');
       assert.equal(await search.inputValue(), '');
       assert.equal(await page.locator(`[data-${kind}-list] [aria-expanded="true"]`).count(), 0);
@@ -132,11 +132,10 @@ const docs = [
           assert(rects.every(r => Math.abs(r.y + r.h / 2 - rects[0].y - rects[0].h / 2) <= 1));
           assert(rects.every((r, index) => !index || r.x >= rects[index - 1].x + rects[index - 1].w));
         }
-        const columns = await page.locator('.de-document-header').evaluateAll(headers => headers.map(header => [...header.children].slice(1, 3).map(el => {
+        const columns = await page.locator('.de-document-header').evaluateAll(headers => headers.map(header => [header.children[1], header.querySelector('[data-document-target$="-overview"]')].map(el => {
           const rect = el.getBoundingClientRect(), css = getComputedStyle(el);
           return { x:rect.x, width:rect.width, height:rect.height, border:css.border, background:css.backgroundColor, radius:css.borderRadius, font:css.fontSize };
         })));
-        assert.deepEqual(columns[0][0], columns[1][0]);
         assert.deepEqual(columns[1][0], columns[2][0]);
         assert.equal(columns[0][1].x, columns[1][1].x);
         assert.equal(columns[1][1].x, columns[2][1].x);
@@ -151,7 +150,11 @@ const docs = [
       await file('s').press('Enter'); await tab('spec.md').waitFor();
       const original = page.locator('.document-group[aria-labelledby="original-group-label"]');
       assert.deepEqual(await original.locator('.de-document-header').evaluate(el => [...el.children].map(child => child.tagName)), ['SPAN', 'A', 'A']);
-      await original.getByRole('link', {name:'원본 문서 검색', exact:true}).click();
+      assert.equal(await original.getByRole('searchbox').count(), 0);
+      const tableLink = original.getByRole('link', {name:'원본 문서 테이블', exact:true});
+      assert.equal(await tableLink.locator('svg').count(), 1);
+      assert.equal((await tableLink.textContent()).trim(), '');
+      await tableLink.focus(); await tableLink.press('Enter');
       assert(await page.locator('[data-document-view="original-search"]').isVisible());
       await page.evaluate(() => window.agentFactoryWorkspace.originalSearch.replaceRows([
         {sourceIdentity:'one', name:'Alpha source', classification:'문서', provider:'Drive', tags:['alpha'], extension:'md', modifiedAt:'2026-09-06', sourceUrl:'https://example.com/alpha'},

@@ -59,6 +59,29 @@ async def test_drive_exports_native_files_and_keeps_folder_pagination():
 
 
 @pytest.mark.asyncio
+async def test_drive_reference_mode_never_downloads_file_bodies():
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        assert request.url.path.endswith('/files')
+        assert request.url.params.get('alt') is None
+        return response({'files': [{
+            'id': 'source-file', 'name': 'Roadmap.pdf', 'mimeType': 'application/pdf',
+            'modifiedTime': '2026-09-06T00:00:00Z', 'fileExtension': 'pdf',
+            'webViewLink': 'https://drive.google.com/file/d/source-file/view',
+        }]})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        page = await CloudDriver('google-drive', ProviderHTTP(client), {'access_token': 'hidden'}).page(
+            Selection(folder_id='folder'), {}, 10, metadata_only=True)
+
+    assert page.done and len(requests) == 1
+    assert page.items[0].artifacts == []
+    assert page.items[0].metadata['webViewLink'].endswith('/source-file/view')
+
+
+@pytest.mark.asyncio
 async def test_gmail_raw_message_and_original_attachment_bytes():
     raw = (b'From: sender@example.com\r\nSubject: Source mail\r\nMIME-Version: 1.0\r\n'
            b'Content-Type: multipart/mixed; boundary=x\r\n\r\n--x\r\nContent-Type: text/plain\r\n\r\nbody\r\n'

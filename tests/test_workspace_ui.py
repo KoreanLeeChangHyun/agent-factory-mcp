@@ -75,11 +75,17 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
     assert html.count('role="tree"') == 2
     assert html.count("data-document-target=") == 4
     assert html.count('data-document-target="original-overview"><svg') == 1
-    assert html.count('data-document-target="original-search"><span>검색</span>') == 1
+    assert html.count('data-document-target="original-search"><svg') == 1
+    assert 'aria-label="원본 문서 테이블"' in html
     assert html.count('data-document-target="processed-overview"><svg') == 1
     assert html.count('data-document-target="specification-overview"><svg') == 1
     assert "data-processed-list" in html
     assert "data-specification-list" in html
+    assert "data-integration-add" in html
+    assert 'data-integration-tab="status"' in html
+    assert 'data-integration-tab="scope"' in html
+    assert 'data-integration-tab="settings"' in html
+    assert "../static/js/integrations.js" in html
     assert 'data-document-view="document-editor"' in html
     assert "../static/js/document-editor.js" in html
     assert 'role="status"' in html
@@ -90,9 +96,32 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
     with TestClient(application) as client:
         assert client.get("/workspace/").status_code == 200
         assert client.get("/static/js/workspace.js").status_code == 200
+        assert client.get("/static/js/integrations.js").status_code == 200
         assert client.get("/static/css/workspace.css").status_code == 200
         assert client.get("/static/js/login.js").status_code == 200
         assert client.get("/static/css/login.css").status_code == 200
+
+
+def test_primary_sidebar_grammar_is_shared_across_workspace_domains() -> None:
+    html = TEMPLATE.read_text()
+    styles = (ROOT / "static" / "css" / "ui.css").read_text()
+    planning = (ROOT / "static" / "js" / "planning.js").read_text()
+    reporting = (ROOT / "static" / "js" / "agent-reporting.js").read_text()
+
+    assert 'class="app-sidebar primary-sidebar"' in html
+    assert html.count('class="app-sidebar primary-sidebar"') == 1
+    assert html.count('class="app-sidebar__header') == 1
+    assert html.count('class="app-sidebar__content') == 1
+    for view in ("organization", "workspaces", "schedule", "agents", "documents"):
+        assert f'data-sidebar-view="{view}"' in html
+    assert 'data-workspace-view="organization"' in html
+    assert 'data-workspace-view="workspaces"' in html
+    assert 'class="app-sidebar__nav" aria-label="조직 관리"' in html
+    assert 'class="app-sidebar__nav app-sidebar__nav--flush" aria-label="내 작업공간"' in html
+    assert 'class="app-sidebar__nav" aria-label="일정 탐색"' in planning
+    assert 'class="app-sidebar__nav" aria-label="에이전트 탐색"' in reporting
+    assert "--ui-sidebar-header-height: 35px" in styles
+    assert "--ui-sidebar-row-height: 28px" in styles
 
 
 def test_activity_bar_supports_persisted_order_and_visibility_controls() -> None:
@@ -112,6 +141,16 @@ def test_empty_document_explorers_stay_visually_quiet() -> None:
     assert 'tree.status.textContent = tree.status.hidden ? ""' in script
     assert "연결된 가공 문서가 없습니다." not in script
     assert "연결된 명세 문서가 없습니다." not in script
+
+
+def test_drive_integration_ui_keeps_reference_and_auth_lifecycles_separate() -> None:
+    script = (ROOT / "static/js/integrations.js").read_text()
+    assert 'mode: "reference"' in script
+    assert 'attachments: false' in script
+    assert 'data-unlink-collection' in TEMPLATE.read_text()
+    assert 'data-disconnect-account' in TEMPLATE.read_text()
+    assert '/authorize' in script
+    assert '/drive/folders' in script
 
 
 def test_workspace_is_accessible_below_factory_root(monkeypatch) -> None:
