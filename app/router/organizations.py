@@ -1,5 +1,6 @@
 """Authenticated organization management HTTP API."""
 
+import re
 from typing import Annotated
 from uuid import UUID, uuid4
 
@@ -63,11 +64,17 @@ async def create_organization(payload: OrganizationCreate, session: Session, pri
     organization_id = uuid4()
     service = OrganizationService(session, principal, organization_id)
     await service.repository.establish_scope(principal, AuthorizationScope(organization_id))
-    organization = Organization(
-        id=organization_id, name=payload.name, slug=f"org-{organization_id.hex}", is_personal=False
-    )
+    generated = re.sub(r"[^a-z0-9]+", "-", payload.name.casefold()).strip("-")[:30].rstrip("-")
+    slug = payload.slug or f"{generated or 'organization'}-{organization_id.hex[:8]}"
+    organization = Organization(id=organization_id, name=payload.name, slug=slug, is_personal=False)
     session.add(organization)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        await session.rollback()
+        raise ConflictError(
+            "organization_slug_exists", "이미 사용 중인 조직 식별자입니다."
+        ) from exc
     session.add(
         OrganizationMembership(
             organization_id=organization_id,
@@ -77,7 +84,7 @@ async def create_organization(payload: OrganizationCreate, session: Session, pri
     )
     service.audit("organization.create", organization_id)
     await commit(service)
-    return {"id": organization_id, "name": organization.name}
+    return {"id": organization_id, "name": organization.name, "slug": organization.slug}
 
 
 @router.get("/{organization_id}")
@@ -87,7 +94,7 @@ async def get_organization(service: Service):
 
 @router.patch("/{organization_id}", dependencies=[Depends(require_csrf)])
 async def update_organization(payload: OrganizationUpdate, service: Service):
-    await service.update(payload.name, payload.revision)
+    await service.update(payload.name, payload.slug, payload.revision)
     await commit(service)
     return {"ok": True}
 

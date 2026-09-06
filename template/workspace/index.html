@@ -41,11 +41,12 @@
       <aside class="organization-sidebar" aria-label="조직">
         <h2>조직</h2>
         <label class="workspace-owner-select"><span>개인 또는 조직</span><select aria-label="개인 또는 조직" data-organization-select></select></label>
-        <div class="organization-identity" data-organization-identity hidden><span>조직 코드 (ID)</span><code data-organization-code></code><button type="button" data-copy-organization-code>코드 복사</button><span role="status" data-organization-copy-status></span></div>
+        <div class="organization-identity" data-organization-identity hidden><span>조직 식별자</span><strong data-organization-name></strong><code data-organization-slug></code><button type="button" data-copy-organization-slug>식별자 복사</button><span role="status" data-organization-copy-status></span></div>
         <nav aria-label="조직 관리" data-organization-navigation>
+          <button type="button" data-org-view="overview">개요</button>
+          <button type="button" data-org-view="workspaces">작업공간</button>
           <button type="button" data-org-view="members">구성원</button>
           <button type="button" data-org-view="teams">팀</button>
-          <button type="button" data-org-view="roles">역할 및 권한</button>
           <button type="button" data-org-view="settings">설정</button>
         </nav>
       </aside>

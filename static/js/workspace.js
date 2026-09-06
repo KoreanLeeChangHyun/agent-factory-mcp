@@ -808,20 +808,21 @@ const renderOrganizationIdentity = () => {
   const header = document.querySelector("[data-header-organization]");
   header.hidden = !row;
   header.textContent = row ? (row.is_personal ? "개인" : row.name) : "";
-  header.title = row ? `${row.name} · 조직 코드: ${row.id}` : "";
+  header.title = row ? `${row.name} · ${row.slug}` : "";
   document.querySelector("[data-organization-identity]").hidden = !row;
-  document.querySelector("[data-organization-code]").textContent = row?.id || "";
+  document.querySelector("[data-organization-name]").textContent = row?.is_personal ? "개인" : row?.name || "";
+  document.querySelector("[data-organization-slug]").textContent = row?.slug ? `@${row.slug}` : "";
   document.querySelector("[data-organization-copy-status]").textContent = "";
 };
-document.querySelector("[data-copy-organization-code]").addEventListener("click", async () => {
-  const id = tenant.organizationId;
-  if (!id) return;
+document.querySelector("[data-copy-organization-slug]").addEventListener("click", async () => {
+  const slug = organizationRows.find(item => item.id === tenant.organizationId)?.slug;
+  if (!slug) return;
   const status = document.querySelector("[data-organization-copy-status]");
   try {
-    await navigator.clipboard.writeText(id);
-    if (id === tenant.organizationId) status.textContent = "복사했습니다.";
+    await navigator.clipboard.writeText(slug);
+    if (slug === organizationRows.find(item => item.id === tenant.organizationId)?.slug) status.textContent = "복사했습니다.";
   } catch {
-    if (id === tenant.organizationId) status.textContent = "코드를 선택해 복사해 주세요.";
+    if (slug === organizationRows.find(item => item.id === tenant.organizationId)?.slug) status.textContent = "식별자를 선택해 복사해 주세요.";
   }
 });
 
@@ -875,10 +876,12 @@ createForm.addEventListener("submit", async (event) => {
     document.querySelector("[data-create-error]").textContent = error.status === 403 ? "이 공간에 작업공간을 만들 권한이 없습니다." : "작업공간을 만들지 못했습니다. 다시 시도해 주세요.";
   } finally { submit.disabled = false; }
 });
-const openOrganizationManagement = (view = "members") => {
+const openOrganizationManagement = (view = "overview") => {
   workspaceShell.dataset.mode = "organization";
   applyActivityVisibility();
   window.agentFactoryOrganizations?.open({ api, organizationId: tenant.organizationId, userId: activityUserId,
+    openWorkspace: enterWorkspace,
+    createWorkspace: showCreateWorkspace,
     changed: async (id) => {
       organizationRows = await api("/api/account/organizations");
       renderOrganizations();

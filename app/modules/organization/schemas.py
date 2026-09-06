@@ -14,10 +14,31 @@ class RequestModel(BaseModel):
 
 class OrganizationCreate(RequestModel):
     name: str = Field(min_length=1, max_length=200)
+    slug: str | None = Field(default=None, min_length=1, max_length=39)
+
+    @field_validator("slug")
+    @classmethod
+    def validate_slug(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if (
+            not value.isascii()
+            or not value.replace("-", "").isalnum()
+            or value != value.lower()
+            or value.startswith("-")
+            or value.endswith("-")
+            or "--" in value
+        ):
+            raise ValueError("조직 식별자는 영문 소문자, 숫자, 단일 하이픈만 사용할 수 있습니다.")
+        return value
 
 
-class OrganizationUpdate(OrganizationCreate):
+class OrganizationUpdate(RequestModel):
+    name: str = Field(min_length=1, max_length=200)
+    slug: str | None = Field(default=None, min_length=1, max_length=39)
     revision: int = Field(ge=1)
+
+    _validate_slug = field_validator("slug")(OrganizationCreate.validate_slug.__func__)
 
 
 class RoleWrite(RequestModel):

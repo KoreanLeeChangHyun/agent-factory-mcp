@@ -2,7 +2,7 @@
 (() => {
   const host = document.querySelector('[data-organization-content]');
   const nav = document.querySelector('[data-organization-navigation]');
-  let config, generation = 0, currentView = 'members';
+  let config, generation = 0, currentView = 'overview';
   const element = (tag, text, attrs = {}) => {
     const node = document.createElement(tag);
     if (text != null) node.textContent = text;
@@ -61,6 +61,24 @@
     return node;
   }
   const actions = (...items) => {const node = element('div', null, {class:'organization-actions'}); node.append(...items); return node;};
+  const slugify = value => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').replace(/--+/g,'-').slice(0,39).replace(/-$/,'');
+  const slugInput = value => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9-]+/g,'-').replace(/--+/g,'-').replace(/^-/,'').slice(0,39);
+  const createForm = (local, alive) => {
+    const name=input('name');name.required=true;name.maxLength=200;
+    const slug=input('slug');slug.required=true;slug.maxLength=39;slug.pattern='[a-z0-9]+(?:-[a-z0-9]+)*';
+    let manual=false;
+    slug.addEventListener('input',()=>{manual=true;slug.value=slugInput(slug.value);});
+    slug.addEventListener('blur',()=>{slug.value=slugify(slug.value);});
+    name.addEventListener('input',()=>{if(!manual)slug.value=slugify(name.value);});
+    return form('새 조직 만들기',[
+      label('조직 이름',name),
+      label('조직 식별자',slug),
+      element('p','URL과 개발 도구에서 사용할 고유한 영문 식별자입니다.',{class:'organization-help'})
+    ],'조직 만들기',async data=>{
+      const org=await local.api('/api/organizations',{method:'POST',body:JSON.stringify({name:data.get('name'),slug:data.get('slug')})});
+      if(alive())await local.changed(org.id);
+    },alive);
+  };
   async function open(next = config, view = currentView) {
     config = next; currentView = view;
     const version = ++generation, alive = () => version === generation;
@@ -69,15 +87,11 @@
     const api = (path = '', options) => local.api(base + path, options);
     const mutate = (path, method, body) => api(path, {method, ...(body === undefined ? {} : {body:JSON.stringify(body)})});
     const refresh = () => alive() ? open(local, view) : undefined;
-    host.replaceChildren(element('h1', {members:'구성원', teams:'팀', roles:'역할 및 권한', settings:'조직 설정'}[view]), errorBox);
+    const titles={overview:'개요',workspaces:'작업공간',members:'구성원',teams:'팀',roles:'역할 및 권한',audit:'감사 로그',settings:'설정'};
+    host.replaceChildren(element('h1', titles[view]||'조직'), errorBox);
     errorBox.textContent = '';
-    nav.querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.orgView === view ? 'page' : 'false'));
-    const create = form('조직 만들기', [label('조직 이름', input('name'))], '만들기', async data => {
-      const org = await local.api('/api/organizations', {method:'POST', body:JSON.stringify({name:data.get('name')})});
-      if (alive()) await local.changed(org.id);
-    }, alive);
-    create.querySelector('input').required = true; create.querySelector('input').maxLength = 200;
-    if (!local.organizationId) { host.append(element('p', '조직을 선택하거나 새 조직을 만드세요.'), create); return; }
+    nav.querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.orgView === view || (b.dataset.orgView === 'settings' && ['roles','audit'].includes(view)) ? 'page' : 'false'));
+    if (!local.organizationId) { host.append(element('p', '조직을 선택하거나 새 조직을 만드세요.'), createForm(local,alive)); return; }
     const loading = element('p', '불러오는 중입니다.', {role:'status'}); host.append(loading);
     try {
       const overview = await api(); if (!alive()) return;
@@ -88,19 +102,66 @@
         catch (e) { if (alive()) errorBox.textContent = e.message; }
       };
       const roleChoices = (roles, scope) => roles.filter(r => r.scope === scope).map(r => [r.id, roleName(r)]);
+      const settingsNav = active => {
+        const node=element('nav',null,{class:'organization-subnav','aria-label':'조직 설정'});
+        for(const [target,text] of [['settings','일반'],['roles','역할 및 권한'],['audit','감사 로그']]){
+          const item=button(text,()=>open(local,target));item.setAttribute('aria-current',active===target?'page':'false');node.append(item);
+        }
+        return node;
+      };
       loading.remove();
-      if (view === 'members') {
+      if (view === 'overview') {
+        const [spaces,members,teams,invitations]=await Promise.all([
+          api('/workspaces'),can('member.read')?api('/members'):[],can('team.read')?api('/teams'):[],can('member.invite')?api('/invitations'):[]]);
+        if(!alive())return;
+        const header=element('header',null,{class:'organization-profile'});
+        const avatar=element('span',(overview.name||'?').trim().slice(0,1).toUpperCase(),{class:'organization-avatar','aria-hidden':'true'});
+        const identity=element('div');identity.append(element('h2',overview.name),element('code',`@${overview.slug}`));header.append(avatar,identity);host.append(header);
+        const stats=element('dl',null,{class:'organization-stats'});
+        for(const [labelText,value,target] of [['작업공간',spaces.length,'workspaces'],['구성원',can('member.read')?members.filter(m=>m.status==='active').length:'—','members'],['팀',can('team.read')?teams.length:'—','teams'],['대기 초대',can('member.invite')?invitations.filter(i=>['pending','expired'].includes(i.status)).length:'—','members']]){
+          const card=element('div');card.append(element('dt',labelText),button(String(value),()=>open(local,target)));stats.append(card);
+        }
+        host.append(stats,element('h2','작업공간'));
+        const cards=element('div',null,{class:'organization-cards'});
+        for(const space of spaces.slice(0,6)){
+          const card=element('article');card.append(button(space.name,()=>local.openWorkspace?.(space.id)),element('code',space.slug),element('p','이 조직에서 접근 가능한 작업공간'));
+          cards.append(card);
+        }
+        if(!spaces.length)cards.append(element('p','접근 가능한 작업공간이 없습니다.'));
+        host.append(cards);
+      } else if (view === 'workspaces') {
+        const spaces=await api('/workspaces');if(!alive())return;
+        const toolbar=actions();
+        if(can('workspace.create'))toolbar.append(button('새 작업공간',()=>local.createWorkspace?.()));
+        host.append(element('p',`${overview.name}에서 접근할 수 있는 프로젝트 공간입니다.`),toolbar);
+        const cards=element('div',null,{class:'organization-cards'});
+        for(const space of spaces){
+          const card=element('article');card.append(button(space.name,()=>local.openWorkspace?.(space.id)),element('code',space.slug),element('p',space.status==='active'?'활성':'비활성'));cards.append(card);
+        }
+        if(!spaces.length)cards.append(element('p','접근 가능한 작업공간이 없습니다.'));
+        host.append(cards);
+      } else if (view === 'members') {
         if (!can('member.read')) { host.append(element('p', '구성원 조회 권한이 없습니다.')); return; }
         const [members, roles, spaces, invitations] = await Promise.all([
           api('/members'), can('role.read') ? api('/roles') : [], api('/workspace-options'), can('member.invite') ? api('/invitations') : []]);
         if (!alive()) return;
         const search = input('search'); search.setAttribute('aria-label', '이름 또는 이메일 검색');
         const state = select('state', [['','전체 상태'], ...Object.entries(statuses).filter(([k]) => ['active','suspended','removed'].includes(k))]); state.setAttribute('aria-label','구성원 상태');
+        const roleFilter=select('roleFilter',[['','전체 역할'],...roleChoices(roles,'organization')]);roleFilter.setAttribute('aria-label','조직 역할');
         const list = element('div');
-        const draw = () => list.replaceChildren(table(['이름','이메일','조직 역할','상태'], members.filter(m => (!state.value || m.status === state.value) && `${m.name} ${m.email}`.toLowerCase().includes(search.value.toLowerCase())).map(m => [button(m.name, () => showMember(m).catch(e => {if(alive())errorBox.textContent=e.message;})), m.email, roleNames[m.role_name] || m.role_name, statuses[m.status]])));
-        search.addEventListener('input',draw); state.addEventListener('change',draw); draw();
+        const draw = () => list.replaceChildren(table(['이름','이메일','조직 역할','상태'], members.filter(m => (!state.value || m.status === state.value) && (!roleFilter.value||m.role_id===roleFilter.value) && `${m.name} ${m.email}`.toLowerCase().includes(search.value.toLowerCase())).map(m => [button(m.name, () => showMember(m).catch(e => {if(alive())errorBox.textContent=e.message;})), m.email, roleNames[m.role_name] || m.role_name, statuses[m.status]])));
+        search.addEventListener('input',draw); state.addEventListener('change',draw);roleFilter.addEventListener('change',draw); draw();
         const detail = element('section', null, {class:'organization-detail'});
-        host.append(actions(search,state),list,detail);
+        const memberPanel=element('section',null,{class:'organization-tab-panel'});
+        const invitePanel=element('section',null,{class:'organization-tab-panel',hidden:''});
+        const memberTab=button('구성원',()=>showTab('members'));
+        const inviteTab=button(`대기 중인 초대 (${invitations.filter(i=>['pending','expired'].includes(i.status)).length})`,()=>showTab('invitations'));
+        const subnav=element('nav',null,{class:'organization-subnav','aria-label':'구성원 보기'});subnav.append(memberTab,inviteTab);
+        function showTab(tab){
+          memberPanel.hidden=tab!=='members';invitePanel.hidden=tab!=='invitations';
+          memberTab.setAttribute('aria-current',tab==='members'?'page':'false');inviteTab.setAttribute('aria-current',tab==='invitations'?'page':'false');
+        }
+        memberPanel.append(actions(search,roleFilter,state),list,detail);host.append(subnav,memberPanel,invitePanel);showTab('members');
         async function showMember(member) {
           const data = await api(`/members/${member.user_id}`); if (!alive()) return;
           Object.assign(member, data);
@@ -134,22 +195,27 @@
           const fields = [label('이메일',input('email','','email')), label('조직 역할',select('role',roleChoices(roles,'organization'),'00000000-0000-4000-8000-000000000008'))];
           fields.push(label('참여 작업공간',select('workspace',[['','나중에 배정'],...spaces.map(w=>[w.id,w.name])])), label('작업공간 역할',select('workspaceRole',roleChoices(roles,'workspace'),'00000000-0000-4000-8000-000000000007')));
           const inviteForm = form('구성원 초대',fields,'초대 보내기',async f => {await mutate('/invitations','POST',{email:f.get('email'),role_id:f.get('role'),workspace_grants:f.get('workspace')?[{workspace_id:f.get('workspace'),role_id:f.get('workspaceRole')}]:[]});await refresh();},alive);
-          inviteForm.querySelector('input').required=true; host.append(inviteForm);
-          host.append(element('h2','초대 내역'),table(['이메일','상태','만료','관리'],invitations.map(i=>[i.email,statuses[i.status],new Date(i.expires_at).toLocaleString(),actions(...(['pending','expired'].includes(i.status)?[button('재전송',()=>run(()=>mutate(`/invitations/${i.id}/resend`,'POST'))),...(can('member.cancel_invite')?[button('취소',()=>run(()=>mutate(`/invitations/${i.id}`,'DELETE')))]:[])]:[]))])));
+          inviteForm.querySelector('input').required=true;invitePanel.append(inviteForm);
+          invitePanel.append(element('h2','초대 내역'),table(['이메일','상태','만료','관리'],invitations.map(i=>[i.email,statuses[i.status],new Date(i.expires_at).toLocaleString(),actions(...(['pending','expired'].includes(i.status)?[button('재전송',()=>run(()=>mutate(`/invitations/${i.id}/resend`,'POST'))),...(can('member.cancel_invite')?[button('취소',()=>run(()=>mutate(`/invitations/${i.id}`,'DELETE')))]:[])]:[]))])));
+        } else {
+          invitePanel.append(element('p','초대 조회 권한이 없습니다.'));
         }
       } else if (view === 'roles') {
         if (!can('role.read')) {host.append(element('p','역할 조회 권한이 없습니다.'));return;}
         const [roles,catalog] = await Promise.all([api('/roles'),api('/permission-catalog')]); if(!alive())return;
         const editor=element('section');
+        host.append(settingsNav('roles'));
         function edit(role) {
           editor.replaceChildren();
           const name=input('name',role?.name||'');name.required=true;name.maxLength=80;
           const scope=select('scope',[['organization','조직'],['workspace','작업공간']],role?.scope||'workspace'); if(role)scope.disabled=true;
+          const presets=roles.filter(item=>item.is_system&&item.scope!=='platform');
+          const preset=select('preset',[['','직접 선택'],...presets.map(item=>[item.id,roleName(item)])]);
           const permissions=element('div',null,{class:'organization-permissions'});
-          function draw(){permissions.replaceChildren(); for(const resource of [...new Set(catalog.filter(p=>p.scope===scope.value).map(p=>p.resource))]) {
+          function draw(selected=role?.permissions||[]){permissions.replaceChildren(); for(const resource of [...new Set(catalog.filter(p=>p.scope===scope.value).map(p=>p.resource))]) {
             const group=element('fieldset');group.append(element('legend',catalog.find(p=>p.resource===resource)?.resource_label || resource));
             for(const p of catalog.filter(p=>p.scope===scope.value && p.resource===resource)) {
-              const check=input('permissions',p.key,'checkbox');check.checked=!!role?.permissions.includes(p.key);check.disabled=p.available === false||p.owner_only||!!role?.is_system;
+              const check=input('permissions',p.key,'checkbox');check.checked=selected.includes(p.key);check.disabled=p.available === false||p.owner_only||!!role?.is_system;
               const choice=element('div',null,{class:'organization-permission-choice'});
               check.id=`permission-${p.key}`;
               const title=label(p.label + (p.available === false ? " (기능 준비 중)" : p.owner_only ? " (소유자 전용)" : ""),check);
@@ -161,8 +227,11 @@
               group.append(choice);
             } permissions.append(group);
           }}
-          scope.addEventListener('change',draw);draw();
-          const f=form(role?'역할 편집':'역할 만들기',[label('이름',name),label('적용 범위',scope),permissions],role?'저장':'만들기',async data=>{
+          scope.addEventListener('change',()=>{preset.value='';draw([]);});
+          preset.addEventListener('change',()=>{const source=roles.find(item=>item.id===preset.value);if(!source)return;scope.value=source.scope;draw(source.permissions);});draw();
+          const details=element('details',null,{class:'organization-scope-details'});details.open=!!role;details.append(element('summary','세부 스코프 조정'),permissions);
+          const controls=[label('이름',name)];if(!role)controls.push(label('기본 역할에서 시작',preset));controls.push(label('적용 범위',scope),details);
+          const f=form(role?'역할 편집':'역할 만들기',controls,role?'저장':'만들기',async data=>{
             await mutate(role?`/roles/${role.id}`:'/roles',role?'PUT':'POST',{name:data.get('name'),scope:scope.value,permissions:data.getAll('permissions')});await refresh();
           },alive);
           if(role?.is_system || !(role?can('role.update'):can('role.create'))) f.querySelectorAll('input,select,button').forEach(n=>n.disabled=true);
@@ -186,21 +255,35 @@
         }
         host.append(table(['팀','구성원 수','관리'],teams.map(t=>[button(t.name,()=>edit(t)),t.members.length,can('team.delete')?button('삭제',()=>run(async()=>{if(confirm('팀과 팀을 통한 작업공간 접근을 제거할까요?'))await mutate(`/teams/${t.id}`,'DELETE');})):'' ])),editor);
         if(can('team.create'))host.append(form('팀 만들기',[label('이름',input('name')),label('설명',input('description'))],'만들기',async f=>{await mutate('/teams','POST',{name:f.get('name'),description:f.get('description')});await refresh();},alive));
+      } else if(view==='audit') {
+        host.append(settingsNav('audit'));
+        if(!(overview.is_owner||can('member.update_role'))){host.append(element('p','감사 로그 조회 권한이 없습니다.'));return;}
+        const events=await api('/events');if(!alive())return;
+        host.append(element('p','조직의 구성원·팀·역할·소유권 변경 기록입니다.'),table(['일시','작업','대상'],events.map(e=>[new Date(e.occurred_at).toLocaleString(),e.action,e.target_id])));
       } else {
-        if(can('organization.update'))host.append(form('조직 정보',[label('이름',input('name',overview.name))],'저장',async f=>{await mutate('','PATCH',{name:f.get('name'),revision:overview.revision});if(alive())await local.changed(local.organizationId);},alive));
-        host.append(create);
-        if(overview.is_owner&&!overview.is_personal){const members=await api('/members');if(!alive())return;
-          const candidates=members.filter(m=>m.status==='active'&&m.user_id!==local.userId);
-          if(candidates.length)host.append(form('소유권 이전',[label('새 소유자',select('user',candidates.map(m=>[m.user_id,`${m.name} (${m.email})`])))],'소유권 이전',async f=>{if(confirm('소유권을 이전하고 현재 계정을 관리자로 변경할까요?')){await mutate('/transfer','POST',{user_id:f.get('user')});await refresh();}},alive));
+        host.append(settingsNav('settings'));
+        const technical=element('dl',null,{class:'organization-technical'});
+        for(const [term,value] of [['조직 식별자',`@${overview.slug}`],['조직 ID',String(overview.id)]]){const row=element('div');row.append(element('dt',term),element('dd',value));technical.append(row);}
+        host.append(element('h2','일반'),technical);
+        if(can('organization.update')){
+          const orgName=input('name',overview.name);orgName.required=true;orgName.maxLength=200;
+          const orgSlug=input('slug',overview.slug);orgSlug.required=true;orgSlug.maxLength=39;orgSlug.pattern='[a-z0-9]+(?:-[a-z0-9]+)*';
+          orgSlug.addEventListener('input',()=>{orgSlug.value=slugInput(orgSlug.value);});
+          orgSlug.addEventListener('blur',()=>{orgSlug.value=slugify(orgSlug.value);});
+          host.append(form('조직 정보',[label('표시 이름',orgName),label('조직 식별자',orgSlug),element('p','영문 소문자, 숫자, 단일 하이픈만 사용할 수 있습니다.',{class:'organization-help'})],'변경 저장',async f=>{await mutate('','PATCH',{name:f.get('name'),slug:f.get('slug'),revision:overview.revision});if(alive())await local.changed(local.organizationId);},alive));
         }
-        if(overview.is_owner&&!overview.is_personal) {
+        host.append(createForm(local,alive));
+        if(overview.is_owner&&!overview.is_personal){
+          const danger=element('section',null,{class:'organization-danger'});danger.append(element('h2','위험 작업'));
+          const members=await api('/members');if(!alive())return;
+          const candidates=members.filter(m=>m.status==='active'&&m.user_id!==local.userId);
+          if(candidates.length)danger.append(form('소유권 이전',[label('새 소유자',select('user',candidates.map(m=>[m.user_id,`${m.name} (${m.email})`])))],'소유권 이전',async f=>{if(confirm('소유권을 이전하고 현재 계정을 관리자로 변경할까요?')){await mutate('/transfer','POST',{user_id:f.get('user')});await refresh();}},alive));
           const confirmation=input('confirmation');confirmation.required=true;confirmation.autocomplete='off';
-          host.append(form('조직 삭제',[element('p','삭제하면 모든 구성원이 이 조직과 소속 작업공간에 접근할 수 없습니다. 조직 이름을 입력해 확인하세요.'),label('삭제할 조직 이름',confirmation)],'조직 삭제',async f=>{
+          danger.append(form('조직 삭제',[element('p','삭제하면 모든 구성원이 이 조직과 소속 작업공간에 접근할 수 없습니다. 조직 이름을 입력해 확인하세요.'),label('삭제할 조직 이름',confirmation)],'조직 삭제',async f=>{
             if(f.get('confirmation')!==overview.name)throw new Error('조직 이름이 일치하지 않습니다.');
             await mutate('','DELETE');if(alive())await local.changed(null);
-          },alive));
+          },alive));host.append(danger);
         }
-        if(overview.is_owner||can('member.update_role')){const events=await api('/events');if(!alive())return;host.append(element('h2','조직 변경 이력'),table(['일시','작업','대상'],events.map(e=>[new Date(e.occurred_at).toLocaleString(),e.action,e.target_id])));}
       }
     } catch(e) {if(alive()){loading.remove();errorBox.textContent=e.message;host.append(button('다시 불러오기',refresh));}}
   }

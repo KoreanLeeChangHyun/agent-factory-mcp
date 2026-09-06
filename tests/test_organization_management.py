@@ -82,11 +82,65 @@ async def test_organization_members_roles_teams_invitations_and_isolation(monkey
                 return r.json() if r.content else None
 
             org = await request(
-                "POST", "/api/organizations", 201, json={"name": "Organization test"}
+                "POST",
+                "/api/organizations",
+                201,
+                json={"name": "Organization test", "slug": "organization-test"},
             )
             base = "/api/organizations/" + org["id"]
             overview = await request("GET", base)
-            await request("PATCH", base, json={"name": "Renamed", "revision": overview["revision"]})
+            assert overview["slug"] == "organization-test"
+            await request(
+                "POST",
+                "/api/organizations",
+                409,
+                json={"name": "Duplicate slug", "slug": "organization-test"},
+            )
+            await request(
+                "POST",
+                "/api/organizations",
+                422,
+                json={"name": "Invalid slug", "slug": "Invalid--Slug"},
+            )
+            generated_org = await request(
+                "POST", "/api/organizations", 201, json={"name": "한글 조직"}
+            )
+            generated_overview = await request(
+                "GET", "/api/organizations/" + generated_org["id"]
+            )
+            assert generated_overview["slug"].startswith("organization-")
+            boundary_org = await request(
+                "POST",
+                "/api/organizations",
+                201,
+                json={"name": "a" * 29 + " b"},
+            )
+            boundary_overview = await request(
+                "GET", "/api/organizations/" + boundary_org["id"]
+            )
+            assert "--" not in boundary_overview["slug"]
+            await request(
+                "PATCH",
+                base,
+                409,
+                json={
+                    "name": "Conflicting identifier",
+                    "slug": generated_overview["slug"],
+                    "revision": overview["revision"],
+                },
+            )
+            await request("DELETE", "/api/organizations/" + generated_org["id"])
+            await request("DELETE", "/api/organizations/" + boundary_org["id"])
+            await request(
+                "PATCH",
+                base,
+                json={
+                    "name": "Renamed",
+                    "slug": "renamed-organization",
+                    "revision": overview["revision"],
+                },
+            )
+            assert (await request("GET", base))["slug"] == "renamed-organization"
             await request(
                 "PATCH", base, 409, json={"name": "Stale", "revision": overview["revision"]}
             )

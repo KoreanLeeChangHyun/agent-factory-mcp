@@ -179,14 +179,17 @@ class OrganizationService:
             "is_owner": await self.owner(),
         }
 
-    async def update(self, name: str, revision: int):
+    async def update(self, name: str, slug: str | None, revision: int):
         org = await self.lock()
         await self.require("organization.update")
         if org.revision != revision:
             raise ConflictError(
                 "organization_revision_conflict", "조직 정보가 변경되었습니다. 다시 불러오세요."
             )
-        org.name, org.revision = name, org.revision + 1
+        org.name = name
+        if slug is not None:
+            org.slug = slug
+        org.revision += 1
         self.audit("organization.update", org.id)
 
     async def delete_organization(self):
