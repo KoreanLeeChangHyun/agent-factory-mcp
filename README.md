@@ -2,6 +2,14 @@
 
 FastAPI application hosting the Agent Factory MCP server and Workspace UI.
 
+Agent Factory is a Human-facing control and visibility plane for AI activity,
+not an AI harness or runtime. It does not reduce an Agent's native model, memory,
+skills, tools, delegation, or execution capabilities. It collects the reports
+and evidence available from connected Agents and presents their actions,
+relationships, effects, state, and results so that Humans can understand and
+intervene. A reported action is not treated as independently proven execution
+without corresponding evidence.
+
 The service is designed as a multi-tenant SaaS from the start. PostgreSQL is
 the authoritative database, with pgvector used for document embeddings and
 semantic retrieval. Project repositories do not receive an `.agent-factory/`
