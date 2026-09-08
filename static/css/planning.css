@@ -1,30 +1,54 @@
-.planning-sidebar { padding: 0 8px 12px; font-size: 12px; }
-.planning-sidebar button, .planning-panel button, .plan-dialog button { display: inline-flex; align-items: center; gap: var(--ui-space-1); }
+.planning-sidebar { font-size: 12px; }
+.planning-sidebar button:not(.app-sidebar__section-toggle):not(.app-sidebar__icon-button), .planning-panel button, .plan-dialog button { display: inline-flex; align-items: center; gap: var(--ui-space-1); }
 .planning-sidebar svg, .planning-panel svg, .plan-dialog svg { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.4; vertical-align: middle; }
 .plan-header-actions { display: flex; align-items: center; gap: 2px; margin-inline-start: auto; }
 .plan-header-actions[hidden], .plan-header-actions button[hidden] { display: none; }
 .plan-header-actions .sidebar-header-button { margin: 0; }
-.planning-sidebar button { display: flex; align-items: center; gap: 5px; padding: 5px 6px; background: transparent; color: var(--explorer-foreground); border: 0; border-radius: 2px; min-height: 28px; text-align: left; }
+.plan-header-actions .sidebar-header-button[aria-pressed="true"] { background: var(--explorer-row-selected); color: var(--ui-color-selected-text); }
+.planning-sidebar button:not(.app-sidebar__section-toggle):not(.app-sidebar__icon-button) { display: flex; align-items: center; gap: 5px; padding: 5px 6px; background: transparent; color: var(--explorer-foreground); border: 0; border-radius: 2px; min-height: 28px; text-align: left; }
 .planning-sidebar nav > button { width: 100%; }
-.plan-domain-row { display: flex; align-items: center; margin-top: 8px; }
-.plan-domain-row > button:first-child { flex: 0 0 24px; padding: 4px; }
-.plan-domain-row > button:last-child { flex: 1; min-width: 0; }
-.plan-feature-nav { padding-left: 24px; }
-.plan-feature-nav button { width: 100%; min-width: 0; }
 .planning-sidebar button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-task-group.is-selected > .app-sidebar__section-header { background: var(--explorer-row-selected); color: var(--ui-color-selected-text); }
+.planning-sidebar .plan-domain-select { gap: 0; }
 
 .planning-panel { padding: 16px; overflow: auto; color: var(--explorer-foreground); font-size: 13px; }
 .planning-panel[hidden], .planning-sidebar [hidden], .planning-panel [hidden] { display: none !important; }
-.plan-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.plan-dashboard-header { --ui-control-height: var(--ui-control-compact-height); display: flex; height: 46px; min-height: 46px; align-items: center; gap: 12px; overflow: hidden; border-bottom: 1px solid var(--region-border); }
+.planning-panel .plan-dashboard-header h1 { flex: 0 0 auto; margin: 0; font-size: 16px; font-weight: 600; }
+.plan-dashboard-message { height: 18px; min-height: 18px; margin: 0 0 8px; }
+.plan-dashboard-message:empty { display: block; }
+.plan-dashboard-context { height: 18px; margin: 0 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-header { display: flex; min-height: 28px; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: nowrap; }
 .plan-header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+.plan-dashboard-views { display: flex; min-width: 0; gap: 2px; margin: 0; overflow-x: auto; }
+.planning-panel .plan-dashboard-views button { flex: 0 0 auto; height: var(--ui-control-height); min-height: var(--ui-control-height); padding: 1px 9px; border: 0; border-radius: var(--ui-control-radius); background: transparent; color: var(--explorer-muted); }
+.planning-panel .plan-dashboard-views button:hover { background: var(--explorer-row-hover); color: var(--explorer-foreground); }
+.planning-panel .plan-dashboard-views button[aria-pressed="true"] { background: var(--explorer-row-selected); color: var(--ui-color-selected-text); }
 .planning-panel h2 { margin: 18px 0 8px; font-size: 14px; font-weight: 600; }
 .plan-actions, .plan-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.plan-dashboard-header .plan-actions { flex: 0 0 auto; margin-left: auto; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; }
+.plan-dashboard-header .plan-actions > label { display: inline-flex; height: var(--ui-control-height); align-items: center; gap: var(--ui-space-1); white-space: nowrap; }
+.planning-panel .plan-dashboard-header .plan-actions :is(button, select) { box-sizing: border-box; height: var(--ui-control-height); min-height: var(--ui-control-height); padding-block: 0; }
 .plan-summary { padding: 12px 0; border-bottom: 1px solid var(--region-border); }
 .planning-panel button, .plan-dialog button { display: inline-flex; align-items: center; gap: var(--ui-space-1); }
 
 .planning-panel select, .planning-panel input, .plan-dialog input, .plan-dialog select, .plan-dialog textarea { min-width: 0; }
 .plan-muted { color: var(--explorer-muted); font-size: 12px; }
 .plan-empty { color: var(--explorer-muted); padding: 24px 0; }
+.plan-view-list, .plan-kanban ul { display: grid; gap: 6px; margin: 12px 0 0; padding: 0; list-style: none; }
+.plan-view-list button, .plan-kanban li button { display: grid; width: 100%; gap: 2px; justify-items: start; min-height: 48px; }
+.plan-view-list button span, .plan-kanban li button span { color: var(--explorer-muted); font-size: 11px; }
+.plan-today-groups { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.plan-today-group { min-width: 0; padding: 0 10px 10px; }
+.plan-today-group + .plan-today-group { border-left: 1px solid var(--region-border); }
+.plan-today-group h2 { display: flex; justify-content: space-between; margin-top: 0; }
+.plan-kanban { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; align-items: start; }
+.plan-kanban > section { min-width: 0; padding: 10px; border: 1px solid var(--region-border); background: var(--ui-control-background); }
+.plan-kanban h2 { display: flex; justify-content: space-between; margin-top: 0; }
+.plan-kanban-card { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 4px; border: 1px solid transparent; border-radius: var(--ui-control-radius); }
+.plan-kanban-card[draggable="true"] { cursor: grab; }
+.plan-kanban-card:focus-within { border-color: var(--focus-border); }
+.plan-kanban-card select { width: 82px; margin-right: 5px; }
 .plan-message { color: #d7bd85; min-height: 1em; margin: 6px 0; }
 .plan-description, .plan-acceptance p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
 .plan-status { display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
@@ -55,9 +79,10 @@
 .plan-dialog::backdrop { background: #0008; }
 .plan-timeline-scroll { overflow: auto; max-height: calc(100vh - 260px); border: 1px solid var(--region-border); }
 .planning-panel.is-timeline { display: flex; height: 100%; min-height: 0; flex-direction: column; overflow: hidden; box-sizing: border-box; }
-.planning-panel.is-timeline > .plan-header,
-.planning-panel.is-timeline > .plan-message,
-.planning-panel.is-timeline > .plan-muted { flex: 0 0 auto; }
+.planning-panel.is-timeline > .plan-dashboard-header { flex: 0 0 46px; }
+.planning-panel.is-timeline > .plan-dashboard-message { flex: 0 0 18px; }
+.planning-panel.is-timeline > .plan-dashboard-context { flex: 0 0 18px; }
+.planning-panel.is-timeline > .plan-unscheduled { flex: 0 0 auto; }
 .planning-panel.is-timeline > .plan-timeline-scroll { flex: 1 1 auto; min-height: 180px; max-height: none; }
 .planning-panel.is-timeline .plan-timeline { min-height: 100%; }
 .planning-panel.is-timeline .plan-time-body { min-height: calc(100% - 52px); }
@@ -69,6 +94,15 @@
 .plan-time-header > div { position: relative; overflow: hidden; }
 .plan-time-header > div > span { position: absolute; top: 12px; white-space: nowrap; font-size: 12px; border-left: 1px solid #555; padding-left: 5px; }
 .plan-time-body { position: relative; }
+.plan-day-band-layer { position: absolute; inset: 0 0 0 var(--plan-label-width); overflow: hidden; pointer-events: none; z-index: 0; }
+.plan-day-band { position: absolute; top: 0; bottom: 0; background: transparent; }
+.plan-day-band.is-weekend { background: #ffffff08; }
+.plan-day-band.is-today { background: #3794ff0c; }
+.plan-time-header span.is-weekend { color: #aaa; }
+.plan-time-header span.is-today { color: #9cdcfe; font-weight: 600; }
+.plan-unscheduled { margin: 0 0 8px; border: 1px solid var(--region-border); background: var(--ui-control-background); }
+.plan-unscheduled summary { padding: 6px 10px; cursor: pointer; }
+.plan-unscheduled > div { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 8px; }
 .plan-time-row, .plan-time-group { min-height: 44px; border-top: 1px solid var(--region-border); }
 .plan-time-group { background: #202020; min-height: 44px; }
 .plan-time-label { position: sticky; left: 0; z-index: 3; background: #1f1f1f; padding: 3px 12px; border-right: 1px solid #444; display: flex; flex-direction: column; align-items: stretch; justify-content: center; min-width: 0; }
@@ -87,6 +121,7 @@
 .plan-marker-caption span { display: block; padding: 2px 4px; }
 .plan-marker-caption.near-end span { transform: translateX(-100%); }
 @media (max-width: 700px) {
+  .plan-kanban, .plan-today-groups { grid-template-columns: 1fr; }
   .planning-panel { padding: 12px; }
   .plan-actions { gap: 6px; }
   .plan-form-grid { grid-template-columns: 1fr; }
@@ -112,6 +147,8 @@
 
 .plan-message:empty { display: none; }
 .plan-actions { gap: 8px; }
+.planning-panel .plan-dashboard-message,
+.planning-panel .plan-dashboard-message:empty { display: block; height: 18px; min-height: 18px; margin: 0 0 8px; }
 
 .planning-panel .plan-task-title > button { min-height: 20px; line-height: 20px; padding: 0; border: 0; }
 .plan-task-meta { min-height: 18px; line-height: 18px; }

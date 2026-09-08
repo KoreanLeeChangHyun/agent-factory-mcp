@@ -71,7 +71,7 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
     assert "data-document-explorer-toggle" not in html
     assert "<span>탐색기</span>" not in html
     assert "<span>개요</span>" not in html
-    assert html.count('class="de-document-header"') == 3
+    assert html.count("de-document-header") == 3
     assert html.count('role="tree"') == 2
     assert html.count("data-document-target=") == 4
     assert html.count('data-document-target="original-overview"><svg') == 1
@@ -105,23 +105,82 @@ def test_workspace_assets_are_same_origin_and_accessible() -> None:
 def test_primary_sidebar_grammar_is_shared_across_workspace_domains() -> None:
     html = TEMPLATE.read_text()
     styles = (ROOT / "static" / "css" / "ui.css").read_text()
+    feature_styles = (ROOT / "static" / "css" / "workspace.css").read_text()
     planning = (ROOT / "static" / "js" / "planning.js").read_text()
     reporting = (ROOT / "static" / "js" / "agent-reporting.js").read_text()
 
     assert 'class="app-sidebar primary-sidebar"' in html
     assert html.count('class="app-sidebar primary-sidebar"') == 1
+    assert 'data-sidebar-toggle' in html
+    assert 'aria-controls="primary-sidebar"' in html
     assert html.count('class="app-sidebar__header') == 1
     assert html.count('class="app-sidebar__content') == 1
-    for view in ("organization", "workspaces", "schedule", "agents", "documents"):
+    for view in ("organization", "workspaces", "schedule", "agents", "documents", "logs", "tests", "integrations", "database", "account", "admin"):
         assert f'data-sidebar-view="{view}"' in html
+    assert html.count('class="app-sidebar__view sidebar-view') == 11
+    assert html.count('class="app-sidebar__section') >= 14
+    assert 'class="app-sidebar__section-header de-document-header"' in html
+    assert 'class="app-sidebar__section-content document-group__content"' in html
     assert 'data-workspace-view="organization"' in html
     assert 'data-workspace-view="workspaces"' in html
     assert 'class="app-sidebar__nav" aria-label="조직 관리"' in html
-    assert 'class="app-sidebar__nav app-sidebar__nav--flush" aria-label="내 작업공간"' in html
-    assert 'class="app-sidebar__nav" aria-label="일정 탐색"' in planning
+    assert 'aria-label="내 작업공간" data-workspace-default-list' in html
+    assert 'id="workspaces-section-label">기본 그룹</span>' in html
+    assert 'aria-label="사용자 작업공간 그룹" data-workspace-group-list' in html
+    assert 'aria-controls="workspaces-section-content" data-sidebar-section-toggle' in html
+    assert html.count("data-sidebar-section-toggle") == 3
+    assert 'class="app-sidebar__nav app-sidebar__nav--flush" aria-label="${esc(r.name)} 하위 작업"' in planning
+    assert 'class="app-sidebar__row${selected === r.id' in planning
+    assert '기본 그룹' not in planning
+    assert 'domains().map(sidebarGroup)' in planning
+    assert 'data-plan-action="toggle-domain"' in planning
+    assert 'data-plan-action="dashboard" aria-label="일정 대시보드"' in html
+    assert 'class="plan-dashboard-views"' in planning
+    assert 'aria-label="일정 대시보드 보기"' in planning
+    assert 'data-plan-view-actions' not in html
+    assert "taskList('기한 초과',overdue)" in planning
+    assert 'plan-day-band' in planning
+    assert '날짜 미정 작업' in planning
+    assert 'data-plan-column="${value}"' in planning
+    assert 'data-plan-status' in planning
+    assert 'agent-factory:plan-view:' in planning
+    for label in ("전체 일정", "주별 일정", "오늘 할 일", "칸반"):
+        assert f"'{label}'" in planning
     assert 'class="app-sidebar__nav" aria-label="에이전트 탐색"' in reporting
+    assert 'class="app-sidebar__section-header"' in reporting
     assert "--ui-sidebar-header-height: 35px" in styles
     assert "--ui-sidebar-row-height: 28px" in styles
+    for token in (
+        "--ui-space-1:",
+        "--ui-font-body:",
+        "--ui-color-primary:",
+        "--ui-color-error:",
+        "--ui-control-height:",
+        "--ui-control-radius:",
+    ):
+        assert token in styles
+        assert token not in feature_styles
+    assert ".app-sidebar__section-header" in styles
+    assert ".app-sidebar__icon-button" in styles
+    assert "select::picker-icon" in styles
+    assert "margin-inline-start: auto" in styles
+    assert "setSidebarExpanded" in SCRIPT.read_text()
+
+
+def test_workspace_connection_headers_share_sidebar_height() -> None:
+    html = TEMPLATE.read_text()
+    styles = (ROOT / "static" / "css" / "workspace.css").read_text()
+
+    assert ".mcp-panel-header { height: var(--ui-sidebar-header-height); min-height: var(--ui-sidebar-header-height);" in styles
+    assert html.count('class="mcp-ai-step"') == 2
+    assert 'data-mcp-command-mode hidden' in html
+    assert 'data-mcp-config-mode' in html
+    for label in ("설정 파일 다운로드", "AI 지침 전달", "등록 명령 · POSIX 셸", "클라이언트 설정"):
+        assert label in html
+    assert "data-mcp-steps" not in html
+    assert "mcp-manual-steps" not in html
+    assert ".mcp-section-header, .mcp-step-header" in styles
+    assert ".mcp-token-section" in styles
 
 
 def test_activity_bar_supports_persisted_order_and_visibility_controls() -> None:

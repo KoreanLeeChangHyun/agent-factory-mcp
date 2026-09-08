@@ -32,6 +32,7 @@ const server=http.createServer(async(req,res)=>{
     const reply=(data,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(data)});
     if(p==='/api/auth/me')return reply({user:{id:'user',display_name:'테스터',email:'test@example.test',is_platform_admin:false}});
     if(p==='/api/account/organizations')return reply([{id:'org',name:'테스트',is_personal:true}]);
+    if(p.endsWith('/workspaces/groups'))return reply([]);
     if(p.endsWith('/workspaces'))return reply(workspaces);
     if(p.endsWith('/recent')||p.endsWith('/documents'))return reply([]);
     if(p.endsWith('/visits'))return route.fulfill({status:204});
@@ -65,6 +66,7 @@ const server=http.createServer(async(req,res)=>{
   });
   const panel=page.locator('.planning-panel');
   const nav=page.locator('.planning-sidebar');
+  const dashboardButton=page.locator('[data-plan-header-actions] [data-plan-action="dashboard"]');
   async function create(kind,name,fields={}) {
     await page.getByRole('button',{name:`${kind} 추가`,exact:true}).click();
     const dialog=page.locator('.plan-dialog');await dialog.getByLabel('작업 이름',{exact:true}).fill(name);
@@ -72,11 +74,51 @@ const server=http.createServer(async(req,res)=>{
     await dialog.getByRole('button',{name:'추가',exact:true}).click();
     await dialog.waitFor({state:'hidden'});await panel.getByRole('status').filter({hasText:'저장했습니다.'}).waitFor();
   }
+  async function chooseView(label) {
+    await dashboardButton.click();
+    await panel.locator('.plan-dashboard-views').getByRole('button',{name:label,exact:true}).click();
+  }
+  async function dashboardHeaderHeight() {
+    return Math.round((await panel.locator('.plan-dashboard-header').boundingBox()).height);
+  }
+  async function dashboardGeometry() {
+    return panel.evaluate(el=>{
+      const header=el.querySelector('.plan-dashboard-header');
+      const message=el.querySelector('.plan-dashboard-message');
+      const context=el.querySelector('.plan-dashboard-context');
+      const headerBox=header.getBoundingClientRect();
+      const controls=[...header.querySelectorAll('.plan-dashboard-views button,.plan-actions button,.plan-actions select')].map(control=>{
+        const box=control.getBoundingClientRect();
+        return {height:Math.round(box.height),center:Math.round((box.top+box.bottom)/2-headerBox.top)};
+      });
+      const messageBox=message.getBoundingClientRect();
+      const contextBox=context.getBoundingClientRect();
+      return {
+        messageDisplay:getComputedStyle(message).display,
+        messageHeight:Math.round(messageBox.height),
+        contextOffset:Math.round(contextBox.top-headerBox.bottom),
+        controls,
+      };
+    });
+  }
   try {
     await page.goto(base+'/factory/workspace/');
     await page.locator('[data-workspace-list]').getByRole('button',{name:'계획 검증'}).click();
     await page.locator('[data-activity="schedule"]').click();
     await panel.getByText('하위 작업에 목표 기간을 입력하면 전체 일정이 표시됩니다.').waitFor();
+    assert.equal(await nav.locator('.app-sidebar__section-header').count(),0);
+    assert.equal(await page.locator('.primary-sidebar__header [data-sidebar-title]').textContent(),'일정');
+    assert(await dashboardButton.isVisible());
+    assert.equal(await dashboardButton.getAttribute('aria-pressed'),'true');
+    assert.deepEqual(await panel.locator('.plan-dashboard-views button').allTextContents(),['전체 일정','주별 일정','오늘 할 일','칸반']);
+    assert.equal(await panel.getByRole('heading',{name:'일정 대시보드',exact:true}).count(),1);
+    assert.equal(await panel.locator('.plan-dashboard-views [aria-pressed="true"]').textContent(),'전체 일정');
+    assert.equal(await dashboardHeaderHeight(),46);
+    const initialDashboardGeometry=await dashboardGeometry();
+    assert.equal(initialDashboardGeometry.messageDisplay,'block');
+    assert.equal(initialDashboardGeometry.messageHeight,18);
+    assert(initialDashboardGeometry.controls.every(control=>control.height===22),JSON.stringify(initialDashboardGeometry));
+    assert.equal(new Set(initialDashboardGeometry.controls.map(control=>control.center)).size,1,JSON.stringify(initialDashboardGeometry));
     await panel.getByRole('button',{name:'가져오기',exact:true}).click();
     await panel.getByRole('button',{name:'가져온 일정 <script>',exact:true}).click();
     await panel.getByText('원본 작업',{exact:false}).first().waitFor();
@@ -91,6 +133,7 @@ const server=http.createServer(async(req,res)=>{
     assert.equal(await page.locator('.primary-sidebar__header').getByRole('button',{name:'작업 추가',exact:true}).count(),1);
     assert.equal(await nav.getByRole('button',{name:'새로고침',exact:true}).count(),0);
     await create('작업','결제');
+    assert.deepEqual(await nav.locator('.app-sidebar__section-title').allTextContents(),['결제']);
     const unscheduled=panel.getByRole('button',{name:'결제 기간 설정',exact:true});
     await unscheduled.waitFor();
     assert((await panel.locator('.plan-time-group').boundingBox()).height<=46);
@@ -115,7 +158,9 @@ const server=http.createServer(async(req,res)=>{
     assert(defaultOverflow.scroll>defaultOverflow.client,JSON.stringify(defaultOverflow));
 
     await nav.getByRole('button',{name:'결제',exact:true}).click();
+    assert.equal(await dashboardButton.getAttribute('aria-pressed'),'false');
     await create('하위 작업','카드 결제',{'시작일':'2026-01-01','목표일':'2027-03-01','완료 조건':'카드 승인 성공'});
+    assert.equal(await nav.getByRole('button',{name:'카드 결제',exact:true}).locator('svg').count(),0);
     await panel.getByRole('button',{name:'수정',exact:true}).click();
     const rootEditor=page.locator('.plan-dialog');
     assert.equal(await rootEditor.getByLabel('시작일',{exact:true}).inputValue(),'2025-12-01');
@@ -152,7 +197,36 @@ const server=http.createServer(async(req,res)=>{
     await panel.getByRole('button',{name:'상위 작업 기간 조정',exact:true}).click();
     assert.equal(await page.locator('.plan-dialog').getByLabel('시작일',{exact:true}).inputValue(),'2026-01-01');
     await page.locator('.plan-dialog').getByRole('button',{name:'취소',exact:true}).click();
-    await nav.getByRole('button',{name:'전체 일정',exact:true}).click();
+    await chooseView('전체 일정');
+    await chooseView('주별 일정');
+    await panel.locator('.plan-dashboard-views [aria-pressed="true"]').filter({hasText:'주별 일정'}).waitFor();
+    assert.equal(await dashboardHeaderHeight(),46);
+    const weekDashboardGeometry=await dashboardGeometry();
+    assert.equal(weekDashboardGeometry.contextOffset,initialDashboardGeometry.contextOffset,JSON.stringify(weekDashboardGeometry));
+    assert(weekDashboardGeometry.controls.every(control=>control.height===22),JSON.stringify(weekDashboardGeometry));
+    assert.equal(new Set(weekDashboardGeometry.controls.map(control=>control.center)).size,1,JSON.stringify(weekDashboardGeometry));
+    assert.equal(await panel.locator('.plan-time-header > div > span').count(),7);
+    assert.equal(await panel.locator('.plan-time-header > div > span.is-weekend').count(),2);
+    assert.equal(await panel.locator('.plan-time-header > div > span.is-today').count(),1);
+    assert((await panel.locator('.plan-unscheduled summary').textContent()).includes('날짜 미정 작업 1'));
+    await panel.getByRole('button',{name:'다음 주',exact:true}).click();
+    await chooseView('오늘 할 일');
+    await panel.locator('.plan-dashboard-views [aria-pressed="true"]').filter({hasText:'오늘 할 일'}).waitFor();
+    assert.equal(await dashboardHeaderHeight(),46);
+    assert.equal((await dashboardGeometry()).contextOffset,initialDashboardGeometry.contextOffset);
+    assert.deepEqual(await panel.locator('.plan-today-group h2').allTextContents(),['기한 초과 0','오늘 진행 1']);
+    await page.screenshot({path:'/tmp/planning-today.png'});
+    await chooseView('칸반');
+    await panel.locator('.plan-dashboard-views [aria-pressed="true"]').filter({hasText:'칸반'}).waitFor();
+    assert.equal(await dashboardHeaderHeight(),46);
+    assert.equal((await dashboardGeometry()).contextOffset,initialDashboardGeometry.contextOffset);
+    assert.equal(await panel.locator('.plan-kanban > section').count(),3);
+    const cardStatus=panel.getByLabel('카드 결제 상태',{exact:true});
+    await cardStatus.selectOption('active');
+    await panel.locator('[data-plan-column="active"]').getByText('카드 결제',{exact:true}).waitFor();
+    assert.equal(items.find(r=>r.name==='카드 결제').status,'active');
+    await page.screenshot({path:'/tmp/planning-kanban.png'});
+    await chooseView('전체 일정');
     await panel.getByRole('button',{name:'전체 맞춤',exact:true}).click();
     assert(await panel.locator('.plan-bar').count());
     assert.equal(await panel.locator('.plan-summary-bar').count(),1);
@@ -173,6 +247,8 @@ const server=http.createServer(async(req,res)=>{
     await panel.getByLabel('타임라인 단위').selectOption('month');
     assert((await panel.locator('.plan-time-header').innerText()).includes('월'));
     await page.setViewportSize({width:600,height:850});
+    const dashboardViewsBox=await panel.locator('.plan-dashboard-views').boundingBox();
+    assert(dashboardViewsBox.x>=0 && dashboardViewsBox.x+dashboardViewsBox.width<=600,JSON.stringify(dashboardViewsBox));
     await panel.getByRole('button',{name:'전체 맞춤',exact:true}).click();
     const geometry=await panel.locator('.plan-timeline-scroll').evaluate(el=>({client:el.clientWidth,scroll:el.scrollWidth}));
     assert(geometry.scroll<=geometry.client+1,JSON.stringify(geometry));
@@ -191,7 +267,7 @@ const server=http.createServer(async(req,res)=>{
     readOnly=true;await page.locator('[data-plan-header-actions]').getByRole('button',{name:'새로고침'}).click();await page.waitForFunction(()=>!document.querySelector('[data-plan-header-actions] [data-plan-action="add"]:not([hidden])'));
     await nav.getByRole('button',{name:'카드 결제',exact:true}).click();assert.equal(await panel.getByRole('button',{name:'수정',exact:true}).count(),0);
     await chooseWorkspace('two');await page.locator('[data-activity="schedule"]').click();await panel.getByText('하위 작업에 목표 기간을 입력하면 전체 일정이 표시됩니다.').waitFor();assert.equal(await nav.getByRole('button',{name:'카드 결제',exact:true}).count(),0);
-    assert.deepEqual(errors,[]);assert.equal(mutations,9); // Four creates, three domain updates, one issue update, one launch-date update.
+    assert.deepEqual(errors,[]);assert.equal(mutations,10); // Four creates, three domain updates, one issue update, one Kanban status update, one launch-date update.
     console.log('PASS planning browser: hierarchy CRUD entry, issue draft/save, bounds adjustment, timeline fit/week/month/launch, mobile, reload, errors/retry, viewer, tenant switching, CSRF, prefixed deployment.');
   } catch(error) { await fs.writeFile('/tmp/planning-failure.html',await page.content()); await page.screenshot({path:'/tmp/planning-failure.png'}); console.error(errors); throw error; } finally {await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exit(1);});
