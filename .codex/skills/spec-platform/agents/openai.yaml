@@ -1,0 +1,4 @@
+interface:
+  display_name: "Platform Specifications"
+  short_description: "Use the MCP platform’s current domain specifications"
+  default_prompt: "Use $spec-platform to implement this request against the current platform specifications."

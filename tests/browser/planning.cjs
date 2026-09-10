@@ -167,6 +167,14 @@ const server=http.createServer(async(req,res)=>{
     assert.equal(await rootEditor.locator('input[required]').count(),1);
     assert.equal(await rootEditor.locator('label').filter({hasText:'작업 이름'}).innerText(),'작업 이름 *');
     assert.equal(await rootEditor.getByText('(선택)',{exact:false}).count(),0);
+    const beforeInvalidSubmit=mutations;
+    await rootEditor.getByLabel('시작일',{exact:true}).fill('2027-04-01');
+    await rootEditor.getByLabel('목표일',{exact:true}).fill('2027-03-01');
+    await rootEditor.getByRole('button',{name:'저장',exact:true}).click();
+    const validation=rootEditor.locator('.af-status--inline[data-kind="error"]');
+    await validation.waitFor();assert.equal(await validation.getAttribute('role'),'alert');
+    assert.equal(await rootEditor.getByLabel('시작일',{exact:true}).inputValue(),'2027-04-01');
+    assert.equal(mutations,beforeInvalidSubmit,'Local validation must not submit a mutation');
     await rootEditor.getByLabel('시작일',{exact:true}).fill('2026-02-01');
     await rootEditor.getByLabel('목표일',{exact:true}).fill('');
     await rootEditor.getByRole('button',{name:'저장',exact:true}).click();
@@ -243,6 +251,14 @@ const server=http.createServer(async(req,res)=>{
     await page.locator('.plan-dialog').getByRole('button',{name:'저장',exact:true}).click();
     await page.locator('.plan-dialog').waitFor({state:'hidden'});
     await panel.locator('.plan-marker.launch').waitFor();
+    const tokenResponse=await panel.evaluate(root=>{
+      const before=root.style.getPropertyValue('--ui-color-link');
+      root.style.setProperty('--ui-color-link','rgb(123, 145, 167)');
+      const colors=[...root.querySelectorAll('.plan-marker.today,.plan-marker-caption.today')].map(el=>getComputedStyle(el).borderLeftColor);
+      if(before)root.style.setProperty('--ui-color-link',before);else root.style.removeProperty('--ui-color-link');
+      return colors;
+    });
+    assert(tokenResponse.length>=2 && tokenResponse.every(color=>color==='rgb(123, 145, 167)'),'Timeline markers consume the shared link token');
     await page.screenshot({path:'/tmp/planning-timeline.png'});
     await panel.getByLabel('타임라인 단위').selectOption('month');
     assert((await panel.locator('.plan-time-header').innerText()).includes('월'));
@@ -263,6 +279,7 @@ const server=http.createServer(async(req,res)=>{
     await page.locator('[data-activity="schedule"]').click();
     await nav.getByRole('button',{name:'카드 결제',exact:true}).waitFor();
     fail=true;await page.locator('[data-plan-header-actions]').getByRole('button',{name:'새로고침',exact:true}).click();await panel.getByRole('alert').waitFor();
+    assert.equal(await panel.locator('.af-status[data-kind="error"]').count(),1);
     fail=false;await panel.getByRole('button',{name:'다시 시도'}).click();await nav.getByRole('button',{name:'카드 결제',exact:true}).waitFor();
     readOnly=true;await page.locator('[data-plan-header-actions]').getByRole('button',{name:'새로고침'}).click();await page.waitForFunction(()=>!document.querySelector('[data-plan-header-actions] [data-plan-action="add"]:not([hidden])'));
     await nav.getByRole('button',{name:'카드 결제',exact:true}).click();assert.equal(await panel.getByRole('button',{name:'수정',exact:true}).count(),0);

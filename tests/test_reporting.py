@@ -85,7 +85,7 @@ def test_discoverable_guide_examples_match_command_schema():
     import re
     from pathlib import Path
 
-    guide = Path("docs/external-agent-reporting.md").read_text()
+    guide = Path(".codex/skills/spec-platform/references/external-agent-reporting.md").read_text()
     examples = re.findall(r"```json\n(.*?)\n```", guide, re.DOTALL)
     assert len(examples) >= 7
     for example in examples:

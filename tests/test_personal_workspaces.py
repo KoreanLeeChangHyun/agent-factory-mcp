@@ -10,7 +10,13 @@ from app.db.session import get_session
 from app.main import create_app
 from app.modules.auth.dependencies import get_current_principal
 from app.modules.auth.service import Principal
-from app.modules.organization.models import Organization, OrganizationMembership, Role, RoleScope, MembershipStatus
+from app.modules.organization.models import (
+    MembershipStatus,
+    Organization,
+    OrganizationMembership,
+    Role,
+    RoleScope,
+)
 from app.modules.organization.system_roles import ORGANIZATION_OWNER_ROLE_ID
 from app.modules.workspace.models import Workspace, WorkspaceStatus
 from app.modules.workspace.schemas import WorkspaceCreate
@@ -38,9 +44,15 @@ class ProvisionSession:
     async def scalar(self, statement):
         sql = str(statement)
         if "FROM organization_memberships JOIN organizations" in sql:
-            return OrganizationMembership(role_id=ORGANIZATION_OWNER_ROLE_ID, status=MembershipStatus.ACTIVE)
+            return OrganizationMembership(
+                role_id=ORGANIZATION_OWNER_ROLE_ID, status=MembershipStatus.ACTIVE
+            )
         if "FROM roles" in sql:
-            return Role(id=ORGANIZATION_OWNER_ROLE_ID, name="organization_owner", scope=RoleScope.ORGANIZATION)
+            return Role(
+                id=ORGANIZATION_OWNER_ROLE_ID,
+                name="organization_owner",
+                scope=RoleScope.ORGANIZATION,
+            )
         self.query = statement
         return self.existing
 

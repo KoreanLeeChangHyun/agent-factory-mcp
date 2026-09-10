@@ -41,6 +41,34 @@ class WorkspaceResponse(BaseModel):
     updated_at: datetime
 
 
+class WorkspaceGroupCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=60)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def trim_name(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+
+class WorkspaceGroupUpdate(BaseModel):
+    revision: int = Field(ge=1)
+    name: str | None = Field(default=None, min_length=1, max_length=60)
+    collapsed: bool | None = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def trim_name(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+
+class WorkspaceGroupResponse(BaseModel):
+    id: UUID
+    name: str
+    collapsed: bool
+    revision: int
+    workspace_ids: list[UUID] = Field(default_factory=list)
+
+
 class RepositoryCreate(BaseModel):
     location: str = Field(min_length=1, max_length=2048)
     remote_url: HttpUrl | None = None

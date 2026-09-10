@@ -82,7 +82,7 @@ then repeat with `--apply` and the destination organization, workspace, and an
 existing revision-author user ID. The importer creates deterministic archives
 for multi-file packages, verifies uploaded hashes, stops on conflicting slugs,
 and can resume matching imports. It never deletes or rewrites the source. See
-[`config/migration.md`](config/migration.md) for the cutoff procedure.
+[`migration.md`](.codex/skills/spec-platform/references/migration.md) for the cutoff procedure.
 
 After applying migrations, create the first platform administrator without
 placing a password in shell history:

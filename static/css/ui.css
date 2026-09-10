@@ -1,13 +1,79 @@
-/* Shared Workspace controls and interaction states. Feature CSS owns layout. */
+/* Shared Workspace tokens, controls, and interaction states. Feature CSS owns layout. */
 :root {
+  color-scheme: dark;
+  --ui-font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --activity-bar-background: #181818;
+  --activity-item-foreground: #929292;
+  --activity-item-active-background: #2b2d30;
+  --activity-item-active-foreground: #d0d0d0;
+  --primary-sidebar-background: #181818;
+  --workspace-background: #1e1e1e;
+  --region-border: #2b2b2b;
+  --explorer-row-hover: #2a2d2e;
+  --explorer-row-selected: #37373d;
+  --explorer-row-active-selected: #04395e;
+  --explorer-foreground: #cccccc;
+  --explorer-muted: #a0a0a0;
+  --focus-border: #007fd4;
+  --editor-header-background: #181818;
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-6: 24px;
+  --ui-font-body: 12px;
+  --ui-font-caption: 11px;
+  --ui-font-section: 13px;
+  --ui-font-title: 18px;
+  --ui-line-body: 20px;
+  --ui-line-code: 16px;
+  --ui-weight-normal: 400;
+  --ui-weight-heading: 600;
+  --ui-font-code: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  --ui-scroll-thumb: #424242;
+  --ui-color-primary: #0e639c;
+  --ui-color-primary-hover: #1177bb;
+  --ui-color-link: #75beff;
+  --ui-color-success: #89d185;
+  --ui-color-error: #f48771;
+  --ui-color-warning: #cca700;
+  --ui-danger-border: #8b3a3a;
+  --ui-overlay-background: #252526;
+  --ui-overlay-backdrop: #0007;
+  --ui-dialog-shadow: 0 16px 60px #0008;
+  --ui-color-selected-text: #ffffff;
+  --ui-control-background: #242424;
+  --ui-control-border: #454545;
+  --ui-control-radius: 3px;
+  --ui-control-height: 30px;
   --ui-control-compact-height: 22px;
   --ui-focus-width: 1px;
   --ui-focus-offset: -1px;
   --ui-drop-border: var(--focus-border);
   --ui-drop-background: color-mix(in srgb, var(--ui-drop-border) 20%, transparent);
   --ui-disabled-opacity: .5;
-  --ui-sidebar-header-height: 35px;
+  --ui-workbench-header-height: 35px;
+  --ui-sidebar-header-height: var(--ui-workbench-header-height);
   --ui-sidebar-row-height: 28px;
+  --ui-workbench-panel-gap: 5px;
+  --ui-workbench-panel-radius: 7px;
+  --ui-notice-background: var(--primary-sidebar-background);
+  --ui-notice-shadow: 0 3px 12px #0006;
+  --ui-chart-grid: color-mix(in srgb, var(--explorer-foreground) 6%, transparent);
+  --ui-chart-muted-band: color-mix(in srgb, var(--explorer-foreground) 4%, transparent);
+  --ui-chart-current-band: color-mix(in srgb, var(--ui-color-link) 5%, transparent);
+  --ui-state-neutral-background: color-mix(in srgb, var(--explorer-muted) 20%, var(--workspace-background));
+  --ui-state-active-background: color-mix(in srgb, var(--ui-color-link) 20%, var(--workspace-background));
+  --ui-state-success-background: color-mix(in srgb, var(--ui-color-success) 20%, var(--workspace-background));
+}
+:where(.workspace-shell, .workspace-dialog, .auth-card) {
+  font-family: var(--ui-font-family);
+  font-size: var(--ui-font-body);
+  line-height: var(--ui-line-body);
+  color: var(--explorer-foreground);
+}
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select:where(:not([multiple])) {
+  padding-inline-end: var(--ui-space-6);
 }
 
 /* One Primary Sidebar grammar shared by every Workspace domain. */
@@ -33,6 +99,7 @@
   font-weight: var(--ui-weight-heading);
   letter-spacing: .02em;
   text-transform: uppercase;
+  border-bottom: 1px solid var(--region-border);
 }
 
 .app-sidebar__header > span {
@@ -42,6 +109,7 @@
   white-space: nowrap;
 }
 
+.app-sidebar__body,
 .app-sidebar__content {
   height: calc(100% - var(--ui-sidebar-header-height));
   min-height: 0;
@@ -51,7 +119,87 @@
 
 .app-sidebar__view { min-height: 100%; }
 .app-sidebar__view[hidden] { display: none; }
+.app-sidebar__section { min-width: 0; border-bottom: 1px solid var(--region-border); }
+.app-sidebar__section:last-child { border-bottom: 0; }
+:where(.app-sidebar__section-header) {
+  display: flex;
+  min-width: 0;
+  min-height: 26px;
+  align-items: center;
+  padding: 0 var(--ui-space-3);
+  background: var(--editor-header-background);
+  color: var(--explorer-foreground);
+  font-size: var(--ui-font-caption);
+  font-weight: var(--ui-weight-heading);
+  letter-spacing: .02em;
+}
+.app-sidebar__section-header--toggle { padding: 0 var(--ui-space-1); }
+.app-sidebar__section-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 1px; }
+.app-sidebar__icon-button {
+  display: grid;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ui-control-radius);
+  background: transparent;
+  color: var(--explorer-muted);
+  cursor: pointer;
+}
+.app-sidebar__icon-button:hover { background: var(--explorer-row-hover); color: var(--explorer-foreground); }
+.app-sidebar__icon-button[aria-pressed="true"] { background: var(--explorer-row-selected); color: var(--ui-color-selected-text); }
+.app-sidebar__section-actions:focus-within .app-sidebar__icon-button[aria-pressed="true"] { background: var(--explorer-row-active-selected); }
+.app-sidebar__icon-button svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+}
+.app-sidebar__section-toggle {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 26px;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.app-sidebar__section-header > .app-sidebar__section-toggle { flex: 1 1 auto; width: auto; }
+.app-sidebar__section-toggle:hover { background: var(--explorer-row-hover); }
+.app-sidebar__section-toggle svg {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+.app-sidebar__section-toggle[aria-expanded="false"] .app-sidebar__section-chevron { transform: rotate(-90deg); }
+.app-sidebar__section-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-sidebar__section-content { min-width: 0; }
 .app-sidebar__nav { display: grid; gap: 1px; padding: var(--ui-space-1) var(--ui-space-2) var(--ui-space-3); }
+.app-sidebar__nav[hidden], .app-sidebar__section-content[hidden] { display: none; }
 .app-sidebar__nav--flush { padding-inline: var(--ui-space-2); }
 
 .app-sidebar__row {
@@ -102,9 +250,7 @@
   font-size: var(--ui-font-body);
   line-height: var(--ui-line-body);
 }
-.plan-domain-row > .app-sidebar__row:first-child { width: var(--ui-sidebar-row-height); padding: 0; }
-
-:is(.workspace-shell, .workspace-dialog, .plan-dialog) :is(input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"])), select, textarea),
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) :is(input:where(:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="hidden"])), select, textarea),
 .original-search .tabulator .tabulator-header-filter :is(input, select) {
   box-sizing: border-box;
   min-width: 0;
@@ -120,16 +266,21 @@
   line-height: var(--ui-line-body);
   color-scheme: dark;
 }
-:is(.workspace-shell, .workspace-dialog, .plan-dialog) textarea { height: auto; }
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) textarea { height: auto; }
 :is(.de-document-header, .tabulator-header-filter) { --ui-control-height: var(--ui-control-compact-height); }
 .de-document-header input,
 .original-search .tabulator .tabulator-header-filter :is(input, select) { padding: 0 var(--ui-space-1); }
-:is(.workspace-shell, .workspace-dialog, .plan-dialog) input::placeholder,
-:is(.workspace-shell, .workspace-dialog, .plan-dialog) textarea::placeholder { color: var(--explorer-muted); opacity: 1; }
-:is(.workspace-shell, .workspace-dialog, .plan-dialog) select option { background: var(--ui-control-background); color: var(--explorer-foreground); }
-:is(.workspace-shell, .workspace-dialog, .plan-dialog) :is(input[type="checkbox"], input[type="radio"], progress) { accent-color: var(--focus-border); }
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) input::placeholder,
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) textarea::placeholder { color: var(--explorer-muted); opacity: 1; }
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select option { background: var(--ui-control-background); color: var(--explorer-foreground); }
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) :is(input[type="checkbox"], input[type="radio"], progress) { accent-color: var(--focus-border); }
 
-:is(.organization-view, .planning-panel, .plan-dialog, .reporting-panel, .mcp-onboarding, .workspace-dialog footer) button {
+.ui-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ui-space-1);
   min-height: var(--ui-control-height);
   padding: var(--ui-space-1) var(--ui-space-2);
   border: 1px solid var(--ui-control-border);
@@ -140,18 +291,49 @@
   font-size: var(--ui-font-body);
   line-height: var(--ui-line-body);
   cursor: pointer;
+  text-decoration: none;
 }
-:is(.organization-view, .planning-panel, .plan-dialog, .reporting-panel, .mcp-onboarding, .workspace-dialog footer) button:enabled:hover { background: var(--explorer-row-hover); }
-.workspace-dialog footer .primary-action { background: var(--explorer-row-active-selected); border-color: var(--focus-border); color: var(--ui-color-selected-text); }
+.ui-button:where(:enabled:hover) { background: var(--explorer-row-hover); }
+.ui-button--primary { background: var(--ui-color-primary); border-color: var(--ui-color-primary); color: var(--ui-color-selected-text); }
+.ui-button--primary:where(:enabled:hover) { background: var(--ui-color-primary-hover); border-color: var(--ui-color-primary-hover); }
+.ui-button--danger { border-color: var(--ui-danger-border); color: var(--ui-color-error); }
+.ui-button--link { min-height: 0; padding: 0; border: 0; background: transparent; color: var(--ui-color-link); justify-content: start; text-align: left; }
+.ui-button--link:where(:enabled:hover) { background: transparent; text-decoration: underline; }
+.ui-button--icon { width: var(--ui-control-height); padding: 0; flex-shrink: 0; }
+.ui-button--compact { --ui-control-height: var(--ui-control-compact-height); padding-block: 0; }
+.ui-button:focus-visible, .ui-tab:focus-visible { outline: var(--ui-focus-width) solid var(--focus-border); outline-offset: var(--ui-focus-offset); }
+.ui-button:disabled { opacity: var(--ui-disabled-opacity); cursor: not-allowed; }
+.ui-button[aria-busy="true"] { cursor: progress; background-image: linear-gradient(90deg, currentColor 50%, transparent 50%); background-size: 8px 2px; background-repeat: repeat-x; background-position: bottom; }
+:where(form[aria-busy="true"]) .ui-button[type="submit"] { cursor: progress; background-image: linear-gradient(90deg, currentColor 50%, transparent 50%); background-size: 8px 2px; background-repeat: repeat-x; background-position: bottom; }
+
+/* Navigation is deliberately independent from action-button styling. */
+.ui-tabs { display: flex; gap: var(--ui-space-1); overflow-x: auto; border-bottom: 1px solid var(--region-border); }
+.ui-tab { flex: 0 0 auto; min-height: var(--ui-control-height); padding: var(--ui-space-1) var(--ui-space-2); border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--explorer-muted); font: inherit; cursor: pointer; }
+.ui-tab:hover { background: var(--explorer-row-hover); }
+.ui-tab:is([aria-current="page"], [aria-selected="true"], [aria-pressed="true"]) { border-bottom-color: var(--focus-border); color: var(--explorer-foreground); }
+.ui-resource-row { display: flex; width: 100%; min-height: 44px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--ui-space-2); padding: var(--ui-space-2); border: 1px solid var(--ui-control-border); border-radius: var(--ui-control-radius); background: var(--ui-control-background); color: var(--explorer-foreground); font: inherit; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.ui-resource-row:hover { background: var(--explorer-row-hover); }
+.ui-resource-row[aria-pressed="true"] { border-color: var(--focus-border); background: var(--explorer-row-selected); }
+.ui-field { display: grid; gap: var(--ui-space-1); min-width: 0; }
+.ui-field__help { margin: 0; color: var(--explorer-muted); font-size: var(--ui-font-caption); overflow-wrap: anywhere; }
+.ui-message { margin-block: var(--ui-space-2); font-size: var(--ui-font-body); line-height: var(--ui-line-body); overflow-wrap: anywhere; white-space: pre-wrap; }
+.ui-message:empty { display: none; }
+.ui-message--reserved, .ui-message--reserved:empty { display: block; min-height: var(--ui-line-body); }
+.ui-message:where([role="alert"]), .ui-message--error { color: var(--ui-color-error); }
+.ui-message--success { color: var(--ui-color-success); }
+.ui-message--warning { color: var(--ui-color-warning); }
+.ui-message--muted { color: var(--explorer-muted); }
+.ui-section-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--ui-space-2); min-width: 0; }
+.ui-section-header > :is(h1, h2, h3) { margin: 0; }
 :is(.plan-table td, .plan-time-label) button,
 .planning-panel .plan-date-point { background: transparent; border-color: transparent; }
 .planning-panel .plan-date-point { padding: 0; }
 
-:is(.workspace-shell, .workspace-dialog, .plan-dialog, .de-menu) :focus-visible {
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .de-menu, .auth-card) :focus-visible {
   outline: var(--ui-focus-width) solid var(--focus-border);
   outline-offset: var(--ui-focus-offset);
 }
-:is(.workspace-shell, .workspace-dialog, .plan-dialog, .de-menu) :disabled {
+:where(.workspace-shell, .workspace-dialog, .plan-dialog, .de-menu, .auth-card) :disabled {
   opacity: var(--ui-disabled-opacity);
   cursor: not-allowed;
 }
@@ -201,7 +383,7 @@
 :is(.planning-panel, .reporting-panel, .organization-view) { font-size: var(--ui-font-body); line-height: var(--ui-line-body); }
 :is(.planning-panel, .reporting-panel, .organization-view) h1 { font-size: var(--ui-font-title); line-height: 24px; font-weight: var(--ui-weight-heading); }
 :is(.planning-panel, .reporting-panel, .organization-view) :is(h2, h3) { font-size: var(--ui-font-section); line-height: var(--ui-line-body); font-weight: var(--ui-weight-heading); }
-:is(.workspace-shell, .workspace-dialog, .plan-dialog, .de-menu) * { scrollbar-width: thin; scrollbar-color: var(--ui-scroll-thumb) transparent; }
+:is(.workspace-shell, .workspace-dialog, .plan-dialog, .de-menu, .auth-card) * { scrollbar-width: thin; scrollbar-color: var(--ui-scroll-thumb) transparent; }
 
 /* Code fields and timeline annotations keep their semantic text metrics. */
 .mcp-onboarding :is(textarea, [data-mcp-token], [data-mcp-url]) {
@@ -212,12 +394,12 @@
 
 /* Keep the native select contract while theming its popup in supporting browsers. */
 @supports (appearance: base-select) {
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select:where(:not([multiple]):not([size]), [size="1"]),
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select:where(:not([multiple]):not([size]), [size="1"])::picker(select) {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select:where(:not([multiple]):not([size]), [size="1"]),
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select:where(:not([multiple]):not([size]), [size="1"])::picker(select) {
     appearance: base-select;
   }
 
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select::picker(select) {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select::picker(select) {
     min-inline-size: max(anchor-size(self-inline), 100px);
     max-inline-size: calc(100vw - 24px);
     max-block-size: min(320px, 60dvh);
@@ -234,16 +416,16 @@
     scrollbar-color: var(--ui-scroll-thumb) transparent;
   }
 
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select::picker-icon {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select::picker-icon {
     color: var(--explorer-muted);
-    margin-inline-start: var(--ui-space-2);
+    margin-inline-start: auto;
   }
 
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select:open {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select:open {
     border-color: var(--focus-border);
   }
 
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select option {
     min-block-size: var(--ui-control-height);
     padding: var(--ui-space-1) var(--ui-space-2);
     gap: var(--ui-space-2);
@@ -256,22 +438,22 @@
     cursor: pointer;
   }
 
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option:checked {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select option:checked {
     background: var(--explorer-row-selected);
     color: var(--ui-color-selected-text);
   }
 
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option:enabled:hover {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select option:enabled:hover {
     background: var(--explorer-row-hover);
   }
 
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option:focus-visible {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select option:focus-visible {
     background: var(--explorer-row-active-selected);
     outline: var(--ui-focus-width) solid var(--focus-border);
     outline-offset: var(--ui-focus-offset);
   }
 
-  :is(.workspace-shell, .workspace-dialog, .plan-dialog) select option:disabled {
+  :is(.workspace-shell, .workspace-dialog, .plan-dialog, .auth-card) select option:disabled {
     color: var(--explorer-muted);
     cursor: not-allowed;
   }

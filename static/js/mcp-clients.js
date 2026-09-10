@@ -1,4 +1,4 @@
-/* Client configuration adapters. Sources and verified versions: config/mcp-clients.md. */
+/* Client configuration adapters. Sources and verified versions: .codex/skills/spec-platform/references/mcp-clients.md. */
 (() => {
   const clients = [
     { id: 'vscode', label: 'VS Code · Copilot', variants: [['ide', 'IDE · Copilot']], path: '.vscode/mcp.json', docs: 'https://code.visualstudio.com/docs/agent-customization/mcp-servers', auth: 'prompt' },

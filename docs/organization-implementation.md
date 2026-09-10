@@ -34,7 +34,7 @@
 
 | 항목 | 구현 | 확인한 행동 |
 |---|---|---|
-| 1 | `app/modules/organization/permissions.py`, `config/organization-management.md` | 범위가 섞인 역할·알 수 없는 키·소유자 전용 권한 거부, 기본 역할표와 개별 설명 |
+| 1 | `app/modules/organization/permissions.py`, `.codex/skills/spec-platform/references/organization-management.md` | 범위가 섞인 역할·알 수 없는 키·소유자 전용 권한 거부, 기본 역할표와 개별 설명 |
 | 2 | `template/workspace/index.html`, `static/js/organizations.js`, `static/js/workspace.js` | 조직 메뉴, 네 관리 화면, 조직 이름·ID 표시와 조직 전환 시 갱신 |
 | 3 | `OrganizationService.update/transfer/delete_organization` | 생성·이름 변경, 오래된 revision 거부, 이전 후 기존 소유자 권한 하향, 삭제 후 검색·접근 차단 |
 | 4 | `OrganizationService.members/detail/update_member` | 이메일 검색, 역할·상태 변경, 제거 후 재초대 필요, 마지막 소유자 정지·제거 방지 |

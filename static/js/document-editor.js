@@ -1,22 +1,18 @@
 /* Shared, read-only document workbench. Layout is transient and tenant scoped. */
 (() => {
   "use strict";
+  const ui = window.agentFactoryUI;
   const kinds = ["processed", "specification"];
   const labels = { processed: "가공 문서", specification: "명세 문서" };
   const iconPaths = {
     file: "M3 1.5h6l4 4V14H3ZM9 1.5V6h4",
     folder: "M1.5 4h5l1.5 2h6.5v7h-13Z",
     collapse: "M5 2h9v9M2 5h9v9H2ZM4 9h5",
-    close: "m4 4 8 8M12 4l-8 8",
     split: "M2 2h12v12H2ZM8 2v12",
-    down: "m4 6 4 4 4-4",
-    right: "m6 4 4 4-4 4",
     left: "m10 4-4 4 4 4",
     minus: "M3 8h10",
-    plus: "M3 8h10M8 3v10",
     pin: "M5 2h6M6 2v4l-2 3h8l-2-3V2M8 9v5",
     expand: "M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4",
-    more: "M3 8h.1M8 8h.1M13 8h.1",
   };
   const node = (tag, className, text) => {
     const result = document.createElement(tag);
@@ -25,6 +21,8 @@
     return result;
   };
   const icon = (name) => {
+    const shared = {close:'x',down:'chevron-down',right:'chevron-right',plus:'plus',more:'dots'};
+    if (shared[name]) return ui.icon(shared[name],{size:14});
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 16 16");
     svg.setAttribute("aria-hidden", "true");
@@ -35,8 +33,9 @@
     return svg;
   };
   const button = (label, symbol, action) => {
-    const result = node("button", "de-button");
-    result.type = "button";
+    const result = ui.button({label});
+    result.classList.add('de-button','ui-button--icon');
+    result.textContent = '';
     result.title = label;
     result.setAttribute("aria-label", label);
     result.append(icon(symbol));
@@ -49,6 +48,7 @@
       Object.assign(this, { host, reveal, onSelection, rootPath });
       this.docs = new Map();
       this.groups = new Map();
+      this.splitBindings = new Set();
       this.trees = new Map();
       this.menu = node("div", "de-menu");
       this.menu.setAttribute("role", "menu");
@@ -69,6 +69,8 @@
     }
 
     reset() {
+      for (const branch of this.splitBindings) branch.splitter.destroy();
+      this.splitBindings.clear();
       this.clearDrag();
       this.closeMenu(false);
       for (const group of this.groups.values()) {
@@ -128,7 +130,7 @@
       toggle.after(query);
       header.querySelector('[data-document-target]').before(collapse);
       list.setAttribute("aria-multiselectable", "true");
-      list.classList.add("de-tree");
+      list.classList.add("de-tree", "af-explorer-tree");
       const tree = { list, status, query, selected: new Set(), collapsed: new Set(), rows: [], anchor: null };
       this.trees.set(kind, tree);
       query.addEventListener("input", () => {
@@ -139,7 +141,18 @@
         if (event.key === "ArrowDown") { event.preventDefault(); list.querySelector('[role="treeitem"]')?.focus(); }
         if (event.key === "Escape") { query.value = ""; this.renderTree(kind); }
       });
-      list.addEventListener("keydown", (event) => this.treeKey(kind, event));
+      tree.keyboard = ui.bindTreeKeyboard(list,{
+        items:() => tree.rows,
+        isExpanded:row => row.element.getAttribute('aria-expanded') === 'true',
+        onToggle:row => this.toggleFolder(kind,row.key),
+        onActivate:(row,event) => event.ctrlKey || event.metaKey ? this.openSide([row.key],'right') : this.open(row.key,{preview:false}),
+        onToggleSelection:row => this.selectTree(kind,row.key,{ctrlKey:true}),
+        onSelectAll:rows => {tree.selected=new Set(rows.filter(row=>!row.folder).map(row=>row.key));this.syncSelection();},
+        onContextMenu:(row,event) => {
+          if(!row.folder){if(!tree.selected.has(row.key))this.selectTree(kind,row.key,{});this.treeMenu(kind,event,row.element);}
+        },
+        onMove:(row,event) => {if(event.shiftKey && !row.folder)this.selectTree(kind,row.key,event);},
+      });
     }
 
     renderTrees() { for (const kind of kinds) this.renderTree(kind); }
@@ -158,31 +171,22 @@
         });
         parent.children.set(`file:${doc.id}`, { name: doc.parts.at(-1), key: doc.id, doc });
       }
-      const oldFocus = focusKey || tree.list.querySelector(":focus")?.dataset.key;
-      tree.list.replaceChildren(); tree.rows = [];
-      const walk = (parent, container, level, parentKey) => {
-        const entries = [...parent.children.values()].sort((a, b) => Number(!!b.folder) - Number(!!a.folder) || a.name.localeCompare(b.name));
-        entries.forEach((entry, index) => {
-          const row = node("div", "de-tree-row");
-          row.setAttribute("role", "treeitem"); row.tabIndex = -1;
-          row.setAttribute("aria-level", String(level));
-          row.setAttribute("aria-posinset", String(index + 1)); row.setAttribute("aria-setsize", String(entries.length));
-          row.dataset.key = entry.key; row.style.setProperty("--depth", level - 1);
+      const childrenOf = parent => [...parent.children.values()].sort((a,b) => Number(!!b.folder)-Number(!!a.folder) || a.name.localeCompare(b.name));
+      tree.rows = ui.renderNativeTree(tree.list,{
+        entries:childrenOf(root),childrenOf,focusKey,groupClass:'de-tree-children af-explorer-group',
+        isExpanded:entry => query || !tree.collapsed.has(entry.key),
+        renderRow:(entry,{level,expanded}) => {
+          const row = node("div", "de-tree-row af-explorer-row");
+          row.style.setProperty("--tree-depth", level - 1);
           row.title = entry.folder ? entry.key : `${entry.doc.title}\n${entry.doc.path}`;
-          const expanded = query || !tree.collapsed.has(entry.key);
-          const marker = icon(entry.folder ? (expanded ? "down" : "right") : "file");
-          row.append(marker, ...(entry.folder ? [icon("folder")] : []), node("span", "de-tree-name", entry.name));
-          if (entry.folder) row.setAttribute("aria-expanded", String(!!expanded));
-          else {
+          const disclosure = node("span", "af-explorer-disclosure");
+          if (entry.folder) disclosure.append(icon(expanded ? "down" : "right"));
+          row.append(disclosure, icon(entry.folder ? "folder" : "file"), node("span", "de-tree-name af-explorer-name", entry.name));
+          if (!entry.folder) {
             row.dataset[`${kind}Link`] = entry.doc.id;
             row.draggable = !!entry.doc.href;
             if (!entry.doc.href) { row.setAttribute("aria-disabled", "true"); row.title += " · 내용 없음"; }
           }
-          const item = { ...entry, element: row, parentKey };
-          tree.rows.push(item); container.append(row);
-          row.addEventListener("focus", () => {
-            tree.rows.forEach((value) => { value.element.tabIndex = value === item ? 0 : -1; });
-          });
           row.addEventListener("click", (event) => {
             row.focus();
             if (entry.folder) { this.toggleFolder(kind, entry.key); return; }
@@ -204,19 +208,9 @@
             const ids = tree.selected.has(entry.key) ? [...tree.selected] : [entry.key];
             this.startDrag(event, { ids, kind: "tree" });
           });
-          if (entry.folder && expanded) {
-            const children = node("div", "de-tree-children"); children.setAttribute("role", "group");
-            row.append(children); // Tree hierarchy remains semantic; children don't inherit parent clicks.
-            children.addEventListener("click", (event) => event.stopPropagation());
-            children.addEventListener("dblclick", (event) => event.stopPropagation());
-            children.addEventListener("contextmenu", (event) => event.stopPropagation());
-            walk(entry, children, level + 1, entry.key);
-          }
-        });
-      };
-      walk(root, tree.list, 1, null);
-      tree.rows.find((row) => row.key === oldFocus)?.element.focus();
-      if (!tree.rows.some((row) => row.element.tabIndex === 0) && tree.rows[0]) tree.rows[0].element.tabIndex = 0;
+          return row;
+        },
+      });
       tree.status.hidden = !query || tree.rows.length > 0;
       tree.status.textContent = tree.status.hidden ? "" : "일치하는 파일이 없습니다.";
       this.syncSelection();
@@ -230,44 +224,11 @@
 
     selectTree(kind, key, event) {
       const tree = this.trees.get(kind);
-      if (event.shiftKey && tree.anchor) {
-        const files = tree.rows.filter((row) => !row.folder);
-        const a = files.findIndex((row) => row.key === tree.anchor), b = files.findIndex((row) => row.key === key);
-        tree.selected = new Set(files.slice(Math.max(0, Math.min(a, b)), Math.max(a, b) + 1).map((row) => row.key));
-      } else if (event.ctrlKey || event.metaKey) {
-        if (tree.selected.has(key)) tree.selected.delete(key); else tree.selected.add(key);
-        tree.anchor = key;
-      } else { tree.selected = new Set([key]); tree.anchor = key; }
+      const next = ui.selectKeys({keys:tree.rows.filter(row=>!row.folder).map(row=>row.key),
+        selected:tree.selected,anchor:tree.anchor,key,range:event.shiftKey,
+        toggle:event.ctrlKey || event.metaKey});
+      tree.selected=next.selected;tree.anchor=next.anchor;
       this.syncSelection();
-    }
-
-    treeKey(kind, event) {
-      const tree = this.trees.get(kind), index = tree.rows.findIndex((row) => row.element === event.target);
-      if (index < 0) return;
-      const row = tree.rows[index];
-      let next;
-      if (event.key === "ArrowDown") next = tree.rows[index + 1];
-      else if (event.key === "ArrowUp") next = tree.rows[index - 1];
-      else if (event.key === "Home") next = tree.rows[0];
-      else if (event.key === "End") next = tree.rows.at(-1);
-      else if (event.key === "ArrowRight" && row.folder) {
-        if (tree.collapsed.has(row.key)) this.toggleFolder(kind, row.key); else next = tree.rows[index + 1];
-      } else if (event.key === "ArrowLeft") {
-        if (row.folder && !tree.collapsed.has(row.key)) this.toggleFolder(kind, row.key);
-        else next = tree.rows.find((item) => item.key === row.parentKey);
-      } else if (event.key === "Enter") {
-        if (row.folder) this.toggleFolder(kind, row.key);
-        else if (event.ctrlKey || event.metaKey) this.openSide([row.key], "right");
-        else this.open(row.key, { preview: false });
-      } else if (event.key === " ") {
-        if (row.folder) this.toggleFolder(kind, row.key); else this.selectTree(kind, row.key, { ctrlKey: true });
-      } else if ((event.ctrlKey || event.metaKey) && event.key === "a") {
-        tree.selected = new Set(tree.rows.filter((item) => !item.folder).map((item) => item.key)); this.syncSelection();
-      } else if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
-        if (!row.folder) { if (!tree.selected.has(row.key)) this.selectTree(kind, row.key, {}); this.treeMenu(kind, event, row.element); }
-      } else return;
-      event.preventDefault(); event.stopPropagation();
-      if (next) { next.element.focus(); if (event.shiftKey && !next.folder) this.selectTree(kind, next.key, event); }
     }
 
     treeMenu(kind, event, origin) {
@@ -339,7 +300,7 @@
 
     async loadContent(tab) {
       const { panel, doc, controller } = tab;
-      panel.replaceChildren(node("p", "de-status", "문서를 불러오는 중입니다.")); panel.setAttribute("aria-busy", "true");
+      panel.replaceChildren(node("p", "de-status ui-message", "문서를 불러오는 중입니다.")); panel.setAttribute("aria-busy", "true");
       try {
         const url = new URL(doc.href, location.href);
         if (url.origin !== location.origin || !url.pathname.startsWith(`${this.rootPath}/api/organizations/`)) throw new Error("허용되지 않은 문서 주소입니다.");
@@ -362,11 +323,11 @@
         } else if (["image/png", "image/jpeg", "image/gif", "image/webp"].includes(media)) {
           const url = URL.createObjectURL(blob); tab.urls.push(url);
           const image = node("img", "de-image"); image.src = url; image.alt = doc.title; panel.append(image);
-        } else panel.append(node("p", "de-status", "이 파일 형식은 다운로드하여 열 수 있습니다."), this.downloadLink(doc));
+        } else panel.append(node("p", "de-status ui-message", "이 파일 형식은 다운로드하여 열 수 있습니다."), this.downloadLink(doc));
       } catch (error) {
         if (controller.signal.aborted) return;
-        const message = node("p", "de-status", error.message); message.setAttribute("role", "alert");
-        const retry = node("button", "de-retry", "다시 시도"); retry.type = "button";
+        const message = node("p", "de-status ui-message", error.message); message.setAttribute("role", "alert");
+        const retry = ui.button({label:'다시 시도'}); retry.classList.add('de-retry');
         retry.addEventListener("click", () => this.loadContent(tab)); panel.replaceChildren(message, retry);
       } finally { if (!controller.signal.aborted) panel.removeAttribute("aria-busy"); }
     }
@@ -384,7 +345,7 @@
         frame.title = tab.doc.title; frame.setAttribute("sandbox", "allow-scripts");
         frame.referrerPolicy = "no-referrer"; frame.src = `${base}/preview`;
         tab.panel.append(frame);
-      } else tab.panel.append(node("p", "de-status", "이 패키지에는 HTML 시작 문서가 없습니다."));
+      } else tab.panel.append(node("p", "de-status ui-message", "이 패키지에는 HTML 시작 문서가 없습니다."));
       const files = node("details", "de-package-files");
       files.append(node("summary", "", "패키지 파일"));
       for (const member of manifest.members) {
@@ -537,6 +498,7 @@
         }
         const first = prune(branch.first), second = prune(branch.second);
         if (first && second) { branch.first = first; branch.second = second; return branch; }
+        branch.splitter?.destroy(); this.splitBindings.delete(branch);
         return first || second;
       };
       this.layout = prune(this.layout);
@@ -581,43 +543,25 @@
         }
         if (!branch.element) {
           branch.element = node("div", `de-split de-split--${branch.axis}`);
-          const sash = node("div", "de-sash"); branch.sash = sash;
-          sash.tabIndex = 0; sash.setAttribute("role", "separator"); sash.setAttribute("aria-label", "문서 분할 크기 조절");
-          sash.setAttribute("aria-orientation", branch.axis === "horizontal" ? "vertical" : "horizontal");
-          sash.setAttribute("aria-valuemin", "10"); sash.setAttribute("aria-valuemax", "90");
-          branch.resize = (ratio) => {
-            branch.ratio = Math.max(0.1, Math.min(0.9, ratio));
-            branch.firstElement.style.flex = `${branch.ratio} 1 0px`;
-            branch.secondElement.style.flex = `${1 - branch.ratio} 1 0px`;
-            sash.setAttribute("aria-valuenow", String(Math.round(branch.ratio * 100)));
-          };
-          sash.addEventListener("pointerdown", (event) => {
-            if (event.button !== 0) return;
-            event.preventDefault(); sash.setPointerCapture(event.pointerId); sash.focus(); this.host.classList.add("is-resizing");
-          });
-          sash.addEventListener("pointermove", (event) => {
-            if (!sash.hasPointerCapture(event.pointerId)) return;
-            const rect = branch.element.getBoundingClientRect();
-            branch.resize(branch.axis === "horizontal" ? (event.clientX - rect.left) / rect.width : (event.clientY - rect.top) / rect.height);
-          });
-          const stop = () => this.host.classList.remove("is-resizing");
-          sash.addEventListener("pointerup", stop); sash.addEventListener("pointercancel", stop); sash.addEventListener("lostpointercapture", stop);
-          sash.addEventListener("dblclick", () => branch.resize(0.5));
-          sash.addEventListener("keydown", (event) => {
-            const delta = branch.axis === "horizontal" ? { ArrowLeft: -0.05, ArrowRight: 0.05 } : { ArrowUp: -0.05, ArrowDown: 0.05 };
-            if (delta[event.key] !== undefined) { event.preventDefault(); branch.resize(branch.ratio + delta[event.key]); }
-            if (event.key === "Home" || event.key === "End") { event.preventDefault(); branch.resize(event.key === "Home" ? 0.1 : 0.9); }
-          });
+          branch.firstSlot = node('div','de-split-slot'); branch.firstSlot.dataset.afPanel = '';
+          branch.secondSlot = node('div','de-split-slot'); branch.secondSlot.dataset.afPanel = '';
+          branch.sash = node('div','de-sash'); branch.sash.dataset.afResizer = '';
+          branch.element.append(branch.firstSlot,branch.sash,branch.secondSlot);
+          branch.sash.addEventListener('dblclick',() => branch.splitter?.setSizes([50,50]));
         }
-        move(parent, branch.element);
-        branch.firstElement = build(branch.first, branch.element);
-        branch.secondElement = build(branch.second, branch.element);
-        move(branch.element, branch.sash, branch.secondElement);
-        // Remove obsolete wrappers only after surviving panes have moved out.
-        for (const child of [...branch.element.children]) {
-          if (![branch.firstElement, branch.sash, branch.secondElement].includes(child)) child.remove();
+        move(parent,branch.element);
+        const first = build(branch.first,branch.firstSlot), second = build(branch.second,branch.secondSlot);
+        for (const [slot,child] of [[branch.firstSlot,first],[branch.secondSlot,second]]) {
+          for (const stale of [...slot.children]) if (stale !== child) stale.remove();
         }
-        branch.resize(branch.ratio);
+        if (!branch.splitter) {
+          branch.splitter = window.agentFactorySplitter.createSplitPane(branch.element,{
+            id:'de-split-' + ++serial, orientation:branch.axis, keyboardResizeBy:5,
+            size:[branch.ratio * 100,(1 - branch.ratio) * 100], label:'문서 분할 크기 조절',
+            onResize:size => {branch.ratio = Number(size[0]) / 100;},
+          });
+          this.splitBindings.add(branch);
+        }
         return branch.element;
       };
       const root = build(this.layout, this.host);
@@ -631,6 +575,8 @@
         }
         const first = applyMaximized(branch.first), second = applyMaximized(branch.second);
         branch.element.hidden = !first && !second;
+        branch.firstSlot.hidden = !first; branch.secondSlot.hidden = !second;
+        branch.element.classList.toggle('is-maximized',!!this.maximized);
         branch.sash.hidden = !!this.maximized;
         return first || second;
       };
@@ -668,18 +614,13 @@
         entry.addEventListener("click", () => { this.closeMenu(false); action(); }); this.menu.append(entry);
       });
       this.menu.hidden = false;
-      const rect = this.menuOrigin?.getBoundingClientRect();
-      this.menu.style.left = `${Math.max(4, Math.min(event.clientX || rect?.left || 4, innerWidth - this.menu.offsetWidth - 4))}px`;
-      this.menu.style.top = `${Math.max(4, Math.min(event.clientY || rect?.bottom || 4, innerHeight - this.menu.offsetHeight - 4))}px`;
-      this.menu.onkeydown = (keyEvent) => {
-        const entries = [...this.menu.children], index = entries.indexOf(document.activeElement);
-        const target = { ArrowDown: (index + 1) % entries.length, ArrowUp: (index + entries.length - 1) % entries.length, Home: 0, End: entries.length - 1 }[keyEvent.key];
-        if (target !== undefined) { keyEvent.preventDefault(); entries[target].focus(); }
-        if (keyEvent.key === "Tab") this.closeMenu();
-      };
+      this.menuPositionCleanup = window.agentFactoryPositioning.positionMenu(this.menu,{
+        origin:this.menuOrigin, x:event.clientX || undefined, y:event.clientY || undefined,
+      });
+      this.menu.onkeydown = ui.menuKeyboard({items:() => [...this.menu.children],close:() => this.closeMenu()});
       this.menu.firstElementChild?.focus();
     }
-    closeMenu(focus = true) { if (!this.menu || this.menu.hidden) return; this.menu.hidden = true; if (focus && this.menuOrigin?.isConnected) this.menuOrigin.focus(); }
+    closeMenu(focus = true) { this.menuPositionCleanup?.(); this.menuPositionCleanup = null; if (!this.menu || this.menu.hidden) return; this.menu.hidden = true; if (focus && this.menuOrigin?.isConnected) this.menuOrigin.focus(); }
     tabMenu(group, tab, event, origin) {
       this.showMenu(event, [
         [tab.pinned ? "고정 해제" : "탭 고정", () => this.pin(group, tab)],

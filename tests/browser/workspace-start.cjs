@@ -21,6 +21,8 @@ const server = http.createServer(async (req, res) => {
   const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
+  const captureDirectory = process.env.AF_CAPTURE_DIR ? path.resolve(process.env.AF_CAPTURE_DIR) : null;
+  if (captureDirectory) await fs.mkdir(captureDirectory, { recursive: true });
   const chooseWorkspace = async id => {
     await page.locator('[data-workspace-picker-toggle]').click();
     if (id) await page.locator('[data-workspace-list] [data-workspace-id="' + id + '"]').click();
@@ -30,6 +32,7 @@ const server = http.createServer(async (req, res) => {
   let organizations = [];
   let rows = [];
   let recent = [];
+  let groups = [];
   let failCreate = false;
   let renameFailure = false;
   let failList = false;
@@ -43,9 +46,32 @@ const server = http.createServer(async (req, res) => {
     const request = route.request();
     const url = new URL(request.url()).pathname.replace(/^\/factory/, '');
     const reply = (data, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
-    if (request.method() === 'POST') {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())) {
       assert.equal(request.headers()['x-csrf-token'], 'test-csrf');
-      mutations.push({ url, body: request.postDataJSON() });
+      mutations.push({ url, body: request.postData() ? request.postDataJSON() : null });
+    }
+    if (url.endsWith('/workspaces/groups') && request.method() === 'GET') return reply(groups);
+    if (url.endsWith('/workspaces/groups') && request.method() === 'POST') {
+      const group = { id: `group-${groups.length + 1}`, name: request.postDataJSON().name, collapsed: false, revision: 1, workspace_ids: [] };
+      groups.push(group); return reply(group, 201);
+    }
+    if (/\/workspaces\/groups\/[^/]+$/.test(url) && request.method() === 'PATCH') {
+      const group = groups.find(item => item.id === url.split('/').at(-1));
+      const body = request.postDataJSON();
+      if (!group || body.revision !== group.revision) return reply({}, 409);
+      if (body.name !== undefined) group.name = body.name;
+      if (body.collapsed !== undefined) group.collapsed = body.collapsed;
+      group.revision += 1; return reply({ ...group, workspace_ids: [] });
+    }
+    if (/\/workspaces\/groups\/[^/]+\/workspaces\/[^/]+$/.test(url) && request.method() === 'PUT') {
+      const parts = url.split('/'); const group = groups.find(item => item.id === parts.at(-3)); const workspaceId = parts.at(-1);
+      for (const item of groups) item.workspace_ids = item.workspace_ids.filter(id => id !== workspaceId);
+      group.workspace_ids.push(workspaceId); return route.fulfill({ status: 204 });
+    }
+    if (/\/workspaces\/groups\/workspaces\/[^/]+$/.test(url) && request.method() === 'DELETE') {
+      const workspaceId = url.split('/').at(-1);
+      for (const item of groups) item.workspace_ids = item.workspace_ids.filter(id => id !== workspaceId);
+      return route.fulfill({ status: 204 });
     }
     if (request.method() === 'PUT' && /\/workspaces\/[^/]+$/.test(url)) {
       assert.equal(request.headers()['x-csrf-token'], 'test-csrf');
@@ -82,6 +108,26 @@ const server = http.createServer(async (req, res) => {
   try {
     await page.goto(base);
     await page.waitForFunction(() => document.querySelector('[data-workspace-list-state]').textContent.includes('없습니다'));
+    const initialViewport = page.viewportSize();
+    const profileTrigger = page.locator('[data-profile-toggle]');
+    const profileMenu = page.locator('[data-profile-menu]');
+    const logout = page.locator('[data-logout]');
+    for (const width of [1440,390]) {
+      await page.setViewportSize({width,height:900});
+      await profileTrigger.focus(); await profileTrigger.press('ArrowDown');
+      assert(await logout.evaluate(el=>el===document.activeElement));
+      await page.waitForFunction(()=>{
+        const menu=document.querySelector('[data-profile-menu]'),box=menu.getBoundingClientRect();
+        return !!menu.style.left && box.left>=7 && box.right<=innerWidth-7 && box.top>=0 && box.bottom<=innerHeight;
+      });
+      await logout.press('Home');assert(await logout.evaluate(el=>el===document.activeElement));
+      await logout.press('Escape');assert(await profileMenu.isHidden());
+      assert(await profileTrigger.evaluate(el=>el===document.activeElement));
+      assert.equal(await profileTrigger.getAttribute('aria-expanded'),'false');
+      await profileTrigger.click();await logout.press('Tab');assert(await profileMenu.isHidden());
+      await profileTrigger.click();await page.locator('.workspace-picker').click({position:{x:4,y:4}});assert(await profileMenu.isHidden());
+    }
+    await page.setViewportSize(initialViewport);
     assert(await visible('.workspace-picker'));
     assert(await visible('.activity-bar'));
     assert.equal(await page.locator('[data-region=activity-bar]').count(), 1);
@@ -154,16 +200,68 @@ const server = http.createServer(async (req, res) => {
     assert(!await visible('[data-activity="logs"]'));
     assert.deepEqual(await page.locator('.activity-bar [data-activity]').evaluateAll(nodes => nodes.map(node => node.dataset.activity)), orderTwo);
     assert(await originalBar.evaluate(node => node === document.querySelector('.activity-bar')));
+    const workspaceSectionToggle=page.locator('[data-sidebar-view="workspaces"] [data-sidebar-section-toggle]');
+    assert.equal(await workspaceSectionToggle.getByText('기본 그룹', { exact: true }).count(), 1);
+    assert.equal(await workspaceSectionToggle.evaluate(node=>node.closest('.app-sidebar__section-header').getBoundingClientRect().height),26);
+    await workspaceSectionToggle.click();assert.equal(await workspaceSectionToggle.getAttribute('aria-expanded'),'false');
+    assert(!await visible('[data-workspace-default-list]'));
+    await workspaceSectionToggle.click();assert.equal(await workspaceSectionToggle.getAttribute('aria-expanded'),'true');
+    assert(await visible('[data-workspace-default-list]'));
     await page.locator('[data-activity="documents"]').click();
     const geometry = await page.evaluate(() => {
       const side = document.querySelector('.primary-sidebar');
       const main = document.querySelector('.workspace');
-      return { gap: main.getBoundingClientRect().left - side.getBoundingClientRect().right, radius: getComputedStyle(main).borderRadius, border: getComputedStyle(side).borderTopWidth };
+      return {
+        gap: main.getBoundingClientRect().left - side.getBoundingClientRect().right,
+        mainRadius: getComputedStyle(main).borderRadius,
+        sideRadius: getComputedStyle(side).borderRadius,
+        mainBorder: getComputedStyle(main).borderTopWidth,
+        sideBorder: getComputedStyle(side).borderTopWidth,
+        mainBackground: getComputedStyle(main).backgroundColor,
+        sideBackground: getComputedStyle(side).backgroundColor,
+      };
     });
     assert.equal(geometry.gap, 5);
-    assert.equal(geometry.radius, '7px');
-    assert.equal(geometry.border, '1px');
+    assert.equal(geometry.mainRadius, '7px');
+    assert.equal(geometry.sideRadius, geometry.mainRadius);
+    assert.equal(geometry.mainBorder, '1px');
+    assert.equal(geometry.sideBorder, geometry.mainBorder);
+    assert.equal(geometry.sideBackground, geometry.mainBackground);
     const resizer = page.locator('[data-sidebar-resizer]');
+    assert.equal(await page.locator('[data-sidebar-toggle]').count(), 0);
+    const defaultSidebarWidth = await page.locator('.primary-sidebar').evaluate(node => node.getBoundingClientRect().width);
+    const mainWidthWithSidebar = await page.locator('.workspace').evaluate(node => node.getBoundingClientRect().width);
+    const resizerBox = await resizer.boundingBox();
+    await page.mouse.move(resizerBox.x + resizerBox.width / 2, resizerBox.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(resizerBox.x - 100, resizerBox.y + 20);
+    await page.mouse.up();
+    assert(await page.locator('.primary-sidebar').isHidden());
+    assert(await resizer.isVisible());
+    assert.equal(await resizer.getAttribute('aria-valuenow'), '0');
+    if (captureDirectory) await page.screenshot({ path:path.join(captureDirectory, 'sidebar-collapsed.png') });
+    assert(await page.locator('.workspace').evaluate((node, width) => node.getBoundingClientRect().width > width, mainWidthWithSidebar));
+    assert.equal(await page.evaluate(() => {
+      const activity = document.querySelector('.activity-bar');
+      const main = document.querySelector('.workspace');
+      return main.getBoundingClientRect().left - activity.getBoundingClientRect().right;
+    }), 5);
+    const collapsedResizerBox = await resizer.boundingBox();
+    await page.mouse.move(collapsedResizerBox.x + collapsedResizerBox.width / 2, collapsedResizerBox.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(collapsedResizerBox.x + collapsedResizerBox.width / 2 + 100, collapsedResizerBox.y + 20);
+    await page.mouse.up();
+    assert(await page.locator('.primary-sidebar').isVisible());
+    assert.equal(await page.locator('.primary-sidebar').evaluate(node => node.getBoundingClientRect().width), 280);
+    if (captureDirectory) await page.screenshot({ path:path.join(captureDirectory, 'sidebar-drag-expanded.png') });
+    await page.keyboard.press('Control+b');
+    assert(await page.locator('.primary-sidebar').isHidden());
+    await page.keyboard.press('Control+b');
+    assert(await page.locator('.primary-sidebar').isVisible());
+    await page.keyboard.press('Control+b');
+    assert(await page.locator('.primary-sidebar').isHidden());
+    await page.locator('[data-activity="documents"]').click();
+    assert(await page.locator('.primary-sidebar').isVisible());
     await resizer.focus();
     const beforeWidth = await page.locator('.primary-sidebar').evaluate(node => node.getBoundingClientRect().width);
     await page.keyboard.press('ArrowRight');
@@ -177,14 +275,28 @@ const server = http.createServer(async (req, res) => {
     assert.equal(await page.locator('[data-header-workspace]').textContent(), await page.locator('[data-account-workspace]').textContent());
     assert(await visible('[data-header-workspace]'));
     assert.equal(await page.locator('[data-workspace-list] .workspace-row[aria-current="true"]').getAttribute('data-workspace-id'), 'workspace-2');
-    assert.equal(await page.locator('.primary-sidebar').evaluate(node => node.getBoundingClientRect().width), beforeWidth);
+    assert.equal(await page.locator('.primary-sidebar').evaluate(node => node.getBoundingClientRect().width), defaultSidebarWidth);
     assert(!await visible('[data-activity="logs"]'));
-    // Hiding every icon leaves a recoverable state inside this Workspace only.
     await page.locator('.activity-bar').click({ button: 'right', position: { x: 20, y: 550 } });
     const checked = await page.locator('[data-activity-visibility][aria-checked="true"]').evaluateAll(nodes => nodes.map(node => node.dataset.activityVisibility));
+    const checkItems = page.locator('[data-activity-visibility]');
+    await checkItems.first().press('End');assert(await checkItems.last().evaluate(el=>el===document.activeElement));
+    await checkItems.last().press('Home');assert(await checkItems.first().evaluate(el=>el===document.activeElement));
+    await checkItems.first().press('ArrowDown');assert(await checkItems.nth(1).evaluate(el=>el===document.activeElement));
+    const toggled = checkItems.nth(1), priorChecked = await toggled.getAttribute('aria-checked');
+    await toggled.press('Space');assert.equal(await toggled.getAttribute('aria-checked'),String(priorChecked!=='true'));
+    assert(await toggled.evaluate(el=>el===document.activeElement),'Toggling retains the live focused checkbox');
+    await toggled.press('Space');assert.equal(await toggled.getAttribute('aria-checked'),priorChecked);
+    await page.setViewportSize({width:390,height:844});
+    await page.waitForFunction(()=>{
+      const box=document.querySelector('[data-activity-context-menu]').getBoundingClientRect();
+      return box.left>=7 && box.right<=innerWidth-7 && box.top>=7 && box.bottom<=innerHeight-7;
+    });
+    await page.setViewportSize(initialViewport);
     for (const activity of checked) await page.locator(`[data-activity-visibility="${activity}"]`).click();
     await page.keyboard.press('Escape');
     assert(await visible('[data-no-activities]'));
+    assert(await page.locator('[data-configure-activities]').evaluate(el=>el===document.activeElement));
     await page.locator('[data-configure-activities]').click();
     await page.locator('[data-activity-visibility="documents"]').click();
     await page.keyboard.press('Escape');
@@ -240,6 +352,7 @@ const server = http.createServer(async (req, res) => {
     await page.getByRole('textbox', { name: '새 그룹 이름', exact: true }).fill('개발');
     await page.getByRole('textbox', { name: '새 그룹 이름', exact: true }).press('Enter');
     await page.locator('.workspace-group summary').getByText('개발', { exact: true }).waitFor();
+    assert(await page.locator('.workspace-ungrouped').evaluate(node => node.compareDocumentPosition(document.querySelector('.workspace-group')) & Node.DOCUMENT_POSITION_FOLLOWING));
     assert.equal(await page.locator('.workspace-group-move').count(), 0);
     await page.locator('[data-workspace-list] [data-workspace-id="workspace-2"]').dragTo(page.locator('.workspace-group summary'));
     await page.locator('.workspace-group [data-workspace-id="workspace-2"]').waitFor();
@@ -248,6 +361,13 @@ const server = http.createServer(async (req, res) => {
     await page.locator('.workspace-ungrouped [data-workspace-id="workspace-2"]').dragTo(page.locator('.workspace-group summary'));
     assert.equal(await page.locator('.workspace-group [data-workspace-id="workspace-2"]').count(), 1);
     await page.locator('.workspace-group summary').click({ button: 'right' });
+    await page.getByRole('menuitem', { name: '이름 변경', exact: true }).waitFor();
+    await page.keyboard.press('Escape');
+    assert.ok(await page.locator('.workspace-group summary').evaluate(el=>el===document.activeElement));
+    assert.equal(await page.getByRole('menuitem', { name: '이름 변경', exact: true }).count(),0);
+    await page.locator('.workspace-group summary').click({ button: 'right' });
+    await page.keyboard.press('Home');
+    assert.ok(await page.getByRole('menuitem', { name: '이름 변경', exact: true }).evaluate(el=>el===document.activeElement));
     await page.getByRole('menuitem', { name: '이름 변경', exact: true }).click();
     await page.getByRole('textbox', { name: '그룹 이름 변경', exact: true }).fill('취소할 그룹');
     await page.keyboard.press('Escape');
@@ -255,7 +375,7 @@ const server = http.createServer(async (req, res) => {
     await page.locator('.workspace-group summary').focus(); await page.keyboard.press('F2');
     await page.getByRole('textbox', { name: '그룹 이름 변경', exact: true }).fill('  제품 개발  ');
     await page.keyboard.press('Enter');
-    assert.equal(await page.locator('.workspace-group summary').textContent(), '제품 개발');
+    await page.locator('.workspace-group summary').getByText('제품 개발', { exact: true }).waitFor();
     assert.equal(await page.locator('.workspace-group [data-workspace-id="workspace-2"]').count(), 1);
     await page.locator('.workspace-group summary').click();
     assert(!await visible('.workspace-group [data-workspace-id="workspace-2"]'));

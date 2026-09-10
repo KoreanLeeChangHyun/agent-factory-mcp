@@ -209,7 +209,7 @@ def test_reporting_browser():
                             },
                         ]
                     )
-                if p.endswith("/recent"):
+                if p.endswith(("/recent", "/workspaces/groups")):
                     return reply([])
                 if p.endswith("/visits"):
                     return route.fulfill(status=204)
@@ -286,7 +286,22 @@ def test_reporting_browser():
             sidebar.get_by_role(
                 "button", name="Main <script>bad()</script> Coordinator", exact=False
             ).click()
+            agent_metadata = panel.locator(":scope > .af-metadata-grid")
+            assert agent_metadata.locator("dt").all_text_contents()[:5] == [
+                "역할",
+                "책임",
+                "범위: 현재 워크스페이스",
+                "구성 수정",
+                "보고 소유자",
+            ]
             panel.get_by_role("button", name="Linked task", exact=True).click()
+            expect(panel.locator(".reporting-detail .af-metadata-grid")).to_be_visible()
+            assert panel.locator(".reporting-detail .af-metadata-grid dt").all_text_contents() == [
+                "시작",
+                "종료",
+                "수정",
+            ]
+            assert panel.locator(".reporting-tasks .af-badge").count() > 0
             expect(panel.get_by_text("진행률 보고 없음", exact=True)).to_be_visible()
             expect(
                 panel.get_by_text("Reviewed <img src=x onerror=bad()> safely", exact=True)
@@ -352,6 +367,13 @@ def test_reporting_browser():
             page.keyboard.press("Enter")
             expect(panel.locator(".reporting-detail")).to_be_visible()
             page.set_viewport_size({"width": 600, "height": 800})
+            assert (
+                panel.locator(".reporting-detail .af-metadata-grid").evaluate(
+                    "el => getComputedStyle(el).gridTemplateColumns.split(' ').length"
+                )
+                == 1
+            )
+            assert panel.evaluate("el => el.scrollWidth <= el.clientWidth")
             expect(
                 panel.get_by_role("button", name="관련 MCP 보고 로그", exact=True)
             ).to_be_visible()

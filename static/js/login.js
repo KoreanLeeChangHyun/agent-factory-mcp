@@ -3,6 +3,13 @@ const loginError = document.querySelector("[data-login-error]");
 const googleLogin = document.querySelector("[data-google-login]");
 const passwordLoginDivider = document.querySelector("[data-password-login-divider]");
 const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
+for (const [name,label] of [['email','이메일'],['password','비밀번호']]) {
+  const control = loginForm?.elements[name];
+  if (control) {
+    const caption = control.closest('label');
+    caption.replaceWith(window.agentFactoryAuthUI.fieldFor({label,control}).root);
+  }
+}
 
 const api = async (path, options = {}) => {
   const response = await fetch(`${rootPath}${path}`, {
@@ -39,6 +46,10 @@ const loadAuthProviders = async () => {
 
 loginForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const submit = loginForm.querySelector('[type="submit"]');
+  if (submit.disabled) return;
+  submit.disabled = true;
+  submit.setAttribute("aria-busy", "true");
   if (loginError) loginError.textContent = "";
   const formData = new FormData(loginForm);
   try {
@@ -52,6 +63,9 @@ loginForm?.addEventListener("submit", async (event) => {
     window.location.assign(`${rootPath}/workspace/`);
   } catch (error) {
     if (loginError) loginError.textContent = error.message || "로그인에 실패했습니다.";
+  } finally {
+    submit.disabled = false;
+    submit.removeAttribute("aria-busy");
   }
 });
 

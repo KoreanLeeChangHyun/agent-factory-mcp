@@ -9,51 +9,81 @@
     audit: "감사 로그",
     "feature-flags": "기능 플래그",
     runtime: "런타임",
+    assets: "공통 에셋",
   };
   const content = document.querySelector("[data-admin-content]");
+  const ui = window.agentFactoryUI;
+  content?.classList.add('af-kit');
+  const message = (kind, text, className) => {
+    const node = ui.status({kind,text}); node.classList.add(className); return node.outerHTML;
+  };
   const status = document.querySelector("[data-admin-status]");
   const title = document.querySelector("[data-admin-title]");
-  const tab = document.querySelector("[data-admin-tab]");
+  const catalogLink = document.querySelector("[data-admin-catalog-link]");
+  const workspace = document.querySelector('[data-workspace-view="admin"]');
   const profileButton = document.querySelector("[data-account-profile]");
   const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
-  const escapeHtml = (value) => String(value ?? "—").replace(
-    /[&<>'"]/g,
-    (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character],
-  );
+  let requestVersion = 0;
+  const setLoadStatus = (kind, text) => {
+    status.classList.add('af-status--inline');
+    ui.setStatus(status,{kind,text});
+  };
 
   const renderTable = (rows) => {
-    if (!rows.length) return '<div class="admin-empty">표시할 레코드가 없습니다.</div>';
+    if (!rows.length) return message('empty','표시할 레코드가 없습니다.','admin-empty');
     const keys = Object.keys(rows[0]).filter((key) => !["payload", "rules"].includes(key));
-    const head = keys.map((key) => `<th>${escapeHtml(key)}</th>`).join("");
-    const body = rows.map((row) => `<tr>${keys.map((key) => `<td>${escapeHtml(row[key])}</td>`).join("")}</tr>`).join("");
-    return `<div class="admin-table-shell"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    const table = ui.resourceTable({headers:keys,rows:rows.map(row=>keys.map(key=>row[key]))});
+    table.classList.add('admin-table-shell');
+    return table.outerHTML;
   };
 
   const load = async (view) => {
     if (!content || !status || !title || !Object.hasOwn(titles, view)) return;
+    const request = ++requestVersion;
     title.textContent = titles[view];
-    if (tab) tab.textContent = `플랫폼 관리 / ${titles[view]}`;
-    status.textContent = "불러오는 중";
+    workspace.dataset.adminLayout = view === 'assets' ? 'catalog' : 'records';
+    catalogLink.hidden = true;
+    setLoadStatus('loading','불러오는 중');
     content.replaceChildren();
     try {
-      const response = await fetch(`${rootPath}/api/admin/${view}`, { credentials: "same-origin" });
+      const url = view === "assets" ? `${rootPath}/admin/assets/` : `${rootPath}/api/admin/${view}`;
+      const response = await fetch(url, { credentials: "same-origin", cache: "no-store" });
+      if (request !== requestVersion) return;
       if (response.status === 401) {
         window.location.assign(`${rootPath}/login/`);
         return;
       }
       if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      if (view === "assets") {
+        catalogLink.href = url;
+        catalogLink.hidden = false;
+        const frame = document.createElement('iframe');
+        frame.className = 'admin-asset-catalog';
+        frame.title = '공통 에셋 카탈로그';
+        frame.hidden = true;
+        frame.addEventListener('load', () => {
+          if (request !== requestVersion || workspace.dataset.adminLayout !== 'catalog') return;
+          frame.hidden = false;
+          setLoadStatus('success', '');
+        }, { once: true });
+        frame.src = url;
+        content.replaceChildren(frame);
+        return;
+      }
       const data = await response.json();
+      if (request !== requestVersion) return;
       if (view === "dashboard") {
-        content.innerHTML = `<div class="admin-cards">${Object.entries(data).map(([key, value]) => `<article class="admin-card"><span>${escapeHtml(key)}</span><strong>${escapeHtml(value)}</strong></article>`).join("")}</div>`;
+        content.replaceChildren(ui.metadataGrid(Object.entries(data)));
       } else if (view === "runtime") {
         content.innerHTML = renderTable([data]);
       } else {
         content.innerHTML = renderTable(data);
       }
-      status.textContent = "실시간";
+      setLoadStatus('success','조회 완료');
     } catch (error) {
-      content.innerHTML = `<div class="admin-error">${escapeHtml(error.message)}</div>`;
-      status.textContent = "연결 불가";
+      if (request !== requestVersion) return;
+      content.innerHTML = message('error',error.message,'admin-error');
+      setLoadStatus('error','조회 실패');
     }
   };
 
@@ -66,6 +96,7 @@
   };
 
   const profile = () => {
+    requestVersion++;
     document.querySelector("[data-admin-view].is-selected")?.classList.remove("is-selected");
     profileButton?.classList.add("is-selected");
     history.replaceState(null, "", "#account");
@@ -76,5 +107,10 @@
   });
   profileButton?.addEventListener("click", profile);
 
-  window.agentFactoryAdmin = { load, open, profile };
+  const reset = () => {
+    requestVersion++;
+    if (catalogLink) catalogLink.hidden = true;
+    content?.replaceChildren();
+  };
+  window.agentFactoryAdmin = { load, open, profile, reset };
 })();

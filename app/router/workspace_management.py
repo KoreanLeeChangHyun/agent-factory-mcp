@@ -16,6 +16,9 @@ from app.modules.workspace.schemas import (
     RepositoryCreate,
     RepositoryResponse,
     WorkspaceCreate,
+    WorkspaceGroupCreate,
+    WorkspaceGroupResponse,
+    WorkspaceGroupUpdate,
     WorkspaceMemberCreate,
     WorkspaceMemberResponse,
     WorkspaceResponse,
@@ -35,6 +38,107 @@ def get_workspace_service(
 
 def _workspace_response(record: object) -> WorkspaceResponse:
     return WorkspaceResponse.model_validate(record, from_attributes=True)
+
+
+def _workspace_group_response(
+    record: object, workspace_ids: list[UUID] | None = None
+) -> WorkspaceGroupResponse:
+    return WorkspaceGroupResponse(
+        id=record.id,
+        name=record.name,
+        collapsed=record.collapsed,
+        revision=record.revision,
+        workspace_ids=workspace_ids or [],
+    )
+
+
+@router.get("/groups", response_model=list[WorkspaceGroupResponse])
+async def list_workspace_groups(
+    context: Annotated[
+        AuthorizedContext,
+        Depends(require_permission("organization.read", workspace_required=False)),
+    ],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+) -> list[WorkspaceGroupResponse]:
+    return [
+        _workspace_group_response(group, workspace_ids)
+        for group, workspace_ids in await service.list_groups(context)
+    ]
+
+
+@router.post(
+    "/groups",
+    response_model=WorkspaceGroupResponse,
+    status_code=201,
+    dependencies=[Depends(require_csrf)],
+)
+async def create_workspace_group(
+    payload: WorkspaceGroupCreate,
+    context: Annotated[
+        AuthorizedContext,
+        Depends(require_permission("organization.read", workspace_required=False)),
+    ],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+) -> WorkspaceGroupResponse:
+    return _workspace_group_response(await service.create_group(context, payload.name))
+
+
+@router.patch(
+    "/groups/{group_id}",
+    response_model=WorkspaceGroupResponse,
+    dependencies=[Depends(require_csrf)],
+)
+async def update_workspace_group(
+    group_id: UUID,
+    payload: WorkspaceGroupUpdate,
+    context: Annotated[
+        AuthorizedContext,
+        Depends(require_permission("organization.read", workspace_required=False)),
+    ],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+) -> WorkspaceGroupResponse:
+    return _workspace_group_response(
+        await service.update_group(
+            context,
+            group_id,
+            payload.revision,
+            name=payload.name,
+            collapsed=payload.collapsed,
+        )
+    )
+
+
+@router.put(
+    "/groups/{group_id}/workspaces/{workspace_id}",
+    status_code=204,
+    dependencies=[Depends(require_csrf)],
+)
+async def assign_workspace_to_group(
+    group_id: UUID,
+    workspace_id: UUID,
+    context: Annotated[
+        AuthorizedContext,
+        Depends(require_permission("organization.read", workspace_required=False)),
+    ],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+) -> None:
+    await service.assign_workspace_group(context, workspace_id, group_id)
+
+
+@router.delete(
+    "/groups/workspaces/{workspace_id}",
+    status_code=204,
+    dependencies=[Depends(require_csrf)],
+)
+async def remove_workspace_from_group(
+    workspace_id: UUID,
+    context: Annotated[
+        AuthorizedContext,
+        Depends(require_permission("organization.read", workspace_required=False)),
+    ],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+) -> None:
+    await service.assign_workspace_group(context, workspace_id, None)
 
 
 @router.get("", response_model=list[WorkspaceResponse])
@@ -189,8 +293,14 @@ async def remove_member(
     await service.remove_member(context, user_id)
 
 
-@router.delete("/{workspace_id}/repositories/{repository_id}", status_code=204, dependencies=[Depends(require_csrf)])
-async def delete_repository(repository_id: UUID,
+@router.delete(
+    "/{workspace_id}/repositories/{repository_id}",
+    status_code=204,
+    dependencies=[Depends(require_csrf)],
+)
+async def delete_repository(
+    repository_id: UUID,
     context: Annotated[AuthorizedContext, Depends(require_permission("repository.delete"))],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)]):
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+):
     await service.delete_repository(context, repository_id)

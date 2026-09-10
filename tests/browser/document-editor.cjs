@@ -35,7 +35,7 @@ const server = http.createServer(async (req, res) => {
 });
 const docs = [
   ['a', 'processed', 'notes/a.md'], ['b', 'processed', 'notes/b.md'], ['c', 'processed', 'notes/deep/c.json'],
-  ['s', 'specification', 'design/spec.md'], ['z', 'specification', 'design/archive.zip'],
+  ['s', 'specification', 'design/spec.md'], ['z', 'specification', 'design/archive.bin'],
   ['img', 'specification', 'design/logo.png'], ['pdf', 'specification', 'design/guide.pdf'], ['bad', 'processed', 'denied.md'],
   ['slow', 'processed', 'slow.md'], ['empty', 'processed', 'empty.md'],
 ].map(([id, document_type, file]) => ({ id, document_type, title: file.split('/').at(-1), document_metadata: { path: file }, current_revision_number: id === 'empty' ? 0 : 1 }));
@@ -64,7 +64,7 @@ const docs = [
       const id = pathname.split('/documents/')[1].split('/')[0];
       if (id === 'bad' && denied) return reply({}, 403);
       if (id === 'slow') { slowRoute = route; return; }
-      if (id === 'z') return route.fulfill({ contentType: 'application/zip', body: 'fixture archive' });
+      if (id === 'z') return route.fulfill({ contentType: 'application/octet-stream', body: 'fixture binary' });
       if (id === 'pdf') {
         return route.continue();
       }
@@ -187,9 +187,16 @@ const docs = [
     await file('a').click({ modifiers: ['Control'] }); await file('b').click({ modifiers: ['Shift'] });
     assert.equal(await page.locator('[data-processed-list] [aria-selected="true"]').count(), 2);
     await file('b').press('Shift+F10'); await page.getByRole('menuitem', { name: '열기', exact: true }).waitFor();
+    await page.keyboard.press('End');
+    assert.ok(await page.getByRole('menuitem').last().evaluate(el=>el===document.activeElement));
+    await page.keyboard.press('Home');
+    assert.ok(await page.getByRole('menuitem').first().evaluate(el=>el===document.activeElement));
     await page.keyboard.press('Escape'); assert.equal(await page.locator(':focus').getAttribute('data-key'), 'b');
     // Preview reuse, promotion, duplicate activation, independent tab closing.
     await file('a').click(); await tab('a.md').waitFor();
+    const closeIcon=page.getByRole('button',{name:'a.md 닫기',exact:true}).locator('svg.af-icon');
+    assert.equal(await closeIcon.count(),1);
+    assert.equal(await closeIcon.getAttribute('aria-hidden'),'true');
     await file('b').click(); assert.equal(await tab('a.md').count(), 0);
     await open('b'); await open('a'); assert.equal(await page.getByRole('tab').count(), 2);
     await open('a'); assert.equal(await tab('a.md').count(), 1);
@@ -206,8 +213,13 @@ const docs = [
     // Keyboard and pointer sash resize, maximize/restore.
     const sash = page.getByRole('separator', { name: '문서 분할 크기 조절', exact: true }).first();
     await sash.focus(); await page.keyboard.press('ArrowRight'); assert.equal(await sash.getAttribute('aria-valuenow'), '55');
-    const sashRect = await sash.boundingBox(); await page.mouse.move(sashRect.x + 2, sashRect.y + 30); await page.mouse.down(); await page.mouse.move(sashRect.x + 50, sashRect.y + 30); await page.mouse.up();
+    const sashRect = await sash.boundingBox();
+    assert.equal(sashRect.width, 5, 'Horizontal split handle retains its pointer target');
+    const verticalSashRect = await page.locator('.de-split--vertical > .de-sash').boundingBox();
+    assert.equal(verticalSashRect.height, 5, 'Vertical split handle retains its pointer target');
+    await page.mouse.move(sashRect.x + 2, sashRect.y + 30); await page.mouse.down(); await page.mouse.move(sashRect.x + 50, sashRect.y + 30); await page.mouse.up();
     assert(Number(await sash.getAttribute('aria-valuenow')) > 55);
+    assert.equal(await page.locator('html[data-af-split-cursor]').count(), 0, 'Pointer release clears the global resize cursor');
     await groups.last().getByRole('button', { name: '그룹 확대·복원', exact: true }).click(); assert.equal(await page.locator('.de-group:visible').count(), 1);
     await page.locator('.de-group:visible').getByRole('button', { name: '그룹 확대·복원', exact: true }).click(); assert.equal(await page.locator('.de-group:visible').count(), 3);
     // Close last tab in nested group; preserve active group when closing elsewhere.
@@ -234,6 +246,13 @@ const docs = [
     await file('a').click({ modifiers: ['Control'] }); await file('b').click({ modifiers: ['Control'] });
     await chooseMenu(file('b'), '오른쪽에 열기');
     assert(await page.locator('.de-group.is-active').getByRole('tab', { name: 'a.md', exact: true }).count());
+    // Filtering away the range anchor must not select unrelated leading files.
+    await file('c').click({modifiers:['Control']});
+    const processedSearch=page.locator('[aria-labelledby="processed-group-label"] .de-document-search');
+    await processedSearch.fill('.md');
+    await file('b').click({modifiers:['Shift']});
+    assert.deepEqual(await page.locator('[data-processed-list] [aria-selected="true"]').evaluateAll(rows=>rows.map(row=>row.dataset.key)),['b']);
+    await processedSearch.fill('');
     // Error/retry, binary fallback, and image rendering.
     await open('bad'); await page.getByRole('alert').filter({ hasText: '권한' }).waitFor(); denied = false;
     await page.getByRole('button', { name: '다시 시도', exact: true }).click(); await page.waitForFunction(() => document.querySelector('.de-group.is-active .de-panel:not([hidden]) pre')?.textContent.includes('Content bad'));

@@ -2,24 +2,28 @@
 
 from __future__ import annotations
 
-from app.modules.auth.authorization import require_context
-
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 
-from app.common.errors import ApplicationError, ConflictError, NotFoundError
+from app.common.errors import (
+    ApplicationError,
+    ConflictError,
+    NotFoundError,
+    PermissionDeniedError,
+)
 from app.core.config import Settings
 from app.modules.auth.authorization import (
     AuthorizationRepository,
     AuthorizationScope,
     AuthorizedContext,
+    require_context,
 )
 from app.modules.identity.models import User
 from app.modules.organization.system_roles import WORKSPACE_OWNER_ROLE_ID
-from app.modules.workspace.models import Workspace, WorkspaceRepository
+from app.modules.workspace.models import Workspace, WorkspaceGroup, WorkspaceRepository
 from app.modules.workspace.repository import WorkspaceRepositoryStore
 
 
@@ -79,6 +83,96 @@ class WorkspaceService:
             await self.repository.rollback()
             raise ConflictError("workspace_slug_conflict", "Workspace slug already exists") from exc
 
+    async def list_groups(
+        self, context: AuthorizedContext
+    ) -> list[tuple[WorkspaceGroup, list[UUID]]]:
+        require_context(context, "organization.read")
+        rows = await self.repository.list_groups(
+            context.scope.organization_id, context.principal.user_id
+        )
+        visible = {workspace.id for workspace in await self.list(context)}
+        return [(group, [item for item in items if item in visible]) for group, items in rows]
+
+    async def create_group(self, context: AuthorizedContext, name: str) -> WorkspaceGroup:
+        require_context(context, "organization.read")
+        try:
+            group = await self.repository.create_group(
+                context.scope.organization_id, context.principal.user_id, name.strip()
+            )
+            await self.repository.commit()
+            return group
+        except IntegrityError as exc:
+            await self.repository.rollback()
+            raise ConflictError(
+                "workspace_group_name_conflict", "Workspace group name already exists"
+            ) from exc
+
+    async def update_group(
+        self,
+        context: AuthorizedContext,
+        group_id: UUID,
+        revision: int,
+        *,
+        name: str | None = None,
+        collapsed: bool | None = None,
+    ) -> WorkspaceGroup:
+        require_context(context, "organization.read")
+        values: dict[str, object] = {}
+        if name is not None:
+            values["name"] = name.strip()
+        if collapsed is not None:
+            values["collapsed"] = collapsed
+        if not values:
+            raise ApplicationError(
+                "workspace_group_update_empty", "No Workspace group changes supplied", 400
+            )
+        try:
+            group = await self.repository.update_group(
+                context.scope.organization_id,
+                context.principal.user_id,
+                group_id,
+                revision,
+                values,
+            )
+            if group is None:
+                raise ConflictError(
+                    "workspace_group_revision_conflict", "Workspace group changed concurrently"
+                )
+            await self.repository.commit()
+            return group
+        except IntegrityError as exc:
+            await self.repository.rollback()
+            raise ConflictError(
+                "workspace_group_name_conflict", "Workspace group name already exists"
+            ) from exc
+
+    async def assign_workspace_group(
+        self, context: AuthorizedContext, workspace_id: UUID, group_id: UUID | None
+    ) -> None:
+        require_context(context, "organization.read")
+        if (
+            group_id is not None
+            and await self.repository.get_group(
+                context.scope.organization_id, context.principal.user_id, group_id
+            )
+            is None
+        ):
+            raise NotFoundError("workspace_group_not_found", "Workspace group not found")
+        workspace = await self.repository.get(context.scope.organization_id, workspace_id)
+        if workspace is None:
+            raise NotFoundError("workspace_not_found", "Workspace not found")
+        permissions = await AuthorizationRepository(self.repository.session).permission_keys(
+            context.principal, AuthorizationScope(context.scope.organization_id, workspace_id)
+        )
+        if "workspace.read" not in permissions:
+            raise PermissionDeniedError(
+                "permission_required", "Permission required: workspace.read"
+            )
+        await self.repository.assign_workspace_to_group(
+            context.principal.user_id, workspace_id, group_id
+        )
+        await self.repository.commit()
+
     async def update(self, context: AuthorizedContext, name: str, revision: int) -> Workspace:
         require_context(context, "workspace.update")
         workspace = await self.repository.update(
@@ -124,6 +218,7 @@ class WorkspaceService:
 
     async def delete_repository(self, context: AuthorizedContext, repository_id: UUID) -> None:
         from datetime import UTC, datetime
+
         from sqlalchemy import select
 
         require_context(context, "repository.delete")

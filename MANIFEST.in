@@ -6,3 +6,10 @@ include app/modules/document/preview_runtime.js
 recursive-include app/resources *.md
 recursive-include app/resources/document_template *
 include app/resources/document_template_inventory.json
+
+include assets/ui-kit/index.html
+recursive-include assets/ui-kit/catalog *
+recursive-include assets/ui-kit/src *.js
+recursive-include assets/ui-kit/styles *.css
+recursive-include assets/ui-kit/generated *
+recursive-include assets/ui-kit/vendor *

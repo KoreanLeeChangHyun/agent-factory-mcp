@@ -98,6 +98,7 @@ services:
       - ../app:/srv/agent-factory/app
       - ../static:/srv/agent-factory/static
       - ../template:/srv/agent-factory/template
+      - ../assets/ui-kit:/srv/agent-factory/assets/ui-kit:ro
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:

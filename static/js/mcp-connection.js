@@ -1,9 +1,26 @@
 /* Connection evidence belongs to the server; secrets live only in this view. */
 (() => {
   const view = document.querySelector('[data-mcp-onboarding]');
+  const ui = window.agentFactoryUI;
+  view.classList.add('af-kit');
   const main = view.closest('main');
   const adapters = window.agentFactoryMCPClients;
   const el = name => view.querySelector(`[data-mcp-${name}]`);
+  for (const [name, label] of [['client','클라이언트'],['variant','사용 환경'],['token-select','연결 토큰'],['ai-text','파일 전달용 AI 연결 지침']]) {
+    const control = el(name), caption = control.parentElement;
+    const field = ui.fieldFor({label, control});
+    // Keep owner lookup/visibility attributes on the replacement field container.
+    for (const attribute of caption.attributes) field.root.setAttribute(attribute.name, attribute.value);
+    field.root.classList.add('af-field');
+    caption.replaceWith(field.root);
+  }
+  for (const name of ['command','config','token']) {
+    const control = el(name), root = control.parentElement, header = root.firstElementChild;
+    ui.bindCodeOperation({root, header, label:header.querySelector('label'), control,
+      help:root.querySelector('p')});
+  }
+  el('token-refresh').replaceChildren(ui.icon('refresh'));
+  let notifications = null;
   let current = null, generation = 0, requestVersion = 0, timer = null, verified = false, manual = false;
   let selectedId = '', selectionVersion = 0, busy = false, downloaded = null;
   const selectionKey = () => `afMcpToken:${current?.userId || 'user'}:${current?.organizationId}:${current?.workspaceId}:${clientName()}`;
@@ -18,7 +35,11 @@
     el('copy-ai').textContent = 'AI 지침 복사';
     el('download').disabled = !selectedId || !el('token').value || busy;
     el('copy-ai').disabled = !selectedId || !el('token').value || busy;
-    el('ai-help').textContent = downloaded ? '다운로드한 ZIP 파일을 첨부하고 AI 지침을 전달하세요.' : '선택한 토큰의 설정 파일과 AI 지침을 함께 전달하세요. 이미 받은 파일도 사용할 수 있습니다.';
+    el('ai-help').textContent = !selectedId
+      ? '사용할 토큰을 선택하세요. 새 토큰은 오른쪽에서 발급합니다.'
+      : downloaded
+        ? '설정 파일을 다운로드했습니다. 연결할 프로젝트 디렉터리에 넣고 2단계를 진행하세요.'
+        : '선택한 토큰으로 설정 파일을 다운로드하세요.';
     const visible = Boolean(current) && (!verified || manual);
     view.hidden = !visible;
     main.dataset.connectionRequired = String(visible);
@@ -43,6 +64,7 @@
 
   };
   const reset = () => {
+    notifications?.destroy(); notifications = null;
     generation += 1;
     clearTimeout(timer);
     current = null; verified = false; manual = false;
@@ -109,9 +131,8 @@
         try {
           if (!localStorage.getItem(noticeKey)) {
             localStorage.setItem(noticeKey, '1');
-            const toast = document.createElement('div'); toast.className = 'mcp-connection-toast'; toast.setAttribute('role', 'status');
-            toast.textContent = clientName() + ' MCP 연결이 확인되었습니다.';
-            document.body.append(toast); setTimeout(() => toast.remove(), 4500);
+            notifications ||= window.agentFactoryToasts.createToastManager(document.body,{id:'mcp-notifications'});
+            notifications.show({id:noticeKey,type:'success',title:clientName() + ' MCP 연결이 확인되었습니다.',duration:4500});
           }
         } catch { /* Optional notification preference. */ }
       }
@@ -121,7 +142,10 @@
         const status = { pending: '연결 대기', verified: /connection-check|diagnostic|verification/i.test(row.client_name || '') ? '서버 통신 확인' : 'MCP 연결됨', reauth_required: row.reason === 'expired' ? '만료' : '폐기됨' }[row.state];
         const details = document.createElement('div'); details.className = 'mcp-token-details';
         const name = document.createElement('strong'); name.textContent = row.name;
-        const state = document.createElement('span'); state.className = 'mcp-token-state'; state.textContent = status;
+        const connected = row.state === 'verified' && !/connection-check|diagnostic|verification/i.test(row.client_name || '');
+        const state = ui.badge(status, connected ? 'success' : row.state === 'reauth_required' ? 'warning' : 'neutral');
+        state.classList.add('mcp-token-state');
+        state.dataset.state = row.state === 'verified' && !/connection-check|diagnostic|verification/i.test(row.client_name || '') ? 'connected' : row.state;
         const seen = document.createElement('span'); seen.className = 'mcp-token-seen';
         seen.textContent = row.last_seen_at ? `마지막 요청 · ${new Date(row.last_seen_at).toLocaleString()}` : '마지막 요청 · 없음';
         const identity = document.createElement('span'); identity.textContent = 'ID · ' + row.id.slice(0, 8);
@@ -131,7 +155,7 @@
         }
         li.append(details);
         if (row.reason !== 'revoked') {
-          const button = document.createElement('button'); button.type = 'button'; button.textContent = '토큰 폐기';
+          const button = ui.button({label:'토큰 폐기',variant:'danger'});
           button.addEventListener('click', async () => {
             button.disabled = true;
             try {
@@ -148,7 +172,7 @@
           li.append(button);
         }
         if (row.reason === 'revoked') {
-          const button = document.createElement('button'); button.type = 'button'; button.textContent = '영구 삭제';
+          const button = ui.button({label:'영구 삭제',variant:'danger'});
           button.addEventListener('click', async () => {
             button.disabled = true;
             try {
@@ -185,24 +209,21 @@
     el('config').rows = Math.max(2, lines.length);
     el('url').title = url;
     el('config-label').textContent = `설정 위치 · ${result.path}`;
-    el('auth-help').textContent = result.client.auth === 'env'
+    const authHelp = result.client.auth === 'env'
       ? '설정에 지정된 환경변수에 토큰을 저장하고 클라이언트를 실행하세요. 토큰 변경 후에는 클라이언트를 재시작하세요.'
       : result.authHelp;
-    el('notes').textContent = el('client').value === 'codex' && el('variant').value === 'cli'
-      ? '설정 파일은 현재 프로젝트에, 등록 명령은 사용자 전체에 적용됩니다.'
-      : result.notes.join(' ');
-    const instructions = [
-      '토큰을 발급하고 아래 인증 안내에 따라 설정하세요.',
-      `아래 설정을 기존 설정에 병합한 뒤 ${result.client.label}에서 MCP 서버를 시작하세요. 도구 조회 시 연결이 확인됩니다.`,
-    ];
-    el('steps').replaceChildren(...instructions.map(text => { const li = document.createElement('li'); li.textContent = text; return li; }));
+    const notes = result.notes.join(' ');
+    el('config-help').textContent = [authHelp, notes].filter(Boolean).join(' ');
+    el('command-help').textContent = [authHelp, el('client').value === 'codex' && el('variant').value === 'cli'
+      ? '등록 명령은 사용자 설정에 서버를 추가합니다.'
+      : notes].filter(Boolean).join(' ');
     el('install').hidden = !result.install;
     if (result.install) { el('install').href = result.install; el('install').textContent = `${result.client.label}에서 설정 추가`; }
     else el('install').removeAttribute('href');
     el('command').value = result.command;
     el('command').rows = Math.max(1, result.command.trimEnd().split('\n').length);
-    el('command-label').hidden = !result.command;
-    el('copy-command').hidden = !result.command;
+    el('command-mode').hidden = !result.command;
+    el('config-mode').hidden = Boolean(result.command);
     el('docs').href = result.client.docs;
   };
   const options = rows => rows.map(([value, text]) => { const option = document.createElement('option'); option.value = value; option.textContent = text; return option; });
@@ -349,7 +370,7 @@
       }
     } finally { if (version === generation) { busy = false; display(); } }
   });
-  for (const [button, field] of [['copy-token', 'token'], ['copy-config', 'config'], ['copy-url', 'url'], ['copy-command', 'command']]) {
+  for (const [button, field] of [['copy-token', 'token'], ['copy-config', 'config'], ['copy-command', 'command']]) {
     el(button).addEventListener('click', async () => {
       const version = generation, choice = selectionVersion;
       if (field === 'token' && !await retrieveToken(false)) return;
@@ -362,9 +383,9 @@
   el('token-refresh').addEventListener('click', () => void refresh());
   el('refresh').addEventListener('click', async () => {
     const button = el('refresh');
-    button.disabled = true; button.textContent = '확인 중…';
+    button.disabled = true; button.setAttribute('aria-busy', 'true');
     try { await refresh(); }
-    finally { button.disabled = false; button.textContent = '상태 확인'; }
+    finally { button.disabled = false; button.removeAttribute('aria-busy'); }
   });
   const dismiss = () => { manual = false; rememberClient(); el('token').value = ''; el('secret').hidden = true; clearAICopy(); display(); };
   el('dismiss').addEventListener('click', dismiss);

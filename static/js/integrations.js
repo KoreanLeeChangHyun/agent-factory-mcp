@@ -1,8 +1,19 @@
 (() => {
   "use strict";
+  const ui = window.agentFactoryUI;
+  const host = document.querySelector('[data-workspace-view="integrations"]');
+  host.classList.add('af-kit');
+  let confirmation;
+  const clearConfirmation = () => { confirmation?.destroy(); confirmation = null; };
+  const confirmAction = async (message) => {
+    if (confirmation) return false;
+    const dialog = ui.createNativeConfirm(host, {message, destructive:true});
+    confirmation = dialog;
+    try { return await dialog.ask(); }
+    finally { dialog.destroy(); if (confirmation === dialog) confirmation = null; }
+  };
 
   const listState = document.querySelector("[data-integration-list-state]");
-  const listGroup = document.querySelector("[data-integration-group]");
   const list = document.querySelector("[data-integration-list]");
   const empty = document.querySelector("[data-integration-empty]");
   const catalog = document.querySelector("[data-integration-catalog]");
@@ -13,6 +24,12 @@
   const folderState = document.querySelector("[data-drive-state]");
   const folderList = document.querySelector("[data-drive-folders]");
   const scopeForm = document.querySelector("[data-scope-form]");
+  const scopeName = scopeForm?.elements.name;
+  if (scopeName) {
+    const caption = scopeName.closest('label');
+    const field = ui.fieldFor({label:'범위 이름',control:scopeName});
+    caption.replaceWith(field.root);
+  }
   const collectionList = document.querySelector("[data-collection-list]");
   const state = { context: null, providers: [], connections: [], collections: [], selected: null,
     selectedCollection: null, selectedFolder: null, folders: [], nextFolderPage: null, generation: 0 };
@@ -24,9 +41,12 @@
     retry: "재시도 필요", queued: "대기 중", running: "갱신 중" }[value] || value || "아직 없음");
   const currentCollections = () => state.collections.filter((item) => item.connection_id === state.selected?.id);
 
-  const setMessage = (element, message) => { if (element) element.textContent = message || ""; };
+  const setMessage = (element, message, kind = element === errorBox || element === scopeError ? 'error' : 'info') => {
+    if (element) ui.setStatus(element, {text:message || '', kind});
+  };
 
   const showCatalog = () => {
+    clearConfirmation();
     state.selected = null;
     catalog.hidden = false;
     detail.hidden = true;
@@ -39,7 +59,7 @@
     state.connections.forEach((connection) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "integration-sidebar__item";
+      button.className = "app-sidebar__row integration-sidebar__item";
       if (connection.id === state.selected?.id) button.classList.add("is-selected");
       const icon = document.createElement("span"); icon.textContent = "G"; icon.setAttribute("aria-hidden", "true");
       const text = document.createElement("span"); text.textContent = connection.name;
@@ -50,19 +70,19 @@
       list.append(button);
     });
     const hasRows = state.connections.length > 0;
-    listGroup.hidden = !hasRows; empty.hidden = hasRows; listState.textContent = "";
+    list.hidden = !hasRows; empty.hidden = hasRows; setMessage(listState, '');
   };
 
   const renderCollections = () => {
     collectionList.replaceChildren();
     const rows = currentCollections();
     if (!rows.length) {
-      const p = document.createElement("p"); p.className = "integration-muted";
-      p.textContent = "이 작업공간에 연결된 Drive 범위가 없습니다."; collectionList.append(p); return;
+      collectionList.append(ui.status({kind:'empty',text:'이 작업공간에 연결된 Drive 범위가 없습니다.'})); return;
     }
     rows.forEach((collection) => {
       const button = document.createElement("button"); button.type = "button";
-      button.className = "integration-collection-row";
+      button.className = "integration-collection-row ui-resource-row";
+      button.setAttribute("aria-pressed", String(collection.collection_id === state.selectedCollection?.collection_id));
       if (collection.collection_id === state.selectedCollection?.collection_id) button.classList.add("is-selected");
       const title = document.createElement("strong"); title.textContent = collection.name;
       const meta = document.createElement("span");
@@ -100,6 +120,8 @@
   };
 
   const selectConnection = async (id) => {
+    clearConfirmation();
+    if (state.selected?.id !== id) resetFolders();
     state.selected = state.connections.find((item) => item.id === id) || null;
     state.selectedCollection = state.collections.find((item) => item.connection_id === id && item.enabled)
       || state.collections.find((item) => item.connection_id === id) || null;
@@ -110,13 +132,13 @@
   const inspect = async (live) => {
     if (!state.selected) return;
     const id = state.selected.id;
-    setMessage(status, live ? "연결 상태를 확인하는 중입니다." : "");
+    setMessage(status, live ? "연결 상태를 확인하는 중입니다." : "", 'loading');
     try {
       const cloud = await state.context.api(`${base()}/integrations/${id}/state?live=${live}`);
       if (state.selected?.id !== id) return;
       state.selected.cloud = cloud;
       state.selected.status = cloud.status;
-      setMessage(status, cloud.inspection?.health === "available" ? "Google Drive 사용 가능" : "");
+      setMessage(status, cloud.inspection?.health === "available" ? "Google Drive 사용 가능" : "", 'success');
       renderConnection();
     } catch (error) { if (state.selected?.id === id) setMessage(errorBox, error.message); }
   };
@@ -124,7 +146,7 @@
   const reload = async () => {
     const generation = ++state.generation;
     if (!state.context) return;
-    listState.textContent = "연동을 불러오는 중입니다.";
+    setMessage(listState, "연동을 불러오는 중입니다.", 'loading');
     try {
       const [providers, connections, collections] = await Promise.all([
         state.context.api("/api/integration-providers", { headers: {
@@ -143,7 +165,7 @@
       else showCatalog();
     } catch (error) {
       if (generation !== state.generation) return;
-      listState.textContent = "연동을 불러오지 못했습니다."; setMessage(status, error.message);
+      setMessage(listState, "연동을 불러오지 못했습니다.", 'error'); setMessage(status, error.message, 'error');
     }
   };
 
@@ -171,40 +193,51 @@
   };
 
   const folderStack = [{ id: "root", name: "내 드라이브" }];
+  let folderRequest = 0;
+  const resetFolders = () => {
+    folderRequest++;folderStack.splice(1);state.selectedFolder=null;state.folders=[];state.nextFolderPage=null;
+    document.querySelector('[data-selected-folder]').textContent='선택하지 않음';
+    scopeForm.querySelector('[type="submit"]').disabled=true;
+    setMessage(folderState,'');renderFolders();
+  };
   const renderFolders = () => {
     folderList.replaceChildren(); document.querySelector("[data-drive-path]").textContent = folderStack.map((row) => row.name).join(" / ");
     document.querySelector("[data-drive-up]").disabled = folderStack.length === 1;
     state.folders.forEach((folder) => {
       const row = document.createElement("div"); row.className = "drive-folder-row";
-      const select = document.createElement("button"); select.type = "button"; select.textContent = folder.name;
+      const select = ui.button({label:folder.name, variant:'link'});
       select.addEventListener("click", () => {
         state.selectedFolder = folder; document.querySelector("[data-selected-folder]").textContent = folder.name;
         scopeForm.querySelector('[type="submit"]').disabled = false;
         folderList.querySelectorAll(".is-selected").forEach((item) => item.classList.remove("is-selected")); select.classList.add("is-selected");
       });
-      const open = document.createElement("button"); open.type = "button"; open.textContent = "열기"; open.setAttribute("aria-label", `${folder.name} 폴더 열기`);
+      const open = ui.button({label:'열기', variant:'link'}); open.setAttribute("aria-label", `${folder.name} 폴더 열기`);
       open.addEventListener("click", () => { folderStack.push({ id: folder.id, name: folder.name }); void loadFolders(folder.id); });
       row.append(select, open); folderList.append(row);
     });
     if (state.nextFolderPage) {
-      const more = document.createElement("button"); more.type = "button";
-      more.className = "drive-folder-more"; more.textContent = "폴더 더 보기";
+      const more = ui.button({label:'폴더 더 보기'}); more.classList.add('drive-folder-more');
       more.addEventListener("click", () => void loadFolders(folderStack.at(-1).id, state.nextFolderPage, true));
       folderList.append(more);
     }
   };
 
   const loadFolders = async (parentId = folderStack.at(-1).id, pageToken = null, append = false) => {
-    if (state.selected?.status !== "active") { folderState.textContent = "먼저 Google 계정을 인증해 주세요."; return; }
-    folderState.textContent = "폴더를 불러오는 중입니다.";
+    const request=++folderRequest, context=state.context, connection=state.selected, generation=state.generation;
+    const alive=()=>request===folderRequest && context===state.context && connection===state.selected && generation===state.generation;
+    if (state.selected?.status !== "active") { setMessage(folderState, "먼저 Google 계정을 인증해 주세요.", 'warning'); return; }
+    if (!append) {state.folders=[];state.nextFolderPage=null;renderFolders();}
+    folderList.querySelector('.drive-folder-more')?.setAttribute('disabled','');
+    setMessage(folderState, "폴더를 불러오는 중입니다.", 'loading');
     try {
       const query = `parent_id=${encodeURIComponent(parentId)}${pageToken ? `&page_token=${encodeURIComponent(pageToken)}` : ""}`;
-      const result = await state.context.api(`${base()}/integrations/${state.selected.id}/drive/folders?${query}`);
+      const result = await context.api(`${base()}/integrations/${connection.id}/drive/folders?${query}`);
+      if (!alive()) return;
       const folders = Array.isArray(result.folders) ? result.folders : [];
       state.folders = append ? [...state.folders, ...folders] : folders;
       state.nextFolderPage = result.next_page_token || null;
-      folderState.textContent = state.folders.length ? "" : "하위 폴더가 없습니다."; renderFolders();
-    } catch (error) { folderState.textContent = error.message; }
+      setMessage(folderState, state.folders.length ? "" : "하위 폴더가 없습니다.", 'empty'); renderFolders();
+    } catch (error) { if(alive()){setMessage(folderState, error.message, 'error');renderFolders();} }
   };
 
   const refreshCollection = async () => {
@@ -241,13 +274,22 @@
     document.querySelector("[data-selected-folder]").textContent = folder.name;
     scopeForm.querySelector('[type="submit"]').disabled = false;
   });
-  document.querySelectorAll("[data-integration-tab]").forEach((button) => button.addEventListener("click", () => {
-    document.querySelectorAll("[data-integration-tab]").forEach((tab) => tab.setAttribute("aria-selected", String(tab === button)));
-    document.querySelectorAll("[data-integration-panel]").forEach((panel) => { panel.hidden = panel.dataset.integrationPanel !== button.dataset.integrationTab; });
-    if (button.dataset.integrationTab === "scope") void loadFolders();
-  }));
+  ui.bindTabs({
+    list:host.querySelector('[role="tablist"]'),
+    items:[...host.querySelectorAll('[data-integration-tab]')].map(button => ({
+      id:button.dataset.integrationTab, button,
+      panel:host.querySelector('[data-integration-panel="' + button.dataset.integrationTab + '"]'),
+    })),
+    onChange:id => { if (id === 'scope') void loadFolders(); },
+  });
   scopeForm?.addEventListener("submit", async (event) => {
     event.preventDefault(); if (!state.selectedFolder || !state.selected) return;
+    if (scopeForm.getAttribute("aria-busy") === "true") return;
+    const submit = scopeForm.querySelector('[type="submit"]');
+    const disabled = submit.disabled;
+    if (disabled) return;
+    scopeForm.setAttribute("aria-busy", "true");
+    submit.disabled = true;
     setMessage(scopeError, "");
     try {
       const created = await state.context.api(`${base()}/integration-collections`, { method: "POST", body: JSON.stringify({
@@ -257,23 +299,32 @@
       }) });
       state.collections.push(created); state.selectedCollection = created; renderConnection(); await refreshCollection();
     } catch (error) { setMessage(scopeError, error.message); }
+    finally { scopeForm.removeAttribute("aria-busy"); submit.disabled = disabled || !state.selectedFolder; }
   });
   document.querySelector("[data-unlink-collection]")?.addEventListener("click", async () => {
-    if (!state.selectedCollection || !window.confirm("이 범위의 이후 갱신을 중지하시겠습니까? 기존 원본 링크는 유지됩니다.")) return;
+    if (!state.selectedCollection || !state.context) return;
+    const generation = state.generation, collectionId = state.selectedCollection.collection_id;
+    const context = state.context, path = `${base()}/integration-collections/${collectionId}`;
+    const alive = () => generation === state.generation && context === state.context && collectionId === state.selectedCollection?.collection_id;
+    if (!await confirmAction("이 범위의 이후 갱신을 중지하시겠습니까? 기존 원본 링크는 유지됩니다.") || !alive()) return;
     try {
-      await state.context.api(`${base()}/integration-collections/${state.selectedCollection.collection_id}`, { method: "PATCH", body: JSON.stringify({ enabled: false }) });
-      await reload();
-    } catch (error) { setMessage(errorBox, error.message); }
+      await context.api(path, { method: "PATCH", body: JSON.stringify({ enabled: false }) });
+      if (alive()) await reload();
+    } catch (error) { if (alive()) setMessage(errorBox, error.message); }
   });
   document.querySelector("[data-disconnect-account]")?.addEventListener("click", async () => {
-    if (!state.selected || !window.confirm("이 작업공간에 저장된 Google 인증을 해제하시겠습니까? 연결 범위의 갱신이 중단됩니다.")) return;
-    try { await state.context.api(`${base()}/integrations/${state.selected.id}`, { method: "DELETE" }); await reload(); }
-    catch (error) { setMessage(errorBox, error.message); }
+    if (!state.selected || !state.context) return;
+    const generation = state.generation, connectionId = state.selected.id;
+    const context = state.context, path = `${base()}/integrations/${connectionId}`;
+    const alive = () => generation === state.generation && context === state.context && connectionId === state.selected?.id;
+    if (!await confirmAction("이 작업공간에 저장된 Google 인증을 해제하시겠습니까? 연결 범위의 갱신이 중단됩니다.") || !alive()) return;
+    try { await context.api(path, { method: "DELETE" }); if (alive()) await reload(); }
+    catch (error) { if (alive()) setMessage(errorBox, error.message); }
   });
 
   window.agentFactoryIntegrations = Object.freeze({
-    open(context) { state.context = context; folderStack.splice(1); state.selectedFolder = null; void reload(); },
-    reset() { state.generation += 1; state.context = null; state.providers = []; state.connections = []; state.collections = []; state.selected = null; renderSidebar(); },
+    open(context) { clearConfirmation(); state.context = context; resetFolders(); void reload(); },
+    reset() { state.generation += 1; clearConfirmation(); state.context = null; state.providers = []; state.connections = []; state.collections = []; state.selected = null; state.selectedCollection = null; resetFolders(); renderSidebar(); },
     add: showCatalog,
   });
 })();

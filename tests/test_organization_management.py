@@ -105,9 +105,7 @@ async def test_organization_members_roles_teams_invitations_and_isolation(monkey
             generated_org = await request(
                 "POST", "/api/organizations", 201, json={"name": "한글 조직"}
             )
-            generated_overview = await request(
-                "GET", "/api/organizations/" + generated_org["id"]
-            )
+            generated_overview = await request("GET", "/api/organizations/" + generated_org["id"])
             assert generated_overview["slug"].startswith("organization-")
             boundary_org = await request(
                 "POST",
@@ -115,9 +113,7 @@ async def test_organization_members_roles_teams_invitations_and_isolation(monkey
                 201,
                 json={"name": "a" * 29 + " b"},
             )
-            boundary_overview = await request(
-                "GET", "/api/organizations/" + boundary_org["id"]
-            )
+            boundary_overview = await request("GET", "/api/organizations/" + boundary_org["id"])
             assert "--" not in boundary_overview["slug"]
             await request(
                 "PATCH",

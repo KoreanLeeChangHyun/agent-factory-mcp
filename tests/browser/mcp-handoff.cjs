@@ -13,6 +13,7 @@ const server = http.createServer(async (req, res) => {
     const data = await fs.readFile(path.join(root, file));
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
     res.setHeader('Content-Type', types[path.extname(file)] || 'application/octet-stream');
+    res.setHeader('Content-Security-Policy', "style-src 'self'");
     res.end(data);
   } catch { res.writeHead(404).end(); }
 });
@@ -22,6 +23,9 @@ const server = http.createServer(async (req, res) => {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
   const page = await context.newPage();
   const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const cspViolations=[];
+  await page.exposeFunction('captureCspViolation',directive=>cspViolations.push(directive));
+  await page.addInitScript(()=>document.addEventListener('securitypolicyviolation',e=>window.captureCspViolation(e.violatedDirective)));
   const records = { one: [], two: [] };
   let serial = 0, issued = 0, revealFailure = false, createFailure = false, statusFailure = false;
   let holdSecret = false, releaseSecret;
@@ -66,6 +70,9 @@ const server = http.createServer(async (req, res) => {
   const downloadButton = page.locator('[data-mcp-download]');
   const copyAI = page.locator('[data-mcp-copy-ai]');
   const refresh = async () => {
+    assert.equal(await page.locator('[data-mcp-token-refresh] svg.af-icon').count(),1);
+    assert.equal(await page.locator('[data-mcp-token-refresh] svg').getAttribute('aria-hidden'),'true');
+    assert.equal(await page.locator('[data-mcp-token-refresh]').getAttribute('aria-label'),'토큰 목록 새로고침');
     await page.locator('[data-mcp-token-refresh]').click();
     await page.waitForTimeout(80);
   };
@@ -91,6 +98,30 @@ const server = http.createServer(async (req, res) => {
   try {
     await page.goto('http://127.0.0.1:' + server.address().port + '/factory/workspace/');
     await choose('one');
+    const sharedControls = await page.evaluate(() => {
+      const selects = [...document.querySelectorAll('.mcp-connect-controls select')];
+      const codes = ['command','config','token'].map(name => document.querySelector(`[data-mcp-${name}]`));
+      return {
+        fields: selects.every(control => control.classList.contains('af-input') && control.closest('.af-field') && control.labels.length === 1),
+        codes: codes.every(control => control.classList.contains('af-code-value') && control.closest('.af-code-operation') && control.labels.length === 1 &&
+          control.getAttribute('aria-describedby').split(/\s+/).every(id => document.getElementById(id))),
+        secretType: codes[2].type,
+      };
+    });
+    assert.deepEqual(sharedControls,{fields:true,codes:true,secretType:'password'});
+    const headerBoxes = await Promise.all([
+      page.locator('.primary-sidebar__header').boundingBox(),
+      page.locator('.mcp-setup > .mcp-panel-header').boundingBox(),
+      page.locator('.mcp-token-panel > .mcp-panel-header').boundingBox(),
+    ]);
+    assert.deepEqual(headerBoxes.map(box => box.height), [35, 35, 35]);
+    assert.equal(new Set(headerBoxes.map(box => box.y + box.height)).size, 1);
+    const headerBorders = await Promise.all([
+      page.locator('.primary-sidebar__header').evaluate(el=>getComputedStyle(el).borderBottomWidth),
+      page.locator('.mcp-setup > .mcp-panel-header').evaluate(el=>getComputedStyle(el).borderBottomWidth),
+      page.locator('.mcp-token-panel > .mcp-panel-header').evaluate(el=>getComputedStyle(el).borderBottomWidth),
+    ]);
+    assert.deepEqual(headerBorders,['1px','1px','1px']);
     await page.locator('[data-mcp-token-list-state]').filter({ hasText: '없습니다' }).waitFor();
     assert(await downloadButton.isDisabled());
     createFailure = true; await page.locator('[data-mcp-enroll]').click();
@@ -120,6 +151,7 @@ const server = http.createServer(async (req, res) => {
           await page.locator('[data-mcp-enroll]').click();
           await page.waitForFunction(() => !!document.querySelector('[data-mcp-token]').value);
         }
+        await page.waitForFunction(() => !!document.querySelector('[data-mcp-token-select]').value);
         const selectedId = await page.locator('[data-mcp-token-select]').inputValue();
         const issuedBeforeDownload = issued;
         const file = await download();
@@ -173,9 +205,13 @@ const server = http.createServer(async (req, res) => {
     assert(await page.locator('[data-mcp-onboarding]').isVisible());
     assert(await page.locator('[data-no-activities]').isHidden());
     assert(!(await page.locator('[data-mcp-refresh]').isDisabled()));
-    assert.equal(await page.locator('.mcp-connection-toast').count(), 1);
+    await page.locator('.af-toast[data-type="success"]').waitFor();
+    assert.equal(await page.locator('.af-toast').count(), 1);
     await refresh();
-    assert.equal(await page.locator('.mcp-connection-toast').count(), 1);
+    assert.equal(await page.locator('.af-toast').count(), 1);
+    await page.locator('.af-toast').getByRole('button',{name:'알림 닫기'}).click();
+    await page.locator('.af-toast').waitFor({state:'detached'});
+    await refresh();assert.equal(await page.locator('.af-toast').count(),0,'Dismissed confirmation does not repeat');
     records.one.find(row => row.id === 'token-1').client_name = 'agent-factory-connection-check';
     await refresh();
     assert((await page.locator('[data-mcp-status]').textContent()).includes('클라이언트 연결 확인 필요'));
@@ -214,13 +250,16 @@ const server = http.createServer(async (req, res) => {
     await page.locator('[data-mcp-config]').waitFor();
     await refresh();
     assert.equal(await secondRow.count(), 0);
-    const helpColors = await page.evaluate(() => [getComputedStyle(document.querySelector('.mcp-extra-help')).color, getComputedStyle(document.querySelector('.mcp-manual-body')).color]);
-    assert.equal(helpColors[0], helpColors[1]);
+    assert.equal(await page.locator('.mcp-ai-step').count(), 2);
+    const desktopStepTops = await page.locator('.mcp-ai-steps > li').evaluateAll(rows => rows.map(row => row.getBoundingClientRect().top));
+    assert(Math.abs(desktopStepTops[0] - desktopStepTops[1]) < 1);
+    assert(await page.locator('[data-mcp-config-mode]').isVisible());
+    assert(await page.locator('[data-mcp-command-mode]').isHidden());
     statusFailure = true; await refresh();
     await page.locator('[data-mcp-token-list-state]').filter({ hasText: '불러오지 못' }).waitFor();
     statusFailure = false; await refresh();
     assert(await page.locator('[data-mcp-config]').isVisible());
-    assert(await page.locator('[data-mcp-auth-help]').isVisible());
+    assert(await page.locator('[data-mcp-config-help]').isVisible());
     assert.equal(await page.locator('.mcp-manual-setup details, [data-mcp-expand-config], [data-mcp-config-preview]').count(), 0);
     await page.locator('[data-mcp-client]').selectOption('codex');
     await page.locator('[data-mcp-variant]').selectOption('cli');
@@ -230,11 +269,15 @@ const server = http.createServer(async (req, res) => {
     await page.waitForFunction(() => document.querySelector('[data-mcp-token]').value !== '');
     assert.equal(await page.locator('[data-mcp-client]').inputValue(), 'codex');
     assert.equal(await page.locator('[data-mcp-variant]').inputValue(), 'cli');
+    assert(await page.locator('[data-mcp-command-mode]').isVisible());
+    assert(await page.locator('[data-mcp-config-mode]').isHidden());
+    assert((await page.locator('[data-mcp-command-mode] .mcp-step-header').textContent()).includes('등록 명령 · POSIX 셸'));
+    assert(await page.locator('[data-mcp-command-help]').isVisible());
     assert.equal(await page.locator('[data-mcp-token-select]').inputValue(), codexTokenId);
     assert.equal(await page.locator('[data-mcp-status]').textContent(), 'MCP 연결 대기');
-    assert.equal(await page.locator('.mcp-connection-toast').count(), 0);
+    assert.equal(await page.locator('.af-toast').count(), 0);
     assert(!(await page.evaluate(() => JSON.stringify(localStorage))).includes('fixture-secret'));
-    assert(await page.locator('[data-mcp-config]').isVisible());
+    assert(await page.locator('[data-mcp-config]').isHidden());
     const panelLayout = await page.evaluate(() => {
       const setup = document.querySelector('.mcp-setup').getBoundingClientRect();
       const tokens = document.querySelector('.mcp-token-panel').getBoundingClientRect();
@@ -260,8 +303,11 @@ const server = http.createServer(async (req, res) => {
     assert(await page.locator('.mcp-token-panel .mcp-panel-body').evaluate(node => { node.scrollTop = 100; return node.scrollTop > 0; }));
     await page.setViewportSize({ width: 390, height: 844 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    const mobileSteps = await page.locator('.mcp-ai-steps > li').evaluateAll(rows => rows.map(row => { const box = row.getBoundingClientRect(); return { top: box.top, bottom: box.bottom }; }));
+    assert(mobileSteps[1].top > mobileSteps[0].bottom);
     await page.screenshot({ path: '/tmp/mcp-file-handoff-mobile.png' });
     assert.deepEqual(errors, []);
+    assert.deepEqual(cspViolations,[]);
     console.log('PASS file handoff: 13 clients/all variants, valid ZIP/native config, persistent token selection, no auto issue, clipboard fallback, legacy/revoked/error handling, stale responses, mobile');
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; server.close(); });

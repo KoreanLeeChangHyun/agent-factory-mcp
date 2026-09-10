@@ -3,11 +3,21 @@
   const sidebar = document.querySelector('[data-reporting-sidebar]');
   const panel = document.querySelector('[data-reporting-panel]');
   if (!sidebar || !panel) return;
+  const ui = window.agentFactoryUI;
+  panel.classList.add('af-kit');
   const labels = {pending:'대기', in_progress:'진행 중', input_required:'입력 필요', completed:'완료', failed:'실패', cancelled:'취소'};
   const terminal = new Set(['completed','failed','cancelled']);
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const button = (action, label, id='') => `<button type="button" data-reporting-action="${action}" data-id="${esc(id)}">${esc(label)}</button>`;
-  const date = value => value ? esc(new Date(value).toLocaleString('ko-KR')) : '보고 없음';
+  const button = (action, label, id='') => {
+    const node = ui.button({label}); node.dataset.reportingAction = action; node.dataset.id = id;
+    return node.outerHTML;
+  };
+  const message = (kind, text) => ui.status({kind,text}).outerHTML;
+  const dateText = value => value ? new Date(value).toLocaleString('ko-KR') : '보고 없음';
+  const date = value => esc(dateText(value));
+  const statusBadge = status => ui.badge(labels[status] || status,
+    status==='completed'?'success':status==='failed'?'error':status==='input_required'?'warning':'neutral').outerHTML;
+  const metadata = entries => ui.metadataGrid(entries).outerHTML;
   let scope, epoch=0, loadVersion=0, detailVersion=0, timer, selected=null, taskId=null;
   let snapshot={agents:[],tasks:[]}, detail=null, error='', detailError='', loading=false, loadingDetail=false, received=0;
   function freshness(row) {
@@ -27,8 +37,8 @@
     }).join('');
     return `<ul class="reporting-tree">${branch(null)}</ul>`;
   }
-  const taskRow = t => `<li>${button('task',t.name,t.id)} <span class="reporting-status">${labels[t.status]||esc(t.status)}</span> · ${esc(snapshot.agents.find(a=>a.id===t.agent_id)?.name||t.agent_id)}${t.progress!==null?` · 보고된 진행률 ${t.progress}%`:''}<small>${freshness(t)} · ${date(t.last_report_at)}</small></li>`;
-  function taskList(title, rows) {return `<section><h2>${title}</h2>${rows.length?`<ul class="reporting-tasks">${rows.map(taskRow).join('')}</ul>`:'<p class="reporting-muted">작업 없음</p>'}</section>`;}
+  const taskRow = t => `<li>${button('task',t.name,t.id)} ${statusBadge(t.status)} · ${esc(snapshot.agents.find(a=>a.id===t.agent_id)?.name||t.agent_id)}${t.progress!==null?` · 보고된 진행률 ${t.progress}%`:''}<small>${freshness(t)} · ${date(t.last_report_at)}</small></li>`;
+  function taskList(title, rows) {return `<section><h2>${title}</h2>${rows.length?`<ul class="reporting-tasks">${rows.map(taskRow).join('')}</ul>`:message('empty','작업 없음')}</section>`;}
   function resultView(r) {
     let link='';
     if(r.document_id) link=button('document','문서 열기',r.document_id);
@@ -38,13 +48,13 @@
     return `<li><strong>${esc(r.label)}</strong><p>${esc(r.summary)}</p>${link}</li>`;
   }
   function renderDetail() {
-    if(loadingDetail&&!detail)return '<p role="status">작업 보고 불러오는 중…</p>';
-    if(detailError)return `<p role="alert">${esc(detailError)}</p>${button('task','다시 시도',taskId)}`;
+    if(loadingDetail&&!detail)return message('loading','작업 보고 불러오는 중…');
+    if(detailError)return message('error',detailError)+button('task','다시 시도',taskId);
     if(!detail)return '';
     const t=detail.task;
     const parent=snapshot.tasks.find(r=>r.id===t.parent_id);
-    return `<section class="reporting-detail"><h2 tabindex="-1">${esc(t.name)}</h2><p>${esc(t.description)}</p><p>${labels[t.status]} · ${freshness(t)} · ${date(t.last_report_at)}</p>
-      <p>시작 ${date(t.started_at)} · 종료 ${date(t.finished_at)} · 수정 ${t.revision}</p>
+    return `<section class="reporting-detail"><h2 tabindex="-1">${esc(t.name)}</h2><p>${esc(t.description)}</p><p>${statusBadge(t.status)} · ${freshness(t)} · ${date(t.last_report_at)}</p>
+      ${metadata([['시작',dateText(t.started_at)],['종료',dateText(t.finished_at)],['수정',t.revision]])}
       ${t.progress!==null?`<label>보고된 진행률 ${t.progress}% <progress max="100" value="${t.progress}"></progress></label>`:'<p>진행률 보고 없음</p>'}
       ${t.parent_id?`<p>상위 작업 ${button('task',parent?.name||t.parent_id,t.parent_id)}</p>`:''}
       ${t.plan_item_id?button('plan','연결된 일정 항목 열기',t.plan_item_id):''}
@@ -58,14 +68,15 @@
     const focus=document.activeElement?.closest('[data-reporting-action]');
     const focusKey=focus&&[focus.dataset.reportingAction,focus.dataset.id];
     const tree=hierarchy();
-    sidebar.innerHTML=`<nav class="app-sidebar__nav" aria-label="에이전트 탐색"><button class="app-sidebar__row" type="button" data-reporting-action="overall" data-id="" ${selected===null?'aria-current="page"':''}>전체 에이전트</button>${tree}</nav>`+(!received&&loading?'<p class="app-sidebar__state" role="status">에이전트 불러오는 중…</p>':!received&&error?'<p class="app-sidebar__state" role="alert">에이전트를 불러오지 못했습니다.</p>'+button('refresh','다시 시도'):!snapshot.agents.length?'<p class="app-sidebar__state reporting-muted">등록된 에이전트 없음</p>':'');
+    const stateMessage=!received&&loading?'<p class="ui-message app-sidebar__state" role="status">에이전트 불러오는 중…</p>':!received&&error?'<p class="ui-message app-sidebar__state" role="alert">에이전트를 불러오지 못했습니다.</p><button class="app-sidebar__row" type="button" data-reporting-action="refresh" data-id="">다시 시도</button>':!snapshot.agents.length?'<p class="app-sidebar__state reporting-muted">등록된 에이전트 없음</p>':'';
+    sidebar.innerHTML=`<section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">에이전트</span></header><div class="app-sidebar__section-content"><nav class="app-sidebar__nav" aria-label="에이전트 탐색"><button class="app-sidebar__row" type="button" data-reporting-action="overall" data-id="" ${selected===null?'aria-current="page"':''}>전체 에이전트</button>${tree}</nav>${stateMessage}</div></section>`;
     const agent=snapshot.agents.find(a=>a.id===selected);
     const tasks=selected?snapshot.tasks.filter(t=>t.agent_id===selected):snapshot.tasks;
-    panel.innerHTML=`<header><h1>${esc(agent?.name||'전체 에이전트')}</h1>${button('refresh','새로고침')}</header><p class="reporting-muted">외부 에이전트가 MCP로 보고한 구성과 작업입니다. AI 실행은 연결한 도구에서 수행합니다.</p>
-      ${loading?'<p role="status">불러오는 중…</p>':''}${error?`<p role="alert">${esc(error)} · 이전 자료가 있으면 마지막 수신 자료입니다.</p>`:''}
-      <p role="status">${received?'화면 수신 '+date(received):'수신 대기'} · 15초마다 새로고침 · 5분 무보고 시 오래됨 표시</p>
-      ${snapshot.truncated?'<p role="status">최대 1,000개 구성과 최근 1,000개 작업을 표시합니다. 일부 계층과 작업은 생략되었습니다.</p>':''}
-      ${agent?`<p><strong>역할</strong> ${esc(agent.role)}</p><p><strong>책임</strong> ${esc(agent.responsibilities)}</p><p>범위: 현재 워크스페이스 ${esc(agent.workspace_id)} · 구성 수정 ${agent.revision}</p><p>보고 소유자 ${esc(agent.owner_user_id)} · ${freshness(agent)} ${date(agent.last_report_at)}</p>${agent.parent_id?button('agent','상위 에이전트',agent.parent_id):''}`:`<section><h2>에이전트 계층</h2>${tree||'등록된 에이전트 없음'}</section>`}
+    panel.innerHTML=`<header class="ui-section-header"><h1>${esc(agent?.name||'전체 에이전트')}</h1>${button('refresh','새로고침')}</header><p class="reporting-muted">외부 에이전트가 MCP로 보고한 구성과 작업입니다. AI 실행은 연결한 도구에서 수행합니다.</p>
+      ${loading?message('loading','불러오는 중…'):''}${error?message('error',error+' · 이전 자료가 있으면 마지막 수신 자료입니다.'):''}
+      <p class="ui-message" role="status">${received?'화면 수신 '+date(received):'수신 대기'} · 15초마다 새로고침 · 5분 무보고 시 오래됨 표시</p>
+      ${snapshot.truncated?'<p class="ui-message" role="status">최대 1,000개 구성과 최근 1,000개 작업을 표시합니다. 일부 계층과 작업은 생략되었습니다.</p>':''}
+      ${agent?`${metadata([['역할',agent.role],['책임',agent.responsibilities],['범위: 현재 워크스페이스',agent.workspace_id],['구성 수정',agent.revision],['보고 소유자',agent.owner_user_id],[freshness(agent),dateText(agent.last_report_at)]])}${agent.parent_id?button('agent','상위 에이전트',agent.parent_id):''}`:`<section><h2>에이전트 계층</h2>${tree||'등록된 에이전트 없음'}</section>`}
       ${taskList('대기 작업',tasks.filter(t=>t.status==='pending'))}${taskList('진행 중 / 입력 필요',tasks.filter(t=>['in_progress','input_required'].includes(t.status)))}${taskList('최근 수행 작업',tasks.filter(t=>terminal.has(t.status)))}${taskId?renderDetail():''}`;
     if(focusKey) [sidebar,panel].flatMap(el=>[...el.querySelectorAll('[data-reporting-action]')]).find(el=>el.dataset.reportingAction===focusKey[0]&&el.dataset.id===focusKey[1])?.focus({preventScroll:true});
   }

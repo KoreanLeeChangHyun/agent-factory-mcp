@@ -2,21 +2,35 @@
 (() => {
   const host = document.querySelector('[data-organization-content]');
   const nav = document.querySelector('[data-organization-navigation]');
+  const ui = window.agentFactoryUI;
+  host.classList.add('af-kit');
   let config, generation = 0, currentView = 'overview';
+  let confirmationDialog;
+  const clearConfirmation = () => { confirmationDialog?.destroy(); confirmationDialog = null; };
+  async function confirmAction(message, alive) {
+    if (!alive() || confirmationDialog) return false;
+    const dialog = ui.createNativeConfirm(host, {message, destructive:true});
+    confirmationDialog = dialog;
+    try { return await dialog.ask() && alive(); }
+    finally { dialog.destroy(); if (confirmationDialog === dialog) confirmationDialog = null; }
+  }
   const element = (tag, text, attrs = {}) => {
     const node = document.createElement(tag);
     if (text != null) node.textContent = text;
     for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
     return node;
   };
-  const button = (text, action) => {
-    const node = element('button', text, {type: 'button'});
+  const button = (text, action, variant = '') => {
+    if (variant !== 'tab') return ui.button({label:text, onClick:action, variant:variant || 'secondary'});
+    const node = element('button', text, {type: 'button', class: variant === 'tab' ? 'ui-tab' : 'ui-button' + (variant ? ' ui-button--' + variant : '')});
     node.addEventListener('click', action);
     return node;
   };
+  const dangerButton = (text, action) => button(text, action, 'danger');
   const input = (name, value = '', type = 'text') => element('input', null, {name, value, type});
   const label = (text, control) => {
-    const node = element('label', text); node.append(control); return node;
+    if (!['checkbox','radio'].includes(control.type)) return ui.fieldFor({label:text, control}).root;
+    const node = element('label', text, {class:'ui-field'}); node.append(control); return node;
   };
   const select = (name, choices, selected) => {
     const node = element('select', null, {name});
@@ -27,40 +41,29 @@
   const roleNames = {organization_owner:'조직 소유자', organization_admin:'조직 관리자', organization_member:'구성원', workspace_owner:'작업공간 소유자', workspace_admin:'작업공간 관리자', member:'편집자', viewer:'열람자'};
   const roleName = role => roleNames[role.name] || role.name;
   const statuses = {active:'활성', suspended:'정지', removed:'제거됨', pending:'초대 대기', accepted:'수락됨', cancelled:'취소됨', expired:'만료됨'};
-  const errorBox = element('p', '', {role:'alert', class:'organization-error'});
-  const table = (headers, rows) => {
-    const wrap = element('div', null, {class:'organization-table-scroll'});
-    const node = element('table');
-    const head = element('tr'); headers.forEach(text => head.append(element('th', text, {scope:'col'})));
-    const thead = element('thead'); thead.append(head); node.append(thead);
-    const body = element('tbody');
-    for (const cells of rows) {
-      const row = element('tr');
-      for (const cell of cells) { const td = element('td'); td.append(cell instanceof Node ? cell : document.createTextNode(String(cell ?? '—'))); row.append(td); }
-      body.append(row);
-    }
-    if (!rows.length) { const row = element('tr'); row.append(element('td', '표시할 항목이 없습니다.', {colspan:headers.length})); body.append(row); }
-    node.append(body); wrap.append(node); return wrap;
-  };
-  function form(title, controls, submitText, submit, alive) {
+  const errorBox = element('p', '', {role:'alert', class:'organization-error ui-message'});
+  const table = (headers, rows) => ui.resourceTable({headers,rows});
+  function form(title, controls, submitText, submit, alive, variant = 'primary') {
     const node = element('form', null, {class:'organization-form'});
     if (title) node.append(element('h3', title));
     controls.forEach(control => node.append(control));
-    node.append(element('button', submitText, {type:'submit'}));
-    const error = element('p', '', {role:'alert'}); node.append(error);
+    const submitButton = ui.button({label:submitText, variant});
+    submitButton.type = 'submit'; node.append(submitButton);
+    const error = element('p', '', {role:'alert', class:'ui-message'}); node.append(error);
     let submitting = false;
     node.addEventListener('submit', async event => {
       event.preventDefault(); if (!alive() || submitting) return;
       submitting = true;
+      node.setAttribute('aria-busy', 'true');
       const data = new FormData(node);
-      const buttons = node.querySelectorAll('button'); buttons.forEach(b => b.disabled = true);
+      const buttons = [...node.querySelectorAll('button')].map(b => [b, b.disabled]); buttons.forEach(([b]) => b.disabled = true);
       error.textContent = '';
       try { await submit(data); } catch (e) { if (alive()) error.textContent = e.message; }
-      finally { submitting = false; if (alive()) buttons.forEach(b => b.disabled = false); }
+      finally { node.removeAttribute('aria-busy'); submitting = false; if (alive()) buttons.forEach(([b, disabled]) => b.disabled = disabled); }
     });
     return node;
   }
-  const actions = (...items) => {const node = element('div', null, {class:'organization-actions'}); node.append(...items); return node;};
+  const actions = (...items) => {const node = ui.inline(...items); node.classList.add('organization-actions'); return node;};
   const slugify = value => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').replace(/--+/g,'-').slice(0,39).replace(/-$/,'');
   const slugInput = value => value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9-]+/g,'-').replace(/--+/g,'-').replace(/^-/,'').slice(0,39);
   const createForm = (local, alive) => {
@@ -80,6 +83,7 @@
     },alive);
   };
   async function open(next = config, view = currentView) {
+    clearConfirmation();
     config = next; currentView = view;
     const version = ++generation, alive = () => version === generation;
     const local = {...config};
@@ -91,21 +95,21 @@
     host.replaceChildren(element('h1', titles[view]||'조직'), errorBox);
     errorBox.textContent = '';
     nav.querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.orgView === view || (b.dataset.orgView === 'settings' && ['roles','audit'].includes(view)) ? 'page' : 'false'));
-    if (!local.organizationId) { host.append(element('p', '조직을 선택하거나 새 조직을 만드세요.'), createForm(local,alive)); return; }
-    const loading = element('p', '불러오는 중입니다.', {role:'status'}); host.append(loading);
+    if (!local.organizationId) { host.append(ui.status({kind:'empty',text:'조직을 선택하거나 새 조직을 만드세요.'}), createForm(local,alive)); return; }
+    const loading = ui.status({kind:'loading', text:'불러오는 중입니다.'}); host.append(loading);
     try {
       const overview = await api(); if (!alive()) return;
       const can = key => overview.permissions.includes(key);
       const run = async task => {
         if (!alive()) return;
-        try { await task(); if (alive()) await refresh(); }
+        try { const result = await task(); if (result !== false && alive()) await refresh(); }
         catch (e) { if (alive()) errorBox.textContent = e.message; }
       };
       const roleChoices = (roles, scope) => roles.filter(r => r.scope === scope).map(r => [r.id, roleName(r)]);
       const settingsNav = active => {
-        const node=element('nav',null,{class:'organization-subnav','aria-label':'조직 설정'});
+        const node=element('nav',null,{class:'organization-subnav ui-tabs','aria-label':'조직 설정'});
         for(const [target,text] of [['settings','일반'],['roles','역할 및 권한'],['audit','감사 로그']]){
-          const item=button(text,()=>open(local,target));item.setAttribute('aria-current',active===target?'page':'false');node.append(item);
+          const item=button(text,()=>open(local,target),'tab');item.setAttribute('aria-current',active===target?'page':'false');node.append(item);
         }
         return node;
       };
@@ -119,29 +123,29 @@
         const identity=element('div');identity.append(element('h2',overview.name),element('code',`@${overview.slug}`));header.append(avatar,identity);host.append(header);
         const stats=element('dl',null,{class:'organization-stats'});
         for(const [labelText,value,target] of [['작업공간',spaces.length,'workspaces'],['구성원',can('member.read')?members.filter(m=>m.status==='active').length:'—','members'],['팀',can('team.read')?teams.length:'—','teams'],['대기 초대',can('member.invite')?invitations.filter(i=>['pending','expired'].includes(i.status)).length:'—','members']]){
-          const card=element('div');card.append(element('dt',labelText),button(String(value),()=>open(local,target)));stats.append(card);
+          const card=element('div');card.append(element('dt',labelText),button(String(value),()=>open(local,target),'link'));stats.append(card);
         }
         host.append(stats,element('h2','작업공간'));
-        const cards=element('div',null,{class:'organization-cards'});
+        const cards=ui.grid(); cards.classList.add('organization-cards');
         for(const space of spaces.slice(0,6)){
-          const card=element('article');card.append(button(space.name,()=>local.openWorkspace?.(space.id)),element('code',space.slug),element('p','이 조직에서 접근 가능한 작업공간'));
+          const card=element('article');card.append(button(space.name,()=>local.openWorkspace?.(space.id),'link'),element('code',space.slug),element('p','이 조직에서 접근 가능한 작업공간'));
           cards.append(card);
         }
-        if(!spaces.length)cards.append(element('p','접근 가능한 작업공간이 없습니다.'));
+        if(!spaces.length)cards.append(ui.status({kind:'empty',text:'접근 가능한 작업공간이 없습니다.'}));
         host.append(cards);
       } else if (view === 'workspaces') {
         const spaces=await api('/workspaces');if(!alive())return;
         const toolbar=actions();
         if(can('workspace.create'))toolbar.append(button('새 작업공간',()=>local.createWorkspace?.()));
         host.append(element('p',`${overview.name}에서 접근할 수 있는 프로젝트 공간입니다.`),toolbar);
-        const cards=element('div',null,{class:'organization-cards'});
+        const cards=ui.grid(); cards.classList.add('organization-cards');
         for(const space of spaces){
-          const card=element('article');card.append(button(space.name,()=>local.openWorkspace?.(space.id)),element('code',space.slug),element('p',space.status==='active'?'활성':'비활성'));cards.append(card);
+          const card=element('article');card.append(button(space.name,()=>local.openWorkspace?.(space.id),'link'),element('code',space.slug),element('p',space.status==='active'?'활성':'비활성'));cards.append(card);
         }
-        if(!spaces.length)cards.append(element('p','접근 가능한 작업공간이 없습니다.'));
+        if(!spaces.length)cards.append(ui.status({kind:'empty',text:'접근 가능한 작업공간이 없습니다.'}));
         host.append(cards);
       } else if (view === 'members') {
-        if (!can('member.read')) { host.append(element('p', '구성원 조회 권한이 없습니다.')); return; }
+        if (!can('member.read')) { host.append(ui.status({kind:'permission',text:'구성원 조회 권한이 없습니다.'})); return; }
         const [members, roles, spaces, invitations] = await Promise.all([
           api('/members'), can('role.read') ? api('/roles') : [], api('/workspace-options'), can('member.invite') ? api('/invitations') : []]);
         if (!alive()) return;
@@ -153,15 +157,13 @@
         search.addEventListener('input',draw); state.addEventListener('change',draw);roleFilter.addEventListener('change',draw); draw();
         const detail = element('section', null, {class:'organization-detail'});
         const memberPanel=element('section',null,{class:'organization-tab-panel'});
-        const invitePanel=element('section',null,{class:'organization-tab-panel',hidden:''});
-        const memberTab=button('구성원',()=>showTab('members'));
-        const inviteTab=button(`대기 중인 초대 (${invitations.filter(i=>['pending','expired'].includes(i.status)).length})`,()=>showTab('invitations'));
-        const subnav=element('nav',null,{class:'organization-subnav','aria-label':'구성원 보기'});subnav.append(memberTab,inviteTab);
-        function showTab(tab){
-          memberPanel.hidden=tab!=='members';invitePanel.hidden=tab!=='invitations';
-          memberTab.setAttribute('aria-current',tab==='members'?'page':'false');inviteTab.setAttribute('aria-current',tab==='invitations'?'page':'false');
-        }
-        memberPanel.append(actions(search,roleFilter,state),list,detail);host.append(subnav,memberPanel,invitePanel);showTab('members');
+        const invitePanel=element('section',null,{class:'organization-tab-panel'});
+        const memberTabs=ui.tabs({label:'구성원 보기',items:[
+          {id:'members',label:'구성원',content:memberPanel},
+          {id:'invitations',label:`대기 중인 초대 (${invitations.filter(i=>['pending','expired'].includes(i.status)).length})`,content:invitePanel}
+        ]});
+        memberTabs.root.querySelector('[role="tablist"]').classList.add('organization-subnav');
+        memberPanel.append(actions(search,roleFilter,state),list,detail);host.append(memberTabs.root);
         async function showMember(member) {
           const data = await api(`/members/${member.user_id}`); if (!alive()) return;
           Object.assign(member, data);
@@ -179,8 +181,8 @@
             await mutate(`/members/${member.user_id}`, 'PATCH', {role_id:f.get('role')}); if(alive()) await showMember(member);
           }, alive));
           const stateActions = [];
-          if (can('member.suspend') && data.status !== 'removed') stateActions.push(button(data.status === 'active' ? '활동 정지' : '활동 복구', () => run(async () => {if (confirm(`${member.name}님의 상태를 변경할까요?`)) await mutate(`/members/${member.user_id}`, 'PATCH', {status:data.status === 'active' ? 'suspended' : 'active'});} )));
-          if (can('member.remove') && data.status !== 'removed') stateActions.push(button('조직에서 제거', () => run(async () => {if (confirm(`${member.name}님을 조직에서 제거할까요?`)) await mutate(`/members/${member.user_id}`, 'PATCH', {status:'removed'});} )));
+          if (can('member.suspend') && data.status !== 'removed') stateActions.push(button(data.status === 'active' ? '활동 정지' : '활동 복구', () => run(async () => {if (await confirmAction(`${member.name}님의 상태를 변경할까요?`, alive)) await mutate(`/members/${member.user_id}`, 'PATCH', {status:data.status === 'active' ? 'suspended' : 'active'}); else return false;} )));
+          if (can('member.remove') && data.status !== 'removed') stateActions.push(dangerButton('조직에서 제거', () => run(async () => {if (await confirmAction(`${member.name}님을 조직에서 제거할까요?`, alive)) await mutate(`/members/${member.user_id}`, 'PATCH', {status:'removed'}); else return false;} )));
           detail.append(actions(...stateActions));
           detail.append(element('h3', '작업공간 및 적용 권한'));
           detail.append(table(['작업공간','부여 경로','최종 권한'], data.workspaces.map(w => [w.name, w.sources.map(s => s.source === 'team' ? `팀: ${s.team_name}` : '직접 추가').join(', '), w.permissions.join(', ')])));
@@ -188,7 +190,7 @@
             detail.append(form('작업공간 배정', [label('작업공간',select('workspace',spaces.map(w=>[w.id,w.name]))), label('역할',select('role',roleChoices(roles,'workspace')))], '배정 저장', async f => {
               await mutate(`/assignments/${f.get('workspace')}/members/${member.user_id}`, 'PUT', {role_id:f.get('role')}); if(alive()) await showMember(member);
             }, alive));
-            for (const w of data.workspaces.filter(w => spaces.some(s=>s.id===w.workspace_id) && w.sources.some(s=>s.source==='direct'))) detail.append(button(`${w.name} 직접 배정 해제`, () => run(() => mutate(`/assignments/${w.workspace_id}/members/${member.user_id}`, 'DELETE'))));
+            for (const w of data.workspaces.filter(w => spaces.some(s=>s.id===w.workspace_id) && w.sources.some(s=>s.source==='direct'))) detail.append(dangerButton(`${w.name} 직접 배정 해제`, () => run(() => mutate(`/assignments/${w.workspace_id}/members/${member.user_id}`, 'DELETE'))));
           }
         }
         if (can('member.invite') && !overview.is_personal) {
@@ -198,10 +200,10 @@
           inviteForm.querySelector('input').required=true;invitePanel.append(inviteForm);
           invitePanel.append(element('h2','초대 내역'),table(['이메일','상태','만료','관리'],invitations.map(i=>[i.email,statuses[i.status],new Date(i.expires_at).toLocaleString(),actions(...(['pending','expired'].includes(i.status)?[button('재전송',()=>run(()=>mutate(`/invitations/${i.id}/resend`,'POST'))),...(can('member.cancel_invite')?[button('취소',()=>run(()=>mutate(`/invitations/${i.id}`,'DELETE')))]:[])]:[]))])));
         } else {
-          invitePanel.append(element('p','초대 조회 권한이 없습니다.'));
+          invitePanel.append(ui.status({kind:'permission',text:'초대 조회 권한이 없습니다.'}));
         }
       } else if (view === 'roles') {
-        if (!can('role.read')) {host.append(element('p','역할 조회 권한이 없습니다.'));return;}
+        if (!can('role.read')) {host.append(ui.status({kind:'permission',text:'역할 조회 권한이 없습니다.'}));return;}
         const [roles,catalog] = await Promise.all([api('/roles'),api('/permission-catalog')]); if(!alive())return;
         const editor=element('section');
         host.append(settingsNav('roles'));
@@ -238,32 +240,31 @@
           editor.append(f);
         }
         host.append(element('p','조직 권한과 작업공간 권한을 각각 조합합니다. 작업공간 역할은 참여자 또는 팀에 배정할 때 적용할 공간을 선택합니다.'));
-        host.append(table(['역할','범위','종류','관리'],roles.map(r=>[button(roleName(r),()=>edit(r)),r.scope==='organization'?'조직':'작업공간',r.is_system?'기본':'사용자 지정',!r.is_system&&can('role.delete')?button('삭제',()=>run(async()=>{if(confirm('역할을 삭제할까요?'))await mutate(`/roles/${r.id}`,'DELETE');})):'' ])));
+        host.append(table(['역할','범위','종류','관리'],roles.map(r=>[button(roleName(r),()=>edit(r)),r.scope==='organization'?'조직':'작업공간',r.is_system?'기본':'사용자 지정',!r.is_system&&can('role.delete')?dangerButton('삭제',()=>run(async()=>{if(await confirmAction('역할을 삭제할까요?',alive))await mutate(`/roles/${r.id}`,'DELETE');else return false;})):'' ])));
         if(can('role.create'))host.append(button('역할 만들기',()=>edit(null)));host.append(editor);
       } else if(view==='teams') {
-        if(!can('team.read')){host.append(element('p','팀 조회 권한이 없습니다.'));return;}
+        if(!can('team.read')){host.append(ui.status({kind:'permission',text:'팀 조회 권한이 없습니다.'}));return;}
         const [teams,members,roles,spaces]=await Promise.all([api('/teams'),can('member.read')?api('/members'):[],can('role.read')?api('/roles'):[],can('member.read')?api('/workspace-options'):[]]);if(!alive())return;
         const editor=element('section');
         function edit(team){
           editor.replaceChildren(element('h2',team.name));
           if(can('team.update'))editor.append(form('팀 정보',[label('이름',input('name',team.name)),label('설명',input('description',team.description))],'저장',async f=>{await mutate(`/teams/${team.id}`,'PUT',{name:f.get('name'),description:f.get('description')});await refresh();},alive));
-          editor.append(table(['구성원','관리'],team.members.map(id=>[members.find(m=>m.user_id===id)?.name||id,can('team.manage_members')?button('팀에서 제외',()=>run(()=>mutate(`/teams/${team.id}/members/${id}`,'DELETE'))):''])));
+          editor.append(table(['구성원','관리'],team.members.map(id=>[members.find(m=>m.user_id===id)?.name||id,can('team.manage_members')?dangerButton('팀에서 제외',()=>run(()=>mutate(`/teams/${team.id}/members/${id}`,'DELETE'))):''])));
           const candidates=members.filter(m=>m.status==='active'&&!team.members.includes(m.user_id));
           if(can('team.manage_members')&&candidates.length)editor.append(form('팀원 추가',[label('구성원',select('user',candidates.map(m=>[m.user_id,`${m.name} (${m.email})`])) )],'추가',async f=>{await mutate(`/teams/${team.id}/members/${f.get('user')}`,'PUT');await refresh();},alive));
-          editor.append(table(['작업공간','역할','관리'],team.workspaces.map(w=>[spaces.find(s=>s.id===w.workspace_id)?.name||w.workspace_id,roleName(roles.find(r=>r.id===w.role_id)||{name:w.role_id}),can('team.update')?button('배정 해제',()=>run(()=>mutate(`/teams/${team.id}/workspaces/${w.workspace_id}`,'DELETE'))):''])));
+          editor.append(table(['작업공간','역할','관리'],team.workspaces.map(w=>[spaces.find(s=>s.id===w.workspace_id)?.name||w.workspace_id,roleName(roles.find(r=>r.id===w.role_id)||{name:w.role_id}),can('team.update')?dangerButton('배정 해제',()=>run(()=>mutate(`/teams/${team.id}/workspaces/${w.workspace_id}`,'DELETE'))):''])));
           if(can('team.update')&&spaces.length)editor.append(form('작업공간 배정',[label('작업공간',select('workspace',spaces.map(w=>[w.id,w.name]))),label('역할',select('role',roleChoices(roles.filter(r=>r.name!=='workspace_owner'),'workspace')))],'배정 저장',async f=>{await mutate(`/teams/${team.id}/workspaces/${f.get('workspace')}`,'PUT',{role_id:f.get('role')});await refresh();},alive));
         }
-        host.append(table(['팀','구성원 수','관리'],teams.map(t=>[button(t.name,()=>edit(t)),t.members.length,can('team.delete')?button('삭제',()=>run(async()=>{if(confirm('팀과 팀을 통한 작업공간 접근을 제거할까요?'))await mutate(`/teams/${t.id}`,'DELETE');})):'' ])),editor);
+        host.append(table(['팀','구성원 수','관리'],teams.map(t=>[button(t.name,()=>edit(t)),t.members.length,can('team.delete')?dangerButton('삭제',()=>run(async()=>{if(await confirmAction('팀과 팀을 통한 작업공간 접근을 제거할까요?',alive))await mutate(`/teams/${t.id}`,'DELETE');else return false;})):'' ])),editor);
         if(can('team.create'))host.append(form('팀 만들기',[label('이름',input('name')),label('설명',input('description'))],'만들기',async f=>{await mutate('/teams','POST',{name:f.get('name'),description:f.get('description')});await refresh();},alive));
       } else if(view==='audit') {
         host.append(settingsNav('audit'));
-        if(!(overview.is_owner||can('member.update_role'))){host.append(element('p','감사 로그 조회 권한이 없습니다.'));return;}
+        if(!(overview.is_owner||can('member.update_role'))){host.append(ui.status({kind:'permission',text:'감사 로그 조회 권한이 없습니다.'}));return;}
         const events=await api('/events');if(!alive())return;
         host.append(element('p','조직의 구성원·팀·역할·소유권 변경 기록입니다.'),table(['일시','작업','대상'],events.map(e=>[new Date(e.occurred_at).toLocaleString(),e.action,e.target_id])));
       } else {
         host.append(settingsNav('settings'));
-        const technical=element('dl',null,{class:'organization-technical'});
-        for(const [term,value] of [['조직 식별자',`@${overview.slug}`],['조직 ID',String(overview.id)]]){const row=element('div');row.append(element('dt',term),element('dd',value));technical.append(row);}
+        const technical=ui.metadataList([['조직 식별자',`@${overview.slug}`],['조직 ID',String(overview.id)]]);
         host.append(element('h2','일반'),technical);
         if(can('organization.update')){
           const orgName=input('name',overview.name);orgName.required=true;orgName.maxLength=200;
@@ -277,16 +278,16 @@
           const danger=element('section',null,{class:'organization-danger'});danger.append(element('h2','위험 작업'));
           const members=await api('/members');if(!alive())return;
           const candidates=members.filter(m=>m.status==='active'&&m.user_id!==local.userId);
-          if(candidates.length)danger.append(form('소유권 이전',[label('새 소유자',select('user',candidates.map(m=>[m.user_id,`${m.name} (${m.email})`])))],'소유권 이전',async f=>{if(confirm('소유권을 이전하고 현재 계정을 관리자로 변경할까요?')){await mutate('/transfer','POST',{user_id:f.get('user')});await refresh();}},alive));
+          if(candidates.length)danger.append(form('소유권 이전',[label('새 소유자',select('user',candidates.map(m=>[m.user_id,`${m.name} (${m.email})`])))],'소유권 이전',async f=>{if(await confirmAction('소유권을 이전하고 현재 계정을 관리자로 변경할까요?',alive)){await mutate('/transfer','POST',{user_id:f.get('user')});await refresh();}},alive));
           const confirmation=input('confirmation');confirmation.required=true;confirmation.autocomplete='off';
           danger.append(form('조직 삭제',[element('p','삭제하면 모든 구성원이 이 조직과 소속 작업공간에 접근할 수 없습니다. 조직 이름을 입력해 확인하세요.'),label('삭제할 조직 이름',confirmation)],'조직 삭제',async f=>{
             if(f.get('confirmation')!==overview.name)throw new Error('조직 이름이 일치하지 않습니다.');
             await mutate('','DELETE');if(alive())await local.changed(null);
-          },alive));host.append(danger);
+          },alive,'danger'));host.append(danger);
         }
       }
     } catch(e) {if(alive()){loading.remove();errorBox.textContent=e.message;host.append(button('다시 불러오기',refresh));}}
   }
   nav?.querySelectorAll('[data-org-view]').forEach(node=>node.addEventListener('click',()=>open(config,node.dataset.orgView)));
-  window.agentFactoryOrganizations={open, reset(){generation++;host.replaceChildren();}};
+  window.agentFactoryOrganizations={open, reset(){generation++;clearConfirmation();host.replaceChildren();}};
 })();

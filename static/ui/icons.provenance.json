@@ -1,0 +1,86 @@
+{
+  "version": "3.46.0",
+  "license": "./tabler-LICENSE",
+  "files": [
+    {
+      "name": "alert-triangle.svg",
+      "sha256": "fc82f02dc9702293cb8609a8aed3242c0fe5f5b3337d79d341aa9343b4526ad4",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/alert-triangle.svg"
+    },
+    {
+      "name": "check.svg",
+      "sha256": "fe359b27c74ed0f4f72bfabbe5ca969a8bb13a5f39648bae63f9e798034ebed3",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/check.svg"
+    },
+    {
+      "name": "chevron-down.svg",
+      "sha256": "06bd20b8cbe565b97046c5d0ec917f11ed6b29c0e4885a82ae057325c972bf9a",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/chevron-down.svg"
+    },
+    {
+      "name": "chevron-right.svg",
+      "sha256": "26b321e42c7c7ed5d5161d9af061033df1d49ef33b5d2fc2309e2f6ee3d4c81a",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/chevron-right.svg"
+    },
+    {
+      "name": "copy.svg",
+      "sha256": "b38a178d5ee74073f95b57ea33e7dab0624e314c1cc835c85ff35f1d1e5517e1",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/copy.svg"
+    },
+    {
+      "name": "dots.svg",
+      "sha256": "e0a3f950691ef2e3a4c5c35200eabded201eeb9980b61beab84dcb345c630d9a",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/dots.svg"
+    },
+    {
+      "name": "external-link.svg",
+      "sha256": "951e270416621680e98e80224ef6466a43fc9db3f5105a2005bd621b02e30634",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/external-link.svg"
+    },
+    {
+      "name": "history.svg",
+      "sha256": "0db058f1c196fb1a515998e5814168df3d5300fce746ed90fcf5d7227a0b594d",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/history.svg"
+    },
+    {
+      "name": "loader-2.svg",
+      "sha256": "fe19132ccc93f7b20575769485b13c0404a9809c3c1daf1f746c3a3d70622180",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/loader-2.svg"
+    },
+    {
+      "name": "menu-2.svg",
+      "sha256": "a0080a4db00a4168cfea54a74724e4147cbd9d003f65e70fa367ae797b9cfed8",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/menu-2.svg"
+    },
+    {
+      "name": "plus.svg",
+      "sha256": "ea2630f3d4b4800ed9e1f2818b7064bb62b27943c482e739d76bd2320f82632d",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/plus.svg"
+    },
+    {
+      "name": "refresh.svg",
+      "sha256": "12927e445fd886d0e0fd538ba60fbea56ff8a456204481e233f77ad322e65062",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/refresh.svg"
+    },
+    {
+      "name": "search.svg",
+      "sha256": "e579b69a4b978f702908a48b1bef74d9ac73df4679cb1a6074c567bec2748c41",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/search.svg"
+    },
+    {
+      "name": "settings.svg",
+      "sha256": "d71136dfd83ad19efe1777d01768a5d23d7b295de5dde3b1fccc50806809a423",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/settings.svg"
+    },
+    {
+      "name": "trash.svg",
+      "sha256": "28587eb685afab185034d3fe0e192000a38a4f384e5de8c5c6da2512991d89ff",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/trash.svg"
+    },
+    {
+      "name": "x.svg",
+      "sha256": "6b97b0d51512b84eee04c0644fd07059a9c21d537886cdb40ef48485d874abc3",
+      "source": "https://raw.githubusercontent.com/tabler/tabler-icons/8ac7d81b72ece11072ef25ea9fd92e80c6f3c9fc/icons/outline/x.svg"
+    }
+  ]
+}

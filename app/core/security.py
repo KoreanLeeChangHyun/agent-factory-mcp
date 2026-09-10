@@ -22,11 +22,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         response = await call_next(request)
         # Match the resolved endpoint, status and trusted header values together.
-        from app.router.cloud_documents import package_preview
         from app.modules.document.preview import PREVIEW_HEADERS
+        from app.router.cloud_documents import package_preview
+
         preview = (
             request.scope.get("endpoint") is package_preview
-            and request.method == "GET" and response.status_code == 200
+            and request.method == "GET"
+            and response.status_code == 200
             and all(response.headers.get(key) == value for key, value in PREVIEW_HEADERS.items())
         )
         response.headers.update(
@@ -46,6 +48,19 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         )
         if preview:
             response.headers.update(PREVIEW_HEADERS)
+        from app.router.admin import asset_catalog
+
+        if (
+            request.scope.get("endpoint") is asset_catalog
+            and request.method in {"GET", "HEAD"}
+            and response.status_code == 200
+        ):
+            response.headers["X-Frame-Options"] = "SAMEORIGIN"
+            response.headers["Content-Security-Policy"] = (
+                "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: blob:; object-src 'none'; connect-src 'self' data:; "
+                "frame-ancestors 'self'; base-uri 'none'; form-action 'self'"
+            )
         if request.url.scheme == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response

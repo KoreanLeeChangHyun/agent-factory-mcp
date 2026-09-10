@@ -4,10 +4,12 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.paths import ASSET_ROOT
+from app.core.ui_catalog import catalog_files
 from app.core.urls import public_path
 from app.db.session import get_session
 from app.modules.admin.repository import AdminRepository
@@ -50,6 +52,24 @@ async def admin() -> RedirectResponse:
 @router.get("/admin", include_in_schema=False)
 async def admin_root() -> RedirectResponse:
     return RedirectResponse(public_path("/admin/"), status_code=307)
+
+
+@router.api_route("/admin/assets/", methods=["GET", "HEAD"], include_in_schema=False)
+@router.api_route(
+    "/admin/assets/{asset_path:path}", methods=["GET", "HEAD"], include_in_schema=False
+)
+async def asset_catalog(
+    principal: Annotated[Principal, Depends(require_platform_admin)],
+    asset_path: str = "index.html",
+) -> FileResponse:
+    root = ASSET_ROOT / "assets" / "ui-kit"
+    files = catalog_files(root)
+    path = files.get(asset_path or "index.html")
+    if path is None:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return FileResponse(
+        path, headers={"Cache-Control": "no-store", "X-Frame-Options": "SAMEORIGIN"}
+    )
 
 
 @router.get("/api/admin/dashboard", response_model=DashboardResponse)

@@ -1,5 +1,6 @@
 const workspaceShell = document.querySelector("[data-workspace-shell]");
 const activityBar = document.querySelector(".activity-bar");
+const primarySidebar = document.querySelector("[data-sidebar-host]");
 const sidebarResizer = document.querySelector("[data-sidebar-resizer]");
 const activityButtons = document.querySelectorAll("[data-activity]");
 const activityContextMenu = document.querySelector("[data-activity-context-menu]");
@@ -9,7 +10,7 @@ const sidebarViews = document.querySelectorAll("[data-sidebar-view]");
 const workspaceViews = document.querySelectorAll("[data-workspace-view]");
 const documentNavigationItems = document.querySelectorAll("[data-document-target]");
 const documentViews = document.querySelectorAll("[data-document-view]");
-const documentGroupToggles = document.querySelectorAll("[data-document-group-toggle]");
+const sidebarSectionToggles = document.querySelectorAll("[data-sidebar-section-toggle]");
 const originalSearchInput = document.querySelector("[data-original-global-search]");
 const originalSearchState = document.querySelector("[data-original-search-state]");
 const originalSearchFailure = document.querySelector("[data-original-search-failure]");
@@ -49,7 +50,7 @@ const activityTitles = {
   integrations: "연동",
   database: "DB",
   account: "계정",
-  admin: "관리자",
+  admin: "슈퍼 관리자",
 };
 const activityOrderKey = "agentFactoryActivityOrder";
 const activityVisibilityKey = "agentFactoryActivityVisibility";
@@ -406,24 +407,35 @@ const setActivityVisibility = (activity, visible) => {
   }
 };
 
-const closeActivityContextMenu = () => {
+let activityMenuCleanup = null, activityMenuOrigin = null;
+const closeActivityContextMenu = (restoreFocus = false) => {
+  activityMenuCleanup?.(); activityMenuCleanup = null;
   if (activityContextMenu) activityContextMenu.hidden = true;
+  if (restoreFocus) {
+    const target = activityMenuOrigin?.isConnected && activityMenuOrigin.matches('button,[tabindex]') && activityMenuOrigin.getClientRects().length && !activityMenuOrigin.disabled
+      ? activityMenuOrigin : document.querySelector('[data-activity]:not([hidden]):not(:disabled)') || document.querySelector('[data-configure-activities]:not([hidden])');
+    target?.focus();
+  }
+  activityMenuOrigin = null;
 };
 
-const openActivityContextMenu = (x, y) => {
-  if (!tenant.workspaceId) return;
-  if (!activityContextMenu) return;
+const openActivityContextMenu = (x, y, origin = activityBar) => {
+  if (!tenant.workspaceId || !activityContextMenu) return;
+  closeActivityContextMenu();
+  activityMenuOrigin = origin;
   const activities = Object.keys(activityTitles).filter((activity) => activity !== "admin" || platformAdmin);
   const visibility = activityVisibility();
-  activityContextMenu.innerHTML = activities.map((activity) => {
+  activityContextMenu.replaceChildren(...activities.map((activity) => {
     const checked = visibility[activity] !== false;
-    return `<button type="button" role="menuitemcheckbox" aria-checked="${checked}" data-activity-visibility="${activity}"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"${checked ? "" : " hidden"}><path d="m3.5 8 3 3 6-6"/></svg><span>${activityTitles[activity]}</span></button>`;
-  }).join("");
+    const button = window.agentFactoryUI.button({label:activityTitles[activity]});
+    button.setAttribute('role','menuitemcheckbox');button.setAttribute('aria-checked',String(checked));
+    button.dataset.activityVisibility = activity;
+    const icon = window.agentFactoryUI.icon('check');icon.toggleAttribute('hidden',!checked);
+    button.prepend(icon);
+    return button;
+  }));
   activityContextMenu.hidden = false;
-  const width = activityContextMenu.offsetWidth;
-  const height = activityContextMenu.offsetHeight;
-  activityContextMenu.style.left = `${Math.max(6, Math.min(x, window.innerWidth - width - 6))}px`;
-  activityContextMenu.style.top = `${Math.max(6, Math.min(y, window.innerHeight - height - 6))}px`;
+  activityMenuCleanup = window.agentFactoryPositioning.positionMenu(activityContextMenu,{origin,x,y});
   activityContextMenu.querySelector("button")?.focus();
 };
 
@@ -439,9 +451,7 @@ const moveActivity = (button, direction) => {
 };
 
 const clearActivityDropIndicator = () => {
-  activityButtons.forEach((button) => {
-    button.classList.remove("is-drop-before", "is-drop-after");
-  });
+  activityButtons.forEach((button) => button.classList.remove("is-drop-before", "is-drop-after"));
   pendingActivityDrop = null;
 };
 
@@ -453,7 +463,9 @@ const showActivityDropIndicator = (target, position) => {
 };
 
 const selectActivity = (activity) => {
+  if (activity !== "admin") window.agentFactoryAdmin?.reset();
   if (activity !== null && !Object.hasOwn(activityTitles, activity)) return;
+  setSidebarExpanded(true);
   if (activity !== null && activity !== "workspaces") window.agentFactoryMCPConnection?.dismiss();
   documentEditor?.clearDrag();
   documentEditor?.closeMenu(false);
@@ -525,6 +537,11 @@ const selectDocumentView = (target) => {
 const setSidebarWidth = (width) => {
   if (!workspaceShell || !sidebarResizer) return;
 
+  if (width < minimumSidebarWidth) {
+    setSidebarExpanded(false);
+    return;
+  }
+
   const activityBarWidth = Number.parseFloat(
     getComputedStyle(workspaceShell).getPropertyValue("--activity-bar-width"),
   );
@@ -538,7 +555,21 @@ const setSidebarWidth = (width) => {
   );
 
   workspaceShell.style.setProperty("--primary-sidebar-width", `${nextWidth}px`);
+  if (workspaceShell.dataset.sidebarCollapsed === "true") setSidebarExpanded(true);
   sidebarResizer.setAttribute("aria-valuenow", String(Math.round(nextWidth)));
+};
+
+const setSidebarExpanded = (expanded) => {
+  if (!workspaceShell || !primarySidebar) return;
+  workspaceShell.dataset.sidebarCollapsed = String(!expanded);
+  primarySidebar.hidden = !expanded;
+  if (sidebarResizer) {
+    sidebarResizer.hidden = false;
+    const width = Number.parseFloat(
+      getComputedStyle(workspaceShell).getPropertyValue("--primary-sidebar-width"),
+    );
+    sidebarResizer.setAttribute("aria-valuenow", String(expanded && Number.isFinite(width) ? Math.round(width) : 0));
+  }
 };
 
 const populateSelect = (select, rows) => {
@@ -553,12 +584,17 @@ const populateSelect = (select, rows) => {
 
 let workspaceRows = [];
 let recentRows = [];
+let workspaceGroupRows = [];
 let organizationRows = [];
 let workspaceLoadVersion = 0;
 let documentLoadVersion = 0;
 const listState = document.querySelector("[data-workspace-list-state]");
 const createDialog = document.querySelector("[data-create-dialog]");
+const createDialogUI = window.agentFactoryUI.bindNativeDialog(createDialog);
 const createForm = document.querySelector("[data-create-form]");
+const createName = createForm.elements.name;
+const createNameLabel = createForm.querySelector('label[for="workspace-name"]');
+createNameLabel.replaceWith(window.agentFactoryUI.fieldFor({label:'작업공간 이름',control:createName}).root);
 
 const resetWorkspaceDocuments = () => {
   documentLoadVersion += 1;
@@ -602,20 +638,29 @@ const renderWorkspaceMetadata = record => {
 };
 
 let workspaceRenameMenu = null;
-const closeWorkspaceRenameMenu = () => { workspaceRenameMenu?.remove(); workspaceRenameMenu = null; };
+let workspaceRenamePositionCleanup = null, workspaceRenameOrigin = null;
+const closeWorkspaceRenameMenu = (restore = false) => {
+  workspaceRenamePositionCleanup?.(); workspaceRenamePositionCleanup = null;
+  workspaceRenameMenu?.remove(); workspaceRenameMenu = null;
+  if (restore && workspaceRenameOrigin?.isConnected) workspaceRenameOrigin.focus();
+  workspaceRenameOrigin = null;
+};
 const openRenameMenu = (event, rename) => {
   event.preventDefault(); event.stopPropagation(); closeWorkspaceRenameMenu();
-  const menu = document.createElement('div'); menu.className = 'activity-context-menu'; menu.setAttribute('role', 'menu');
-  const action = document.createElement('button'); action.type = 'button'; action.textContent = '이름 변경'; action.setAttribute('role', 'menuitem');
+  const menu = document.createElement('div'); menu.className = 'activity-context-menu af-popover af-kit'; menu.setAttribute('role', 'menu');
+  const action = window.agentFactoryUI.button({label:'이름 변경'}); action.setAttribute('role', 'menuitem');
   action.addEventListener('click', rename); menu.append(action);
-  menu.style.left = Math.max(0, Math.min(event.clientX, innerWidth - 180)) + 'px';
-  menu.style.top = Math.max(0, Math.min(event.clientY, innerHeight - 48)) + 'px';
-  workspaceRenameMenu = menu; document.body.append(menu); action.focus();
+  workspaceRenameMenu = menu; workspaceRenameOrigin = event.currentTarget;
+  document.body.append(menu);
+  workspaceRenamePositionCleanup = window.agentFactoryPositioning.positionMenu(menu,{
+    origin:workspaceRenameOrigin,x:event.clientX || undefined,y:event.clientY || undefined,
+  });
+  menu.onkeydown = window.agentFactoryUI.menuKeyboard({items:() => [action],close:() => closeWorkspaceRenameMenu(true)});
+  action.focus();
 };
 const renameWorkspaceGroup = (heading, group) => {
   closeWorkspaceRenameMenu();
   if (heading.querySelector('form')) return;
-  const key = workspaceGroupsKey();
   const form = document.createElement('form'); form.className = 'workspace-rename';
   const input = document.createElement('input'); input.value = group.name; input.maxLength = 60; input.required = true;
   input.setAttribute('aria-label', '그룹 이름 변경');
@@ -626,19 +671,26 @@ const renameWorkspaceGroup = (heading, group) => {
     event.stopPropagation();
     if (event.key === 'Escape') { event.preventDefault(); heading.textContent = group.name; heading.focus(); }
   });
-  form.addEventListener('submit', event => {
+  form.addEventListener('submit', async event => {
     event.preventDefault(); event.stopPropagation();
-    if (key !== workspaceGroupsKey()) return;
     const name = input.value.trim(); const groups = workspaceGroups();
     if (!name || groups.some(item => item.id !== group.id && item.name === name)) {
       error.textContent = name ? '같은 이름의 그룹이 있습니다.' : '그룹 이름을 입력하세요.'; return;
     }
-    const item = groups.find(item => item.id === group.id);
-    if (!item) return;
-    item.name = name;
-    if (!saveWorkspaceGroups(groups)) { error.textContent = '저장하지 못했습니다. 다시 시도하세요.'; return; }
-    renderWorkspaces();
-    document.querySelector(`[data-workspace-group-id="${group.id}"] > summary`)?.focus();
+    input.disabled = true;
+    try {
+      const updated = await api(`/api/organizations/${tenant.organizationId}/workspaces/groups/${group.id}`, {
+        method: 'PATCH', body: JSON.stringify({ name, revision: group.revision }),
+      });
+      const item = workspaceGroupRows.find(item => item.id === group.id);
+      if (!item) return;
+      Object.assign(item, updated, { workspace_ids: item.workspace_ids });
+      renderWorkspaces();
+      document.querySelector(`[data-workspace-group-id="${group.id}"] > summary`)?.focus();
+    } catch (failure) {
+      error.textContent = failure.status === 409 ? '다른 곳에서 변경되었거나 같은 이름의 그룹이 있습니다.' : '저장하지 못했습니다. 다시 시도하세요.';
+      input.disabled = false; input.focus();
+    }
   });
 };
 
@@ -680,12 +732,12 @@ const renameWorkspace = (button, record) => {
   });
 };
 document.addEventListener('pointerdown', event => { if (workspaceRenameMenu && !workspaceRenameMenu.contains(event.target)) closeWorkspaceRenameMenu(); });
-document.addEventListener('keydown', event => { if (event.key === 'Escape') closeWorkspaceRenameMenu(); });
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeWorkspaceRenameMenu(true); });
 
-const workspaceRow = (record) => {
+const workspaceRow = (record, { panel = false } = {}) => {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = "app-sidebar__row workspace-row";
+  button.className = panel ? "ui-button ui-button--link workspace-recent-row" : "app-sidebar__row workspace-row";
   button.dataset.workspaceId = record.id;
   button.title = record.name;
   button.setAttribute("aria-current", String(record.id === tenant.workspaceId));
@@ -698,28 +750,27 @@ const workspaceRow = (record) => {
   return button;
 };
 
-// Personal list organization is a browser preference, scoped by account and owner.
-const workspaceGroupsKey = () => `agentFactoryWorkspaceGroups:${activityUserId}:${tenant.organizationId || "personal"}`;
-const workspaceGroups = () => {
-  const groups = storedJson(workspaceGroupsKey(), []);
-  return Array.isArray(groups) ? groups.filter(group => group && typeof group.id === "string"
-    && typeof group.name === "string" && Array.isArray(group.workspaceIds)) : [];
-};
-const saveWorkspaceGroups = groups => {
-  try { localStorage.setItem(workspaceGroupsKey(), JSON.stringify(groups)); }
-  catch { listState.textContent = "그룹을 저장하지 못했습니다."; return false; }
-  return true;
-};
-const moveWorkspaceToGroup = (id, groupId) => {
+// Personal list organization is authoritative server state, scoped by user and organization.
+const workspaceGroups = () => workspaceGroupRows;
+const moveWorkspaceToGroup = async (id, groupId) => {
   if (!workspaceRows.some(row => row.id === id)) return;
-  const groups = workspaceGroups();
-  for (const group of groups) {
-    group.workspaceIds = group.workspaceIds.filter(value => value !== id);
-    if (group.id === groupId) group.workspaceIds.push(id);
+  try {
+    const path = groupId
+      ? `/api/organizations/${tenant.organizationId}/workspaces/groups/${groupId}/workspaces/${id}`
+      : `/api/organizations/${tenant.organizationId}/workspaces/groups/workspaces/${id}`;
+    await api(path, { method: groupId ? 'PUT' : 'DELETE' });
+    for (const group of workspaceGroupRows) {
+      group.workspace_ids = group.workspace_ids.filter(value => value !== id);
+      if (group.id === groupId) group.workspace_ids.push(id);
+    }
+    renderWorkspaces();
+  } catch {
+    listState.textContent = '그룹 이동을 저장하지 못했습니다.';
   }
-  if (saveWorkspaceGroups(groups)) renderWorkspaces();
 };
 const groupDropTarget = (element, groupId) => {
+  if (element.dataset.workspaceDropBound === 'true') return;
+  element.dataset.workspaceDropBound = 'true';
   element.addEventListener("dragover", event => {
     if (!event.dataTransfer.types.includes("application/x-agent-factory-workspace")) return;
     event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect = "move";
@@ -732,13 +783,15 @@ const groupDropTarget = (element, groupId) => {
     element.classList.remove("is-drop-target");
     const id = event.dataTransfer.getData("application/x-agent-factory-workspace");
     if (!id) return;
-    event.preventDefault(); event.stopPropagation(); moveWorkspaceToGroup(id, groupId);
+    event.preventDefault(); event.stopPropagation(); void moveWorkspaceToGroup(id, groupId);
   });
 };
 const renderWorkspaces = () => {
-  const list = document.querySelector("[data-workspace-list]");
+  closeWorkspaceRenameMenu();
+  const defaultList = document.querySelector("[data-workspace-default-list]");
+  const groupList = document.querySelector("[data-workspace-group-list]");
   const groups = workspaceGroups();
-  const grouped = new Set(groups.flatMap(group => group.workspaceIds));
+  const grouped = new Set(groups.flatMap(group => group.workspace_ids));
   const rowWithGroup = record => {
     const row = document.createElement("div"); row.className = "workspace-group-row";
     const button = workspaceRow(record);
@@ -755,7 +808,9 @@ const renderWorkspaces = () => {
     row.append(button);
     return row;
   };
-  list.replaceChildren();
+  defaultList.replaceChildren(...workspaceRows.filter(row => !grouped.has(row.id)).map(rowWithGroup));
+  groupDropTarget(defaultList, "");
+  groupList.replaceChildren();
   groups.forEach(group => {
     const section = document.createElement("details"); section.className = "workspace-group";
     section.dataset.workspaceGroupId = group.id;
@@ -763,21 +818,26 @@ const renderWorkspaces = () => {
     const heading = document.createElement("summary"); heading.textContent = group.name;
     heading.addEventListener('contextmenu', event => openRenameMenu(event, () => renameWorkspaceGroup(heading, group)));
     heading.addEventListener('keydown', event => { if (event.key === 'F2') { event.preventDefault(); renameWorkspaceGroup(heading, group); } });
-    section.append(heading, ...workspaceRows.filter(row => group.workspaceIds.includes(row.id)).map(rowWithGroup));
-    section.addEventListener("toggle", () => {
+    section.append(heading, ...workspaceRows.filter(row => group.workspace_ids.includes(row.id)).map(rowWithGroup));
+    section.addEventListener("toggle", async () => {
       if (!section.isConnected) return;
-      const current = workspaceGroups();
-      const item = current.find(item => item.id === group.id);
-      if (item && item.collapsed !== !section.open) { item.collapsed = !section.open; saveWorkspaceGroups(current); }
+      const collapsed = !section.open;
+      if (group.collapsed === collapsed) return;
+      try {
+        const updated = await api(`/api/organizations/${tenant.organizationId}/workspaces/groups/${group.id}`, {
+          method: 'PATCH', body: JSON.stringify({ collapsed, revision: group.revision }),
+        });
+        Object.assign(group, updated, { workspace_ids: group.workspace_ids });
+      } catch {
+        group.collapsed = !collapsed;
+        section.open = !group.collapsed;
+        listState.textContent = '그룹 상태를 저장하지 못했습니다.';
+      }
     });
-    groupDropTarget(section, group.id); list.append(section);
+    groupDropTarget(section, group.id); groupList.append(section);
   });
-  const ungrouped = document.createElement("div"); ungrouped.className = "workspace-ungrouped";
-  if (groups.length) { const label = document.createElement("p"); label.textContent = "그룹 없음"; ungrouped.append(label); }
-  ungrouped.append(...workspaceRows.filter(row => !grouped.has(row.id)).map(rowWithGroup));
-  groupDropTarget(ungrouped, ""); list.append(ungrouped);
   listState.textContent = !workspaceRows.length ? "작업공간이 없습니다. 새로 만들어 시작하세요." : "";
-  document.querySelector("[data-recent-workspaces]").replaceChildren(...recentRows.map(workspaceRow));
+  document.querySelector("[data-recent-workspaces]").replaceChildren(...recentRows.map(record => workspaceRow(record, { panel: true })));
   document.querySelector("[data-recent-state]").hidden = recentRows.length > 0;
 };
 const groupForm = document.querySelector("[data-workspace-group-form]");
@@ -788,18 +848,27 @@ document.querySelector("[data-create-workspace-group]").addEventListener("click"
 groupForm.addEventListener("keydown", event => {
   if (event.key === "Escape") { event.preventDefault(); groupForm.hidden = true; document.querySelector("[data-create-workspace-group]").focus(); }
 });
-groupForm.addEventListener("submit", event => {
+groupForm.addEventListener("submit", async event => {
   event.preventDefault();
   const name = groupForm.querySelector("input").value.trim();
   const groups = workspaceGroups();
   if (!name || groups.some(group => group.name === name)) {
     groupForm.querySelector("p").textContent = name ? "같은 이름의 그룹이 있습니다." : "그룹 이름을 입력하세요."; return;
   }
-  groups.push({ id: crypto.randomUUID(), name, workspaceIds: [], collapsed: false });
-  if (saveWorkspaceGroups(groups)) { groupForm.hidden = true; renderWorkspaces(); }
+  const input = groupForm.querySelector('input'); input.disabled = true;
+  try {
+    const created = await api(`/api/organizations/${tenant.organizationId}/workspaces/groups`, {
+      method: 'POST', body: JSON.stringify({ name }),
+    });
+    workspaceGroupRows.push(created);
+    groupForm.hidden = true; renderWorkspaces();
+  } catch (failure) {
+    groupForm.querySelector('p').textContent = failure.status === 409 ? '같은 이름의 그룹이 있습니다.' : '그룹을 저장하지 못했습니다.';
+  } finally { input.disabled = false; }
 });
 
 const enterWorkspace = async (id) => {
+  closeWorkspaceRenameMenu();
   const record = workspaceRows.find((row) => row.id === id);
   if (!record) return;
   resetWorkspaceDocuments();
@@ -845,7 +914,7 @@ const enterWorkspace = async (id) => {
   applyActivityVisibility();
   selectActivity("workspaces");
   try {
-    documentGroupToggles.forEach(toggle => {
+    sidebarSectionToggles.forEach(toggle => {
       const content = document.getElementById(toggle.getAttribute('aria-controls'));
       if (!content) return;
       const expanded = localStorage.getItem(activityPreferenceKey('expanded:' + content.id));
@@ -865,6 +934,7 @@ const enterWorkspace = async (id) => {
 };
 
 const loadWorkspaces = async () => {
+  closeWorkspaceRenameMenu();
   renderOrganizationIdentity();
   groupForm.hidden = true;
   const saved = savedWorkspaceView();
@@ -879,12 +949,15 @@ const loadWorkspaces = async () => {
   showWorkspaceList();
   workspaceRows = [];
   recentRows = [];
+  workspaceGroupRows = [];
   renderWorkspaces();
   document.querySelector("[data-retry-workspaces]").hidden = true;
   if (!tenant.organizationId) return;
   listState.textContent = "작업공간을 불러오는 중입니다.";
   const base = `/api/organizations/${tenant.organizationId}/workspaces`;
-  const [listed, recent] = await Promise.allSettled([api(base), api(`${base}/recent`)]);
+  const [listed, recent, groups] = await Promise.allSettled([
+    api(base), api(`${base}/recent`), api(`${base}/groups`),
+  ]);
   if (version !== workspaceLoadVersion) return;
   if (listed.status === "rejected") {
     listState.textContent = "작업공간을 불러오지 못했습니다.";
@@ -893,8 +966,10 @@ const loadWorkspaces = async () => {
   }
   workspaceRows = listed.value.filter((row) => row.status !== "inactive");
   recentRows = recent.status === "fulfilled" ? recent.value.filter((row) => workspaceRows.some((item) => item.id === row.id)) : [];
+  workspaceGroupRows = groups.status === 'fulfilled' ? groups.value : [];
   renderWorkspaces();
   if (recent.status === "rejected") document.querySelector("[data-recent-state]").textContent = "최근 목록을 불러오지 못했습니다.";
+  if (groups.status === 'rejected') listState.textContent = '그룹을 불러오지 못했습니다.';
   if (saved && workspaceRows.some((row) => row.id === saved.workspaceId)) {
     await enterWorkspace(saved.workspaceId);
     if (version !== workspaceLoadVersion || tenant.workspaceId !== saved.workspaceId) return;
@@ -950,7 +1025,7 @@ const showCreateWorkspace = () => {
   createForm.reset();
   document.querySelector("[data-create-error]").textContent = "";
   document.querySelector("[data-create-owner]").textContent = organizationSelect.selectedOptions[0]?.textContent || "개인";
-  createDialog.showModal();
+  createDialogUI.open({initialFocus:createName});
 };
 
 document.querySelectorAll("[data-create-workspace]").forEach((button) => button.addEventListener("click", showCreateWorkspace));
@@ -961,6 +1036,7 @@ createForm.addEventListener("submit", async (event) => {
   const submit = createForm.querySelector('[type="submit"]');
   if (submit.disabled) return;
   submit.disabled = true;
+  submit.setAttribute("aria-busy", "true");
   const startingOrganization = tenant.organizationId;
   const startingVersion = workspaceLoadVersion;
   try {
@@ -975,7 +1051,7 @@ createForm.addEventListener("submit", async (event) => {
       organizationSelect.value = tenant.organizationId;
       accountOrganization.textContent = organizationSelect.selectedOptions[0]?.textContent || "개인";
     }
-    createDialog.close();
+    createDialogUI.close();
     const createdOrganization = tenant.organizationId;
     const expectedVersion = workspaceLoadVersion + 1;
     await loadWorkspaces();
@@ -986,7 +1062,7 @@ createForm.addEventListener("submit", async (event) => {
   } catch (error) {
     if (startingVersion !== workspaceLoadVersion || tenant.organizationId !== startingOrganization) return;
     document.querySelector("[data-create-error]").textContent = error.status === 403 ? "이 공간에 작업공간을 만들 권한이 없습니다." : "작업공간을 만들지 못했습니다. 다시 시도해 주세요.";
-  } finally { submit.disabled = false; }
+  } finally { submit.disabled = false; submit.removeAttribute("aria-busy"); }
 });
 const openOrganizationManagement = (view = "overview") => {
   selectActivity("organization");
@@ -1013,7 +1089,7 @@ document.querySelector("[data-open-organizations]").addEventListener("click", ()
 });
 document.querySelectorAll("[data-open-workspaces]").forEach((button) => button.addEventListener("click", () => showWorkspaceList(true)));
 document.querySelector("[data-retry-workspaces]").addEventListener("click", () => bootAuthentication());
-document.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
+createDialog.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => createDialogUI.close()));
 
 
 const openWorkspace = async (session) => {
@@ -1100,7 +1176,7 @@ applyActivityVisibility();
 document.querySelector("[data-configure-activities]").addEventListener("click", (event) => {
   event.stopPropagation();
   const bounds = activityBar.getBoundingClientRect();
-  openActivityContextMenu(bounds.right, bounds.top);
+  openActivityContextMenu(bounds.right, bounds.top, event.currentTarget);
 });
 
 documentConnectorsButton?.addEventListener("click", () => {
@@ -1163,7 +1239,7 @@ activityBar?.addEventListener("drop", (event) => {
 
 activityBar?.addEventListener("contextmenu", (event) => {
   event.preventDefault();
-  openActivityContextMenu(event.clientX, event.clientY);
+  openActivityContextMenu(event.clientX, event.clientY, event.target.closest('button') || activityBar);
 });
 
 activityContextMenu?.addEventListener("click", (event) => {
@@ -1172,30 +1248,45 @@ activityContextMenu?.addEventListener("click", (event) => {
   event.stopPropagation();
   const activity = button.dataset.activityVisibility;
   setActivityVisibility(activity, button.getAttribute("aria-checked") !== "true");
-  openActivityContextMenu(Number.parseFloat(activityContextMenu.style.left), Number.parseFloat(activityContextMenu.style.top));
+  const checked = activityVisibility()[activity] !== false;
+  button.setAttribute('aria-checked',String(checked));
+  button.querySelector('svg').toggleAttribute('hidden',!checked);
 });
 
-activityContextMenu?.addEventListener("keydown", (event) => {
-  if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
-  const items = Array.from(activityContextMenu.querySelectorAll("button"));
-  const current = items.indexOf(document.activeElement);
-  if (!items.length) return;
-  event.preventDefault();
-  if (event.key === "Home") items[0].focus();
-  else if (event.key === "End") items.at(-1).focus();
-  else items[(current + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus();
-});
+activityContextMenu?.addEventListener('keydown', window.agentFactoryUI.menuKeyboard({
+  items:() => [...activityContextMenu.querySelectorAll('[role="menuitemcheckbox"]')],close:closeActivityContextMenu,
+}));
+window.addEventListener('pagehide', () => closeActivityContextMenu());
 
-profileToggle?.addEventListener("click", () => {
-  const expanded = profileToggle.getAttribute("aria-expanded") === "true";
-  profileToggle.setAttribute("aria-expanded", String(!expanded));
-  if (profileMenu) profileMenu.hidden = expanded;
+let profilePositionCleanup = null;
+function closeProfileMenu(restoreFocus = false) {
+  profilePositionCleanup?.(); profilePositionCleanup = null;
+  profileToggle?.setAttribute('aria-expanded','false');
+  if (profileMenu) profileMenu.hidden = true;
+  if (restoreFocus) profileToggle?.focus();
+}
+function openProfileMenu() {
+  if (!profileMenu || !profileToggle) return;
+  closeProfileMenu();
+  profileMenu.hidden = false;
+  profileToggle.setAttribute('aria-expanded','true');
+  profilePositionCleanup = window.agentFactoryPositioning.positionMenu(profileMenu,{origin:profileToggle});
+  profileMenu.querySelector('[role="menuitem"]:not(:disabled)')?.focus();
+}
+profileToggle?.addEventListener('click', () => {
+  if (profileMenu?.hidden) openProfileMenu(); else closeProfileMenu(true);
 });
+profileToggle?.addEventListener('keydown', event => {
+  if (['ArrowDown','ArrowUp'].includes(event.key)) {event.preventDefault();openProfileMenu();}
+});
+profileMenu?.addEventListener('keydown', window.agentFactoryUI.menuKeyboard({
+  items:() => [...profileMenu.querySelectorAll('[role="menuitem"]')], close:closeProfileMenu,
+}));
+window.addEventListener('pagehide', () => closeProfileMenu());
 
 document.addEventListener("click", (event) => {
   if (!profileControl?.contains(event.target)) {
-    profileToggle?.setAttribute("aria-expanded", "false");
-    if (profileMenu) profileMenu.hidden = true;
+    closeProfileMenu();
   }
   if (!activityContextMenu?.contains(event.target)) closeActivityContextMenu();
 });
@@ -1203,9 +1294,7 @@ document.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   if (profileMenu && !profileMenu.hidden) {
-    profileMenu.hidden = true;
-    profileToggle?.setAttribute("aria-expanded", "false");
-    profileToggle?.focus();
+    closeProfileMenu(true);
   }
   closeActivityContextMenu();
 });
@@ -1218,7 +1307,7 @@ documentNavigationItems.forEach((item) => {
   });
 });
 
-documentGroupToggles.forEach((toggle) => {
+sidebarSectionToggles.forEach((toggle) => {
   toggle.addEventListener("click", () => {
     const content = document.getElementById(toggle.getAttribute("aria-controls"));
     if (!content) return;
@@ -1251,41 +1340,23 @@ organizationSelect?.addEventListener("change", async () => {
   if (wasOrganization) openOrganizationManagement();
 });
 
+document.addEventListener("keydown", (event) => {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== "b") return;
+  if (event.target.closest?.("input, textarea, select, [contenteditable='true']")) return;
+  event.preventDefault();
+  setSidebarExpanded(workspaceShell?.dataset.sidebarCollapsed === "true");
+});
+
 
 
 if (sidebarResizer) {
-  sidebarResizer.addEventListener("pointerdown", (event) => {
-    const startX = event.clientX;
-    const initialWidth = Number.parseFloat(
-      getComputedStyle(workspaceShell).getPropertyValue("--primary-sidebar-width"),
-    );
-
-    sidebarResizer.setPointerCapture(event.pointerId);
-    sidebarResizer.classList.add("is-dragging");
-    document.body.classList.add("is-resizing-sidebar");
-
-    const resize = (moveEvent) => {
-      setSidebarWidth(initialWidth + moveEvent.clientX - startX);
-    };
-
-    const stopResize = () => {
-      sidebarResizer.classList.remove("is-dragging");
-      document.body.classList.remove("is-resizing-sidebar");
-      sidebarResizer.removeEventListener("pointermove", resize);
-      sidebarResizer.removeEventListener("pointerup", stopResize);
-      sidebarResizer.removeEventListener("pointercancel", stopResize);
-    };
-
-    sidebarResizer.addEventListener("pointermove", resize);
-    sidebarResizer.addEventListener("pointerup", stopResize);
-    sidebarResizer.addEventListener("pointercancel", stopResize);
+  const sidebarResize = window.agentFactoryUI.bindResizeHandle(sidebarResizer,{
+    getValue:() => workspaceShell.dataset.sidebarCollapsed === 'true'
+      ? minimumSidebarWidth
+      : Number.parseFloat(getComputedStyle(workspaceShell).getPropertyValue('--primary-sidebar-width')),
+    onChange:setSidebarWidth,
+    onDragging:dragging => document.body.classList.toggle('is-resizing-sidebar',dragging),
+    step:16,
   });
-
-  sidebarResizer.addEventListener("keydown", (event) => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-
-    event.preventDefault();
-    const currentWidth = Number(sidebarResizer.getAttribute("aria-valuenow"));
-    setSidebarWidth(currentWidth + (event.key === "ArrowLeft" ? -16 : 16));
-  });
+  window.addEventListener('pagehide', () => sidebarResize.cancel());
 }

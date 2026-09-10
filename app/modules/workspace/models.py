@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Enum, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, RevisionMixin, SoftDeleteMixin, TimestampMixin, UUIDPrimaryKeyMixin
@@ -17,7 +17,10 @@ class WorkspaceStatus(StrEnum):
 
 class Workspace(UUIDPrimaryKeyMixin, TimestampMixin, SoftDeleteMixin, RevisionMixin, Base):
     __tablename__ = "workspaces"
-    __table_args__ = (UniqueConstraint("organization_id", "slug"), UniqueConstraint("organization_id", "id"))
+    __table_args__ = (
+        UniqueConstraint("organization_id", "slug"),
+        UniqueConstraint("organization_id", "id"),
+    )
 
     organization_id: Mapped[UUID] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), index=True
@@ -72,3 +75,35 @@ class WorkspaceVisit(TimestampMixin, Base):
     )
     last_opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_favorite: Mapped[bool] = mapped_column(default=False)
+
+
+class WorkspaceGroup(UUIDPrimaryKeyMixin, TimestampMixin, RevisionMixin, Base):
+    """A user's persisted organization-local Workspace list group."""
+
+    __tablename__ = "workspace_groups"
+    __table_args__ = (UniqueConstraint("organization_id", "user_id", "name"),)
+
+    organization_id: Mapped[UUID] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(60))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    collapsed: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class WorkspaceGroupAssignment(TimestampMixin, Base):
+    """A user's single group assignment for a Workspace."""
+
+    __tablename__ = "workspace_group_assignments"
+
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    workspace_id: Mapped[UUID] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), primary_key=True
+    )
+    group_id: Mapped[UUID] = mapped_column(
+        ForeignKey("workspace_groups.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, default=0)

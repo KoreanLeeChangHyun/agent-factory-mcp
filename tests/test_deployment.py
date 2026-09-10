@@ -31,7 +31,7 @@ def test_production_overlay_has_tls_release_and_scaling_boundaries() -> None:
 def test_workspace_login_is_visible_before_javascript_boots() -> None:
     login_html = (ROOT / "template/login/index.html").read_text()
     assert "<noscript>" in login_html
-    assert 'data-google-login' in login_html
+    assert "data-google-login" in login_html
     assert "../api/auth/oauth/google/login" in login_html
     assert (ROOT / "static/css/login.css").is_file()
     assert (ROOT / "static/js/login.js").is_file()
@@ -39,16 +39,23 @@ def test_workspace_login_is_visible_before_javascript_boots() -> None:
     assert "../static/images/agent-factory.svg" in login_html
 
     workspace_html = (ROOT / "template/workspace/index.html").read_text()
-    assert 'data-login-form' not in workspace_html
+    assert "data-login-form" not in workspace_html
     assert 'class="activity-bar"' in workspace_html
-    assert 'class="primary-sidebar"' in workspace_html
+    assert 'class="app-sidebar primary-sidebar"' in workspace_html
+    assert 'data-region="primary-sidebar"' in workspace_html
     assert 'class="workspace"' in workspace_html
     assert (ROOT / "static/vendor/tabulator/6.5.2/tabulator.min.css").is_file()
     assert (ROOT / "static/vendor/tabulator/6.5.2/tabulator.min.js").is_file()
     assert (ROOT / "static/vendor/THIRD_PARTY_NOTICES.txt").is_file()
 
+    compose = yaml.safe_load((ROOT / "deploy/compose.yaml").read_text())
+    assert (
+        "../assets/ui-kit:/srv/agent-factory/assets/ui-kit:ro"
+        in compose["services"]["api"]["volumes"]
+    )
+
 
 def test_operations_runbook_covers_recovery_and_alerting() -> None:
-    runbook = (ROOT / "config/operations.md").read_text()
+    runbook = (ROOT / ".codex/skills/spec-platform/references/operations.md").read_text()
     for term in ("expand/contract", "RPO/RTO", "dead jobs", "queue age", "cost"):
         assert term in runbook

@@ -7,6 +7,8 @@
     <title>Agent Factory 로그인</title>
     <link rel="icon" type="image/svg+xml" href="../static/images/agent-factory.svg" />
     <link rel="stylesheet" href="../static/css/login.css" />
+    <link rel="stylesheet" href="../static/css/ui.css" />
+    <link rel="stylesheet" href="../static/ui/theme.css" />
   </head>
   <body>
     <main class="login-page">
@@ -26,13 +28,14 @@
           <span>Google로 계속</span>
         </a>
         <div class="auth-divider" data-password-login-divider hidden><span>또는</span></div>
-        <label>이메일<input name="email" type="email" autocomplete="username" required /></label>
+        <label class="ui-field">이메일<input name="email" type="email" autocomplete="username" required /></label>
         <label>비밀번호<input name="password" type="password" autocomplete="current-password" minlength="8" required /></label>
-        <button type="submit">로그인</button>
-        <p class="auth-card__error" role="alert" data-login-error></p>
+        <button class="ui-button ui-button--primary" type="submit">로그인</button>
+        <p class="auth-card__error ui-message ui-message--reserved" role="alert" data-login-error></p>
         <noscript><p class="auth-card__error">로그인하려면 JavaScript를 활성화해 주세요.</p></noscript>
       </form>
     </main>
+    <script src="../static/ui/auth.js"></script>
     <script src="../static/js/login.js"></script>
   </body>
 </html>

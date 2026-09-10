@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func, select, text, update
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,8 @@ from app.modules.identity.models import User
 from app.modules.organization.models import OrganizationMembership, Role, RoleScope
 from app.modules.workspace.models import (
     Workspace,
+    WorkspaceGroup,
+    WorkspaceGroupAssignment,
     WorkspaceMembership,
     WorkspaceRepository,
     WorkspaceStatus,
@@ -60,6 +62,99 @@ class WorkspaceRepositoryStore:
         self.session.add(workspace)
         await self.session.flush()
         return workspace
+
+    async def list_groups(
+        self, organization_id: UUID, user_id: UUID
+    ) -> list[tuple[WorkspaceGroup, list[UUID]]]:
+        groups = list(
+            await self.session.scalars(
+                select(WorkspaceGroup)
+                .where(
+                    WorkspaceGroup.organization_id == organization_id,
+                    WorkspaceGroup.user_id == user_id,
+                )
+                .order_by(WorkspaceGroup.position, WorkspaceGroup.created_at, WorkspaceGroup.id)
+            )
+        )
+        if not groups:
+            return []
+        assignments = await self.session.execute(
+            select(WorkspaceGroupAssignment.group_id, WorkspaceGroupAssignment.workspace_id)
+            .where(
+                WorkspaceGroupAssignment.user_id == user_id,
+                WorkspaceGroupAssignment.group_id.in_([group.id for group in groups]),
+            )
+            .order_by(WorkspaceGroupAssignment.position, WorkspaceGroupAssignment.created_at)
+        )
+        workspace_ids: dict[UUID, list[UUID]] = {group.id: [] for group in groups}
+        for group_id, workspace_id in assignments:
+            workspace_ids[group_id].append(workspace_id)
+        return [(group, workspace_ids[group.id]) for group in groups]
+
+    async def get_group(
+        self, organization_id: UUID, user_id: UUID, group_id: UUID
+    ) -> WorkspaceGroup | None:
+        return await self.session.scalar(
+            select(WorkspaceGroup).where(
+                WorkspaceGroup.id == group_id,
+                WorkspaceGroup.organization_id == organization_id,
+                WorkspaceGroup.user_id == user_id,
+            )
+        )
+
+    async def create_group(self, organization_id: UUID, user_id: UUID, name: str) -> WorkspaceGroup:
+        last_position = await self.session.scalar(
+            select(func.max(WorkspaceGroup.position)).where(
+                WorkspaceGroup.organization_id == organization_id,
+                WorkspaceGroup.user_id == user_id,
+            )
+        )
+        group = WorkspaceGroup(
+            organization_id=organization_id,
+            user_id=user_id,
+            name=name,
+            position=(last_position if last_position is not None else -1) + 1,
+        )
+        self.session.add(group)
+        await self.session.flush()
+        return group
+
+    async def update_group(
+        self,
+        organization_id: UUID,
+        user_id: UUID,
+        group_id: UUID,
+        revision: int,
+        values: dict[str, object],
+    ) -> WorkspaceGroup | None:
+        return await self.session.scalar(
+            update(WorkspaceGroup)
+            .where(
+                WorkspaceGroup.id == group_id,
+                WorkspaceGroup.organization_id == organization_id,
+                WorkspaceGroup.user_id == user_id,
+                WorkspaceGroup.revision == revision,
+            )
+            .values(**values, revision=WorkspaceGroup.revision + 1)
+            .returning(WorkspaceGroup)
+        )
+
+    async def assign_workspace_to_group(
+        self, user_id: UUID, workspace_id: UUID, group_id: UUID | None
+    ) -> None:
+        await self.session.execute(
+            delete(WorkspaceGroupAssignment).where(
+                WorkspaceGroupAssignment.user_id == user_id,
+                WorkspaceGroupAssignment.workspace_id == workspace_id,
+            )
+        )
+        if group_id is not None:
+            self.session.add(
+                WorkspaceGroupAssignment(
+                    user_id=user_id, workspace_id=workspace_id, group_id=group_id
+                )
+            )
+            await self.session.flush()
 
     async def select_workspace_context(self, workspace_id: UUID) -> None:
         await self.session.execute(

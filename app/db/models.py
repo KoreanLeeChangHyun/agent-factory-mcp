@@ -19,6 +19,8 @@ from app.modules.auth.models import (
     OneTimeToken,
     UserCredential,
 )
+from app.modules.document.cloud_models import DocumentImport, DocumentText
+from app.modules.document.delivery_models import DocumentUpload
 from app.modules.document.models import (
     Document,
     DocumentChunk,
@@ -26,12 +28,13 @@ from app.modules.document.models import (
     DocumentRevision,
     EmbeddingProfile,
 )
-from app.modules.document.cloud_models import DocumentImport, DocumentText
-from app.modules.document.delivery_models import DocumentUpload
-from app.modules.integration.cloud_models import (
-    CloudConnectionState, CloudCollection, CloudCollectionRun, CloudSourceMapping,
-)
 from app.modules.identity.models import User
+from app.modules.integration.cloud_models import (
+    CloudCollection,
+    CloudCollectionRun,
+    CloudConnectionState,
+    CloudSourceMapping,
+)
 from app.modules.integration.models import (
     IntegrationConnection,
     IntegrationOAuthState,
@@ -42,30 +45,35 @@ from app.modules.integration.models import (
 from app.modules.mcp_connection.models import MCPConnection
 from app.modules.organization.models import (
     Organization,
+    OrganizationInvitation,
     OrganizationMembership,
     OrganizationTeam,
-    OrganizationInvitation,
-    TeamMembership,
-    TeamWorkspaceGrant,
     Permission,
     Role,
     RolePermission,
+    TeamMembership,
+    TeamWorkspaceGrant,
 )
 from app.modules.planning.import_models import PlanImport, PlanSourceLink
 from app.modules.planning.models import PlanItem, PlanSettings
-from app.modules.reporting.models import ReportAgent, ReportTask, TaskReport, ReportResult, ReportReceipt
+from app.modules.reporting.models import (
+    ReportAgent,
+    ReportReceipt,
+    ReportResult,
+    ReportTask,
+    TaskReport,
+)
 from app.modules.schedule.models import Job, JobEvent, Schedule
 from app.modules.workspace.models import (
     Workspace,
+    WorkspaceGroup,
+    WorkspaceGroupAssignment,
     WorkspaceMembership,
     WorkspaceRepository,
     WorkspaceVisit,
 )
 
 __all__ = [
-    "DocumentImport", "DocumentText", "DocumentUpload",
-    "CloudConnectionState", "CloudCollection", "CloudCollectionRun", "CloudSourceMapping",
-    "ReportAgent", "ReportTask", "TaskReport", "ReportResult", "ReportReceipt",
     "AgentDefinition",
     "AgentDocumentLink",
     "AgentRun",
@@ -77,10 +85,17 @@ __all__ = [
     "AuditEvent",
     "AuthFactor",
     "AuthSession",
+    "CloudCollection",
+    "CloudCollectionRun",
+    "CloudConnectionState",
+    "CloudSourceMapping",
     "Document",
     "DocumentChunk",
+    "DocumentImport",
     "DocumentProvenance",
     "DocumentRevision",
+    "DocumentText",
+    "DocumentUpload",
     "EmbeddingProfile",
     "ExternalIdentity",
     "FeatureFlag",
@@ -92,24 +107,31 @@ __all__ = [
     "MCPConnection",
     "OneTimeToken",
     "Organization",
+    "OrganizationInvitation",
     "OrganizationMembership",
     "OrganizationTeam",
-    "OrganizationInvitation",
-    "TeamMembership",
-    "TeamWorkspaceGrant",
     "Permission",
     "PlanImport",
-    "PlanSourceLink",
     "PlanItem",
     "PlanSettings",
+    "PlanSourceLink",
+    "ReportAgent",
+    "ReportReceipt",
+    "ReportResult",
+    "ReportTask",
     "Role",
     "RolePermission",
     "Schedule",
+    "TaskReport",
+    "TeamMembership",
+    "TeamWorkspaceGrant",
     "User",
     "UserCredential",
     "WebhookDelivery",
     "WebhookEndpoint",
     "Workspace",
+    "WorkspaceGroup",
+    "WorkspaceGroupAssignment",
     "WorkspaceMembership",
     "WorkspaceRepository",
     "WorkspaceVisit",

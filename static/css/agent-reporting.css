@@ -1,21 +1,18 @@
-.reporting-panel { padding: 16px; overflow: auto; min-width: 0; }
-.reporting-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.reporting-panel h1 { font-size: 20px; } .reporting-panel h2 { font-size: 16px; margin-top: 24px; }
-.reporting-panel h3 { font-size: 14px; }
+.reporting-panel { padding: var(--ui-space-4); overflow: auto; min-width: 0; }
+.reporting-panel h2 { margin-top: var(--ui-space-6); }
 .reporting-panel p { white-space: pre-wrap; overflow-wrap: anywhere; }
 .reporting-panel button, .reporting-sidebar button { text-align: left; }
 
-.reporting-sidebar { padding: 8px; overflow: auto; }
+.reporting-sidebar { overflow: auto; }
 .reporting-tree, .reporting-tree ul { list-style: none; padding: 0; margin: 0; }
-.reporting-tree ul { margin-left: 10px; border-left: 1px solid #444; padding-left: 4px; }
+.reporting-tree ul { margin-left: var(--ui-space-3); border-left: 1px solid var(--region-border); padding-left: var(--ui-space-1); }
 .reporting-tree button { display: grid; width: 100%; border: 0; }
 .reporting-tree strong, .reporting-tree span, .reporting-tree small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reporting-panel small, .reporting-sidebar small { display: block; color: var(--explorer-muted); font-size: 12px; overflow-wrap: anywhere; }
+.reporting-panel small, .reporting-sidebar small { display: block; color: var(--explorer-muted); font-size: var(--ui-font-body); overflow-wrap: anywhere; }
 .reporting-muted { color: var(--explorer-muted); }
 .reporting-tasks { list-style: none; padding: 0; }
-.reporting-tasks li { border-bottom: 1px solid var(--region-border); padding: 8px 0; overflow-wrap: anywhere; }
-.reporting-history { padding-left: 24px; } .reporting-history li { padding: 8px 0; overflow-wrap: anywhere; }
-.reporting-status { display: inline-block; padding: 2px 6px; border: 1px solid #555; }
-.reporting-detail { border-top: 1px solid #555; margin-top: 24px; }
-.reporting-panel a { color: #70b8ed; } .reporting-panel progress { max-width: 100%; }
-@media (max-width: 600px) { .reporting-panel { padding: 10px; } .reporting-panel header { flex-wrap: wrap; } }
+.reporting-tasks li { border-bottom: 1px solid var(--region-border); padding: var(--ui-space-2) 0; overflow-wrap: anywhere; }
+.reporting-history { padding-left: var(--ui-space-6); } .reporting-history li { padding: var(--ui-space-2) 0; overflow-wrap: anywhere; }
+.reporting-detail { border-top: 1px solid var(--region-border); margin-top: var(--ui-space-6); }
+.reporting-panel a { color: var(--ui-color-link); } .reporting-panel progress { max-width: 100%; }
+@media (max-width: 600px) { .reporting-panel { padding: var(--ui-space-3); } .reporting-panel header { flex-wrap: wrap; } }
