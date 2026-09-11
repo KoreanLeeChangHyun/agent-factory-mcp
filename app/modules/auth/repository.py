@@ -39,8 +39,12 @@ class AuthRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def _enable_identity_lookup(self) -> None:
+    async def enable_identity_lookup(self) -> None:
         await self.session.execute(text("SELECT set_config('app.is_platform_admin', 'true', true)"))
+
+    # Compatibility for existing integration setup helpers; application code uses
+    # the public method so privileged lookup is an explicit repository capability.
+    _enable_identity_lookup = enable_identity_lookup
 
     async def find_password_login(self, normalized_email: str) -> PasswordLoginRecord | None:
         await self._enable_identity_lookup()
@@ -225,6 +229,27 @@ class AuthRepository:
         self.session.add(record)
         await self.session.flush()
         return record
+
+    async def add_mcp_connection(
+        self,
+        *,
+        user_id: UUID,
+        organization_id: UUID,
+        workspace_id: UUID,
+        token_id: UUID,
+        name: str,
+    ) -> None:
+        from app.modules.mcp_connection.models import MCPConnection
+
+        self.session.add(
+            MCPConnection(
+                user_id=user_id,
+                organization_id=organization_id,
+                workspace_id=workspace_id,
+                token_id=token_id,
+                name=name,
+            )
+        )
 
     async def list_api_tokens(self, user_id: UUID) -> list[ApiToken]:
         result = await self.session.scalars(

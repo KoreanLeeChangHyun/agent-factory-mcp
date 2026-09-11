@@ -96,7 +96,7 @@ async def test_personal_create_reuses_owner_and_restores_privileges(monkeypatch,
             updated_at=now,
         )
 
-    monkeypatch.setattr("app.router.account.WorkspaceService.create", create)
+    monkeypatch.setattr("app.modules.organization.account_service.WorkspaceService.create", create)
     result = await create_personal_workspace(
         WorkspaceCreate(name="Project", slug="project"), principal, session
     )

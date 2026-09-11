@@ -70,9 +70,9 @@
         <span class="activity-button__label" aria-hidden="true">관리자</span></button>
       </nav>
 
-      <aside class="app-sidebar primary-sidebar af-workbench-panel" id="primary-sidebar" aria-label="현재 작업 영역의 기본 사이드바" data-region="primary-sidebar" data-sidebar-host>
-        <header class="app-sidebar__header primary-sidebar__header af-workbench-panel__header">
-          <span data-sidebar-title>문서</span>
+      <aside class="app-sidebar primary-sidebar af-workbench-panel af-kit af-sidebar-host" id="primary-sidebar" aria-label="현재 작업 영역의 기본 사이드바" data-region="primary-sidebar" data-sidebar-host>
+        <header class="app-sidebar__header primary-sidebar__header af-workbench-panel__header af-sidebar-host__header">
+          <span class="af-sidebar-host__title" data-sidebar-title>문서</span>
           <div class="plan-header-actions" data-plan-header-actions hidden>
             <button class="sidebar-header-button" type="button" data-plan-action="dashboard" aria-label="일정 대시보드" title="일정 대시보드" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".5"/><rect x="9" y="2.5" width="4.5" height="4.5" rx=".5"/><rect x="2.5" y="9" width="4.5" height="4.5" rx=".5"/><rect x="9" y="9" width="4.5" height="4.5" rx=".5"/></svg></button>
             <button class="sidebar-header-button" type="button" data-plan-action="refresh" aria-label="새로고침" title="새로고침"><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M13 6a5 5 0 1 0 0 4M13 2v4H9"/></svg></button>
@@ -86,8 +86,8 @@
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 3.75v4M15.5 3.75v4M6.25 7.75h11.5v2.5A5.75 5.75 0 0 1 12 16v4.25M8.5 20.25h7"/></svg>
           </button>
         </header>
-        <div class="app-sidebar__body app-sidebar__content primary-sidebar__content af-workbench-panel__body" data-sidebar-content>
-          <div class="app-sidebar__view sidebar-view organization-sidebar" aria-label="조직" data-sidebar-view="organization" hidden>
+        <div class="app-sidebar__body app-sidebar__content primary-sidebar__content af-workbench-panel__body af-sidebar-host__body" data-sidebar-content>
+          <div class="app-sidebar__view sidebar-view organization-sidebar af-sidebar-view" aria-label="조직" data-sidebar-view="organization" hidden>
             <section class="app-sidebar__section" aria-labelledby="organization-section-label">
               <header class="app-sidebar__section-header"><span class="app-sidebar__section-title" id="organization-section-label">조직</span></header>
               <div class="app-sidebar__section-content">
@@ -103,23 +103,19 @@
               </div>
             </section>
           </div>
-          <div class="app-sidebar__view sidebar-view workspace-picker-sidebar" aria-label="작업공간 목록" data-sidebar-view="workspaces" hidden>
+          <div class="app-sidebar__view sidebar-view workspace-picker-sidebar af-sidebar-view" aria-label="작업공간 목록" data-sidebar-view="workspaces" hidden>
             <form data-workspace-group-form hidden><input aria-label="새 그룹 이름" maxlength="60" placeholder="그룹 이름" required /><p class="ui-message" role="alert"></p></form>
             <p class="ui-message app-sidebar__state workspace-picker-state" role="status" data-workspace-list-state>작업공간을 불러오는 중입니다.</p>
             <button type="button" class="text-action" data-retry-workspaces hidden>다시 시도</button>
-            <section class="app-sidebar__section" aria-labelledby="workspaces-section-label">
-              <header class="app-sidebar__section-header app-sidebar__section-header--toggle"><button class="app-sidebar__section-toggle" type="button" title="기본 그룹 펼치기·접기" aria-expanded="true" aria-controls="workspaces-section-content" data-sidebar-section-toggle><svg class="app-sidebar__section-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m4.5 6 3.5 3.5L11.5 6"/></svg><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M2.5 4.5h4l1.25 1.25h5.75v7H2.5Z"/></svg><span class="app-sidebar__section-title" id="workspaces-section-label">기본 그룹</span></button></header>
-              <div data-workspace-list>
-                <div class="app-sidebar__section-content" id="workspaces-section-content"><nav class="app-sidebar__nav app-sidebar__nav--flush workspace-ungrouped" aria-label="내 작업공간" data-workspace-default-list></nav></div>
-                <nav class="app-sidebar__nav app-sidebar__nav--flush" aria-label="사용자 작업공간 그룹" data-workspace-group-list></nav>
-              </div>
+            <section class="app-sidebar__section" aria-label="작업공간 탐색기">
+              <div class="app-sidebar__section-content workspace-explorer" data-workspace-list data-workspace-explorer></div>
             </section>
           </div>
-          <div class="app-sidebar__view sidebar-view planning-sidebar" data-sidebar-view="schedule" hidden>
+          <div class="app-sidebar__view sidebar-view planning-sidebar af-sidebar-view" data-sidebar-view="schedule" hidden>
             <p class="app-sidebar__state">작업공간의 개발 일정을 불러옵니다.</p>
           </div>
-          <div class="app-sidebar__view sidebar-view reporting-sidebar" data-sidebar-view="agents" data-reporting-sidebar hidden><section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">에이전트</span></header><div class="app-sidebar__section-content"><p class="app-sidebar__state">워크스페이스를 열면 외부 에이전트 보고를 표시합니다.</p></div></section></div>
-          <div class="app-sidebar__view sidebar-view document-sidebar" data-sidebar-view="documents">
+          <div class="app-sidebar__view sidebar-view reporting-sidebar af-sidebar-view" data-sidebar-view="agents" data-reporting-sidebar hidden><section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">에이전트</span></header><div class="app-sidebar__section-content"><p class="app-sidebar__state">워크스페이스를 열면 외부 에이전트 보고를 표시합니다.</p></div></section></div>
+          <div class="app-sidebar__view sidebar-view document-sidebar af-sidebar-view" data-sidebar-view="documents">
             <section class="app-sidebar__section document-group" aria-labelledby="original-group-label">
               <header class="app-sidebar__section-header de-document-header">
                 <span class="app-sidebar__section-title de-document-title" id="original-group-label">원본 문서</span>
@@ -162,9 +158,9 @@
               </div>
             </section>
           </div>
-          <div class="app-sidebar__view sidebar-view oversight-sidebar" data-sidebar-view="logs" hidden><section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">정의 대기</span></header><div class="app-sidebar__section-content"><p class="app-sidebar__state">Primary Sidebar 정보 구조는 Human 결정을 기다리고 있습니다.</p></div></section></div>
-          <div class="app-sidebar__view sidebar-view oversight-sidebar" data-sidebar-view="tests" hidden><section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">정의 대기</span></header><div class="app-sidebar__section-content"><p class="app-sidebar__state">Primary Sidebar 정보 구조는 Human 결정을 기다리고 있습니다.</p></div></section></div>
-          <div class="app-sidebar__view sidebar-view integration-sidebar" data-sidebar-view="integrations" hidden>
+          <div class="app-sidebar__view sidebar-view oversight-sidebar af-sidebar-view" data-sidebar-view="logs" hidden><section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">정의 대기</span></header><div class="app-sidebar__section-content"><p class="app-sidebar__state">Primary Sidebar 정보 구조는 Human 결정을 기다리고 있습니다.</p></div></section></div>
+          <div class="app-sidebar__view sidebar-view oversight-sidebar af-sidebar-view" data-sidebar-view="tests" hidden><section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">정의 대기</span></header><div class="app-sidebar__section-content"><p class="app-sidebar__state">Primary Sidebar 정보 구조는 Human 결정을 기다리고 있습니다.</p></div></section></div>
+          <div class="app-sidebar__view sidebar-view integration-sidebar af-sidebar-view" data-sidebar-view="integrations" hidden>
             <section class="app-sidebar__section integration-sidebar__group" data-integration-group>
               <header class="app-sidebar__section-header"><span class="app-sidebar__section-title">문서</span></header>
               <div class="app-sidebar__section-content">
@@ -174,13 +170,13 @@
               </div>
             </section>
           </div>
-          <div class="app-sidebar__view sidebar-view oversight-sidebar" data-sidebar-view="database" hidden><section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">정의 대기</span></header><div class="app-sidebar__section-content"><p class="app-sidebar__state">데이터베이스 연결, 스키마, 마이그레이션과 상태 정보 구조는 Human 결정을 기다리고 있습니다.</p></div></section></div>
-          <div class="app-sidebar__view sidebar-view account-sidebar" data-sidebar-view="account" hidden>
+          <div class="app-sidebar__view sidebar-view oversight-sidebar af-sidebar-view" data-sidebar-view="database" hidden><section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">정의 대기</span></header><div class="app-sidebar__section-content"><p class="app-sidebar__state">데이터베이스 연결, 스키마, 마이그레이션과 상태 정보 구조는 Human 결정을 기다리고 있습니다.</p></div></section></div>
+          <div class="app-sidebar__view sidebar-view account-sidebar af-sidebar-view" data-sidebar-view="account" hidden>
             <section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">계정</span></header>
               <div class="app-sidebar__section-content"><nav class="app-sidebar__nav" aria-label="계정 메뉴"><button class="app-sidebar__row is-selected" type="button" data-account-profile>프로필</button></nav></div>
             </section>
           </div>
-          <div class="app-sidebar__view sidebar-view account-sidebar" data-sidebar-view="admin" hidden>
+          <div class="app-sidebar__view sidebar-view account-sidebar af-sidebar-view" data-sidebar-view="admin" hidden>
             <section class="app-sidebar__section"><header class="app-sidebar__section-header"><span class="app-sidebar__section-title">슈퍼 관리자</span></header>
               <div class="app-sidebar__section-content"><nav class="app-sidebar__nav" aria-label="슈퍼 관리자 메뉴">
                 <button class="app-sidebar__row" type="button" data-admin-view="dashboard">개요</button>
@@ -213,71 +209,64 @@
         </section>
         <section class="mcp-onboarding" data-mcp-onboarding hidden aria-labelledby="mcp-title">
           <div class="mcp-onboarding-canvas">
-            <div class="mcp-columns">
-              <section class="mcp-setup" aria-label="MCP 설정 및 연결 안내">
-                <header class="mcp-panel-header">
-                  <div class="mcp-heading"><h1 id="mcp-title">작업공간</h1><span class="mcp-workspace-name" data-mcp-workspace></span><span role="status" aria-live="polite" data-mcp-status>연결 상태 확인 중</span></div>
-                  <div class="mcp-actions"><button class="ui-button" type="button" data-mcp-refresh>상태 확인</button><button class="ui-button" type="button" data-mcp-dismiss hidden>작업 화면으로</button></div>
-                </header>
-                <div class="mcp-panel-body">
-                  <section class="workspace-metadata" aria-labelledby="workspace-metadata-title">
-                    <h2 id="workspace-metadata-title">작업공간 정보</h2>
-                    <dl data-workspace-metadata></dl>
-                  </section>
-                  <section class="mcp-ai-connect" aria-label="AI로 MCP 연결">
-                    <h2>MCP 연결</h2>
-                    <div class="mcp-connect-controls">
-                      <label>클라이언트<select data-mcp-client></select></label>
-                      <label data-mcp-variant-label hidden>사용 환경<select data-mcp-variant></select></label>
-                      <label>연결 토큰<select data-mcp-token-select aria-label="연결 토큰 선택"></select></label>
-                    </div>
-                    <p class="mcp-token-caption" data-mcp-ai-help>사용할 토큰을 선택하세요. 새 토큰은 오른쪽에서 발급합니다.</p>
-                    <ol class="mcp-ai-steps">
-                      <li><span class="mcp-step-number" aria-hidden="true">1.</span><div class="mcp-ai-step"><div class="mcp-step-header ui-section-header"><strong>설정 파일 다운로드</strong><button class="ui-button" type="button" data-mcp-download>다운로드</button></div><p class="mcp-supporting-text">설정 파일을 다운로드해 연결할 프로젝트 디렉터리에 넣으세요.</p></div></li>
-                      <li><span class="mcp-step-number" aria-hidden="true">2.</span><div class="mcp-ai-step"><div class="mcp-step-header ui-section-header"><strong>AI 지침 전달</strong><button class="ui-button ui-button--primary" type="button" data-mcp-copy-ai>지침 복사</button></div><p class="mcp-supporting-text">AI 지침을 복사해 AI에게 전달하세요.</p></div></li>
-                    </ol>
-                    <p class="ui-message" role="status" aria-live="polite" data-mcp-ai-message></p>
-                    <label data-mcp-ai-fallback hidden>파일 전달용 AI 연결 지침<textarea readonly spellcheck="false" rows="8" data-mcp-ai-text></textarea></label>
-                  </section>
-                  <section class="mcp-manual-setup" aria-labelledby="mcp-manual-title">
-                    <div class="mcp-section-header ui-section-header"><h2 id="mcp-manual-title">수동 연결</h2><a data-mcp-docs target="_blank" rel="noopener noreferrer">공식 연결 문서</a></div>
-                    <input type="hidden" data-mcp-url />
-                    <div class="mcp-manual-method" data-mcp-command-mode hidden>
-                      <div class="mcp-step-header ui-section-header"><label for="mcp-register-command">등록 명령 · POSIX 셸</label><button class="ui-button" type="button" data-mcp-copy-command>명령 복사</button></div>
-                      <textarea id="mcp-register-command" rows="3" wrap="soft" readonly spellcheck="false" data-mcp-command></textarea>
-                      <p class="mcp-supporting-text" data-mcp-command-help></p>
-                    </div>
-                    <div class="mcp-manual-method" data-mcp-config-mode>
-                      <div class="mcp-step-header ui-section-header"><label for="mcp-client-config" data-mcp-config-label>클라이언트 설정</label><div class="mcp-actions"><a data-mcp-install hidden>설정 추가</a><button class="ui-button" type="button" data-mcp-copy-config>설정 복사</button></div></div>
-                      <textarea id="mcp-client-config" rows="17" wrap="off" readonly spellcheck="false" data-mcp-config></textarea>
-                      <p class="mcp-supporting-text" data-mcp-config-help></p>
-                    </div>
-                    <p class="ui-message" role="status" data-mcp-message></p>
-                  </section>
-                </div>
+            <header class="mcp-panel-header workspace-panel-header">
+              <h1 id="mcp-title" data-mcp-workspace>작업공간</h1>
+              <nav class="ui-tabs workspace-panel-tabs" aria-label="작업공간 패널" data-mcp-tabs>
+                <button class="ui-tab" type="button" data-mcp-tab="overview">작업공간 정보</button>
+                <button class="ui-tab" type="button" data-mcp-tab="connection">MCP 연결</button>
+              </nav>
+              <button class="ui-button" type="button" data-mcp-dismiss hidden>작업 화면으로</button>
+            </header>
+            <section class="workspace-panel-tab workspace-overview-tab" data-mcp-tab-panel="overview">
+              <section class="workspace-metadata" aria-label="작업공간 정보">
+                <dl data-workspace-metadata></dl>
               </section>
-              <aside class="mcp-token-panel" aria-labelledby="mcp-tokens-title">
-                <header class="mcp-panel-header">
-                  <h2 id="mcp-tokens-title">연결 토큰</h2>
-                  <div class="mcp-actions">
-                    <button class="ui-button" type="button" data-mcp-enroll>토큰 발급</button>
-                    <button type="button" class="ui-button ui-button--icon mcp-icon-button" data-mcp-token-refresh aria-label="토큰 목록 새로고침" title="토큰 목록 새로고침"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 6a5 5 0 1 0 0 4M13 2v4H9"/></svg></button>
+            </section>
+            <section class="workspace-panel-tab mcp-connection-tab" data-mcp-tab-panel="connection" hidden>
+              <div class="mcp-columns">
+                <section class="mcp-setup" aria-label="MCP 설정 및 연결 안내">
+                  <header class="mcp-panel-header">
+                    <div class="mcp-heading"><span role="status" aria-live="polite" data-mcp-status>연결 상태 확인 중</span></div>
+                  </header>
+                  <div class="mcp-panel-body">
+                    <section class="mcp-ai-connect" aria-label="AI로 MCP 연결">
+                      <input type="hidden" data-mcp-url />
+                      <ol class="mcp-ai-steps">
+                        <li><span class="mcp-step-number" aria-hidden="true">1.</span><div class="mcp-ai-step"><div class="mcp-step-header ui-section-header"><strong>인증 토큰 발급</strong><button class="ui-button" type="button" data-mcp-enroll>토큰 발급</button></div><label>연결 토큰<select data-mcp-token-select aria-label="연결 토큰 선택"></select></label><input type="hidden" data-mcp-token /><p class="mcp-supporting-text" data-mcp-ai-help>본인이 사용할 토큰을 발급하거나 선택하세요.</p><p class="ui-message" role="status" aria-live="polite" data-mcp-token-message></p></div></li>
+                        <li><span class="mcp-step-number" aria-hidden="true">2.</span><div class="mcp-ai-step"><div class="mcp-step-header ui-section-header"><strong>MCP 클라이언트 설정 다운로드</strong><button class="ui-button" type="button" data-mcp-download>ZIP 다운로드</button></div><p class="mcp-supporting-text">설정 ZIP을 다운로드해 연결할 로컬 워크스페이스 루트에 넣으세요.</p><p class="mcp-supporting-text mcp-supported-clients" data-mcp-supported-clients></p></div></li>
+                        <li><span class="mcp-step-number" aria-hidden="true">3.</span><div class="mcp-ai-step"><div class="mcp-step-header ui-section-header"><strong>AI 지침 복사</strong><button class="ui-button ui-button--primary" type="button" data-mcp-copy-ai>지침 복사</button></div><p class="mcp-supporting-text">ZIP을 넣은 워크스페이스의 AI에게 복사한 지침을 전달하세요.</p></div></li>
+                        <li><span class="mcp-step-number" aria-hidden="true">4.</span><div class="mcp-ai-step"><div class="mcp-step-header ui-section-header"><strong>MCP 연결 확인</strong><button class="ui-button" type="button" data-mcp-refresh>상태 확인</button></div><p class="mcp-supporting-text">AI가 설정을 적용한 뒤 실제 MCP 요청 기록을 확인합니다.</p><p class="ui-message" role="status" aria-live="polite" data-mcp-check-message></p></div></li>
+                      </ol>
+                      <p class="ui-message" role="status" aria-live="polite" data-mcp-ai-message></p>
+                      <label data-mcp-ai-fallback hidden>파일 전달용 AI 연결 지침<textarea readonly spellcheck="false" rows="8" data-mcp-ai-text></textarea></label>
+                    </section>
                   </div>
-                </header>
-                <div class="mcp-panel-body">
-                  <div class="mcp-token-intro"><p class="mcp-token-caption">이 작업공간에서 내가 발급한 토큰</p><p class="mcp-token-caption" data-mcp-token-client></p></div>
-                  <section class="mcp-token-section" data-mcp-secret hidden>
-                    <div class="mcp-section-header ui-section-header"><label for="mcp-issued-token">선택한 토큰</label><button class="ui-button" type="button" data-mcp-copy-token>복사</button></div>
-                    <input id="mcp-issued-token" type="password" readonly autocomplete="off" data-mcp-token />
-                    <p class="mcp-token-caption">본인에게 발급된 유효한 토큰은 새로고침 후에도 조회할 수 있습니다.</p>
-                  </section>
-                  <p class="ui-message" role="status" aria-live="polite" data-mcp-token-message></p>
-                  <p class="ui-message" role="status" data-mcp-token-list-state>토큰 목록을 불러오는 중입니다.</p>
-                  <ul data-mcp-connections aria-label="발급한 연결 토큰"></ul>
-                </div>
-              </aside>
-            </div>
+                </section>
+                <aside class="mcp-token-panel" aria-labelledby="mcp-tokens-title">
+                  <header class="mcp-panel-header">
+                    <h2 id="mcp-tokens-title">연결 토큰</h2>
+                    <div class="mcp-actions">
+                      <button type="button" class="ui-button ui-button--icon mcp-icon-button" data-mcp-token-refresh aria-label="토큰 목록 새로고침" title="토큰 목록 새로고침"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 6a5 5 0 1 0 0 4M13 2v4H9"/></svg></button>
+                    </div>
+                  </header>
+                  <div class="mcp-panel-body">
+                    <div class="mcp-token-intro"><p class="mcp-token-caption">이 작업공간에서 내가 발급한 토큰</p></div>
+                    <p class="ui-message" role="status" data-mcp-token-list-state>토큰 목록을 불러오는 중입니다.</p>
+                    <ul data-mcp-connections aria-label="발급한 연결 토큰"></ul>
+                  </div>
+                </aside>
+              </div>
+            </section>
           </div>
+          <dialog class="workspace-dialog mcp-token-dialog" data-mcp-token-dialog aria-labelledby="mcp-token-dialog-title">
+            <form method="dialog" data-mcp-token-form>
+              <h2 id="mcp-token-dialog-title">연결 토큰 발급</h2>
+              <label>토큰 이름<input type="text" maxlength="120" autocomplete="off" placeholder="예: 개인 노트북" data-mcp-token-label /></label>
+              <p class="mcp-supporting-text">사용 위치나 용도를 알아볼 수 있는 이름을 입력하세요.</p>
+              <p class="ui-message ui-message--error" role="alert" data-mcp-token-dialog-message></p>
+              <footer><button class="ui-button" type="button" data-mcp-token-cancel>취소</button><button class="ui-button ui-button--primary" type="submit" data-mcp-token-submit disabled>토큰 발급</button></footer>
+            </form>
+          </dialog>
         </section>
         <section class="no-activities" data-no-activities hidden><p>표시할 작업 아이콘이 없습니다.</p><button type="button" class="ui-button text-action" data-configure-activities>작업 표시줄 설정</button></section>
         <section class="workspace-view planning-panel" data-workspace-view="schedule" hidden aria-label="일정"><p>작업과 하위 작업의 일정을 관리합니다. JavaScript를 활성화하면 일정을 조회할 수 있습니다.</p></section>

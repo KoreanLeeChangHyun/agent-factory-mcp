@@ -35,15 +35,16 @@ class AgentRepository:
         )
 
     async def get_definition(
-        self, workspace_id: UUID, definition_id: UUID
+        self, workspace_id: UUID, definition_id: UUID, *, lock: bool = False
     ) -> AgentDefinition | None:
-        return await self.session.scalar(
-            select(AgentDefinition).where(
-                AgentDefinition.id == definition_id,
-                AgentDefinition.workspace_id == workspace_id,
-                AgentDefinition.deleted_at.is_(None),
-            )
+        statement = select(AgentDefinition).where(
+            AgentDefinition.id == definition_id,
+            AgentDefinition.workspace_id == workspace_id,
+            AgentDefinition.deleted_at.is_(None),
         )
+        if lock:
+            statement = statement.with_for_update()
+        return await self.session.scalar(statement)
 
     async def create_definition(
         self, workspace_id: UUID, name: str, slug: str, description: str

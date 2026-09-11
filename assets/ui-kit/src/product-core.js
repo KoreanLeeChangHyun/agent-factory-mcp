@@ -12,4 +12,5 @@ export { bindResizeHandle } from './components/resize-handle.js';
 export { bindTreeKeyboard } from './components/tree-keyboard.js';
 export { renderNativeTree } from './components/native-tree.js';
 export { explorerTree } from './components/explorer-tree.js';
+export { bindSidebarHost } from './components/sidebar-host.js';
 export { selectKeys } from './components/selection.js';

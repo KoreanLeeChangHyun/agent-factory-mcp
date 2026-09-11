@@ -85,6 +85,7 @@
   async function open(next = config, view = currentView) {
     clearConfirmation();
     config = next; currentView = view;
+    config?.preferences?.write({view});
     const version = ++generation, alive = () => version === generation;
     const local = {...config};
     const base = `/api/organizations/${local.organizationId}`;

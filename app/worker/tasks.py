@@ -6,20 +6,27 @@ from collections.abc import Awaitable
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+from sqlalchemy import select
+
+from app.common.errors import ApplicationError
 from app.core.config import settings
 from app.db.session import dispose_engine, get_session_factory
 from app.db.tenant import TenantContext, apply_tenant_context
 from app.infrastructure.job_queue import CeleryJobPublisher
+from app.modules.integration.cloud_http import ProviderError
 from app.modules.schedule.models import Job, JobStatus
 from app.modules.schedule.repository import ScheduleRepository
 from app.modules.schedule.service import calculate_next_run, retry_delay
+from app.worker.authority import (
+    authorize_job,
+    cancellation_probe,
+    control_scope,
+    job_guard,
+    reconcile_collection,
+)
 from app.worker.celery_app import celery_app
 from app.worker.handlers import PermanentJobError, get_job_handler
 from app.worker.integration_handlers import integration_sync
-from app.worker.authority import (authorize_job, cancellation_probe, control_scope, job_guard, reconcile_collection)
-from app.modules.integration.cloud_http import ProviderError
-from sqlalchemy import select
-from app.common.errors import ApplicationError
 
 SYSTEM_USER_ID = UUID("00000000-0000-4000-8000-000000000000")
 SYSTEM_ORGANIZATION_ID = UUID("00000000-0000-4000-8000-000000000000")
@@ -47,17 +54,16 @@ async def _execute_job(
 ) -> str:
     # Legacy queue identity arguments are retained for transport compatibility only.
     del organization_id, workspace_id, user_id
-    async with get_session_factory()() as lookup:
-        async with job_guard(lookup.bind, job_id) as acquired:
-            if not acquired:
-                return "ignored"
-            await control_scope(lookup)
-            job = await lookup.scalar(select(Job).where(Job.id == job_id))
-            if job is None:
-                return "missing"
-            identity = (job.organization_id, job.workspace_id, job.requested_by_user_id)
-            await lookup.rollback()
-            return await _execute_claimed(job_id, *identity)
+    async with get_session_factory()() as lookup, job_guard(lookup.bind, job_id) as acquired:
+        if not acquired:
+            return "ignored"
+        await control_scope(lookup)
+        job = await lookup.scalar(select(Job).where(Job.id == job_id))
+        if job is None:
+            return "missing"
+        identity = (job.organization_id, job.workspace_id, job.requested_by_user_id)
+        await lookup.rollback()
+        return await _execute_claimed(job_id, *identity)
 
 
 async def _execute_claimed(job_id, organization_id, workspace_id, user_id):
@@ -92,19 +98,26 @@ async def _execute_claimed(job_id, organization_id, workspace_id, user_id):
                 raise PermanentJobError("job_attempts_exhausted")
             if job.task_type == "integration.sync":
                 context = await authorize_job(session, job)
+
                 async def cancelled():
                     return await cancellation_probe(job_id, organization_id, workspace_id, user_id)
+
                 # A separate session keeps domain transaction hooks out of job finalization.
                 async with get_session_factory()() as domain_session:
-                    result = await integration_sync(job.payload, session=domain_session,
-                        context=context, job_id=job.id, cancelled=cancelled)
+                    result = await integration_sync(
+                        job.payload,
+                        session=domain_session,
+                        context=context,
+                        job_id=job.id,
+                        cancelled=cancelled,
+                    )
             else:
                 await authorize_job(session, job)
                 handler = get_job_handler(job.task_type)
                 if handler is None:
                     raise PermanentJobError("unsupported_job_type")
                 result = await handler(job.payload)
-        except Exception as exc:  # durable boundary; never retain provider bodies or secrets
+        except Exception as exc:  # noqa: BLE001 - durable boundary redacts failures
             await session.rollback()
             await control_scope(session)
             session.expire_all()
@@ -115,19 +128,31 @@ async def _execute_claimed(job_id, organization_id, workspace_id, user_id):
                 current.status, current.finished_at = JobStatus.CANCELLED, datetime.now(UTC)
                 await repository.append_event(current, "job.cancelled", {})
             else:
-                current.error_code = (exc.code if isinstance(exc, ProviderError) else
-                                      "job_authorization_denied" if isinstance(exc, ApplicationError) else
-                                      "job_permanent_failure" if isinstance(exc, PermanentJobError) else "job_execution_failed")
+                current.error_code = (
+                    exc.code
+                    if isinstance(exc, ProviderError)
+                    else "job_authorization_denied"
+                    if isinstance(exc, ApplicationError)
+                    else "job_permanent_failure"
+                    if isinstance(exc, PermanentJobError)
+                    else "job_execution_failed"
+                )
                 current.error_message = current.error_code
-                if isinstance(exc, (PermanentJobError, ApplicationError)) or (isinstance(exc, ProviderError) and not exc.retryable):
+                if isinstance(exc, (PermanentJobError, ApplicationError)) or (
+                    isinstance(exc, ProviderError) and not exc.retryable
+                ):
                     current.status, current.finished_at = JobStatus.FAILED, datetime.now(UTC)
                 elif current.attempt_count >= current.max_attempts:
                     current.status = JobStatus.DEAD
                     current.dead_lettered_at = current.finished_at = datetime.now(UTC)
                 else:
-                    delay = retry_delay(current.attempt_count, settings.job_retry_base_seconds, settings.job_retry_max_seconds)
+                    delay = retry_delay(
+                        current.attempt_count,
+                        settings.job_retry_base_seconds,
+                        settings.job_retry_max_seconds,
+                    )
                     if isinstance(exc, ProviderError) and math.isfinite(exc.retry_after or 0):
-                        delay = max(delay, exc.retry_after or 0)
+                        delay = max(delay, math.ceil(exc.retry_after or 0))
                     current.status = JobStatus.RETRY
                     current.next_attempt_at = datetime.now(UTC) + timedelta(seconds=delay)
                 await repository.append_event(current, "job." + current.status.value, {})
@@ -222,7 +247,8 @@ async def _dispatch_due_retries() -> int:
         jobs = await repository.due_retry_jobs(now)
         # Dispatch only; execute_job acquires the lifetime claim before recovering.
         jobs += await repository.recoverable_jobs(
-            now - timedelta(seconds=settings.worker_time_limit_seconds))
+            now - timedelta(seconds=settings.worker_time_limit_seconds)
+        )
         for job in jobs:
             job.celery_task_id = publisher.publish(job)
         await repository.commit()

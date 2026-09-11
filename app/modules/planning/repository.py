@@ -51,3 +51,29 @@ class PlanningRepository:
 
     async def settings(self, workspace_id: UUID):
         return await self.session.get(PlanSettings, workspace_id)
+
+    async def add_item(self, record: PlanItem) -> None:
+        self.session.add(record)
+
+    async def delete_item(self, record: PlanItem) -> None:
+        await self.session.delete(record)
+
+    async def has_linked_report(self, workspace_id: UUID, item_id: UUID) -> bool:
+        from app.modules.reporting.models import ReportTask
+
+        return bool(
+            await self.session.scalar(
+                select(ReportTask.id)
+                .where(
+                    ReportTask.workspace_id == workspace_id,
+                    ReportTask.plan_item_id == item_id,
+                )
+                .limit(1)
+            )
+        )
+
+    async def add_settings(self, record: PlanSettings) -> None:
+        self.session.add(record)
+
+    async def commit(self) -> None:
+        await self.session.commit()

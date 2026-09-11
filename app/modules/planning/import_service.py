@@ -1,7 +1,5 @@
 """Deterministic preview and atomic apply; no model or source-provider calls."""
 
-from app.modules.auth.authorization import require_context
-
 import hashlib
 import json
 from types import SimpleNamespace
@@ -10,13 +8,13 @@ from uuid import UUID, uuid4
 from sqlalchemy import select
 
 from app.common.errors import ApplicationError, ConflictError, NotFoundError
+from app.modules.auth.authorization import require_context, require_workspace_id
 from app.modules.planning.import_models import PlanImport, PlanSourceLink
 from app.modules.planning.import_schemas import ImportApply, ImportProposal
 from app.modules.planning.models import PlanItem
 from app.modules.planning.repository import PlanningRepository
 from app.modules.planning.schemas import ItemFields, ItemResponse
 from app.modules.planning.service import domain_projection, validate_level
-from app.modules.workspace.service import _workspace_id
 
 FIELDS = set(ItemFields.model_fields)
 
@@ -121,10 +119,10 @@ def build_preview(proposal, rows, links):
                 warnings.append(f"{record.name}: 직접 지정한 날짜와 집계한 날짜의 기간 확인 필요")
             record.start_date, record.target_date = summary["start_date"], summary["target_date"]
     for record in projected.values():
-        parent = projected.get(str(record.parent_id))
-        if parent and any(
-            (parent.start_date and d < parent.start_date)
-            or (parent.target_date and d > parent.target_date)
+        parent_record = projected.get(str(record.parent_id))
+        if parent_record and any(
+            (parent_record.start_date and d < parent_record.start_date)
+            or (parent_record.target_date and d > parent_record.target_date)
             for d in (record.start_date, record.target_date)
             if d
         ):
@@ -142,7 +140,7 @@ class PlanningImportService:
     def __init__(self, session, context):
         self.session = session
         self.context = context
-        self.workspace_id = _workspace_id(context)
+        self.workspace_id = require_workspace_id(context)
         self.repository = PlanningRepository(session)
 
     async def lock(self):

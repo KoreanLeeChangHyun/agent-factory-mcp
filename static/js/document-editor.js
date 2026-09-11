@@ -1,4 +1,4 @@
-/* Shared, read-only document workbench. Layout is transient and tenant scoped. */
+/* Shared, read-only document workbench. Split layout is transient and tenant scoped. */
 (() => {
   "use strict";
   const ui = window.agentFactoryUI;
@@ -50,6 +50,7 @@
       this.groups = new Map();
       this.splitBindings = new Set();
       this.trees = new Map();
+      this.preferences = null;
       this.menu = node("div", "de-menu");
       this.menu.setAttribute("role", "menu");
       this.menu.hidden = true;
@@ -104,9 +105,31 @@
       }
       this.docs = next;
       for (const tree of this.trees.values()) {
+        tree.selected = new Set([...tree.selected].filter(id => next.has(id)));
         tree.list.hidden = false; tree.status.hidden = true;
       }
-      this.renderTrees();
+      this.renderTrees(); this.rememberState();
+    }
+
+    setPreferences(preferences) {
+      this.preferences = preferences;
+      const saved = preferences?.read({}) || {};
+      for (const kind of kinds) {
+        const tree = this.trees.get(kind), state = saved.trees?.[kind] || {};
+        tree.collapsed = new Set(Array.isArray(state.collapsedIds) ? state.collapsedIds.filter(id => typeof id === "string") : []);
+        tree.selected = new Set(Array.isArray(state.selectedIds) ? state.selectedIds.filter(id => typeof id === "string") : []);
+        tree.anchor = typeof state.anchorId === "string" ? state.anchorId : null;
+        tree.query.value = typeof state.query === "string" ? state.query.slice(0, 200) : "";
+      }
+    }
+
+    rememberState() {
+      const trees = {};
+      for (const kind of kinds) {
+        const tree = this.trees.get(kind);
+        trees[kind] = {collapsedIds:[...tree.collapsed], selectedIds:[...tree.selected], anchorId:tree.anchor, query:tree.query.value};
+      }
+      this.preferences?.write({trees});
     }
 
     setupTree(kind) {
@@ -123,7 +146,7 @@
           if (doc.kind !== kind) continue;
           doc.parts.slice(0, -1).forEach((_, index) => tree.collapsed.add(doc.parts.slice(0, index + 1).join("/")));
         }
-        this.renderTree(kind);
+        this.rememberState(); this.renderTree(kind);
       });
       const header = list.closest(".document-group").querySelector(".de-document-header");
       const toggle = header.querySelector("[data-document-group-toggle]");
@@ -135,11 +158,11 @@
       this.trees.set(kind, tree);
       query.addEventListener("input", () => {
         if (toggle.getAttribute("aria-expanded") === "false") toggle.click();
-        this.renderTree(kind);
+        this.rememberState(); this.renderTree(kind);
       });
       query.addEventListener("keydown", (event) => {
         if (event.key === "ArrowDown") { event.preventDefault(); list.querySelector('[role="treeitem"]')?.focus(); }
-        if (event.key === "Escape") { query.value = ""; this.renderTree(kind); }
+        if (event.key === "Escape") { query.value = ""; this.rememberState(); this.renderTree(kind); }
       });
       tree.keyboard = ui.bindTreeKeyboard(list,{
         items:() => tree.rows,
@@ -219,7 +242,7 @@
     toggleFolder(kind, key) {
       const tree = this.trees.get(kind);
       if (tree.collapsed.has(key)) tree.collapsed.delete(key); else tree.collapsed.add(key);
-      this.renderTree(kind, key);
+      this.rememberState(); this.renderTree(kind, key);
     }
 
     selectTree(kind, key, event) {
@@ -228,7 +251,7 @@
         selected:tree.selected,anchor:tree.anchor,key,range:event.shiftKey,
         toggle:event.ctrlKey || event.metaKey});
       tree.selected=next.selected;tree.anchor=next.anchor;
-      this.syncSelection();
+      this.rememberState(); this.syncSelection();
     }
 
     treeMenu(kind, event, origin) {
@@ -592,7 +615,7 @@
       tree.selected = new Set([doc.id]); tree.anchor = doc.id;
       const groupToggle = tree.list.closest(".document-group")?.querySelector("[data-document-group-toggle]");
       if (groupToggle?.getAttribute("aria-expanded") === "false") groupToggle.click();
-      this.renderTree(doc.kind);
+      this.rememberState(); this.renderTree(doc.kind);
       tree.rows.find((row) => row.key === doc.id)?.element.scrollIntoView({ block: "nearest" });
     }
 

@@ -84,12 +84,14 @@ Shared tokens belong in `static/css/ui.css`. Feature styles consume them rather 
 
 ## MCP connection flow
 
-Automated connection is exactly two visible steps:
+Automated connection is exactly four visible steps:
 
-1. Download the configuration file and place it in the target project directory.
-2. Copy the AI instructions and give them to the AI.
+1. Issue or select a personal authentication token.
+2. Download one ZIP containing every supported client configuration.
+3. Copy the AI instructions and give the ZIP and instructions to the AI.
+4. Check for actual MCP connection evidence.
 
-Manual connection shows the client-appropriate registration command or configuration, with one copy action. Token management is a secondary region and follows the same section, control, and list grammar.
+Do not require a client or environment choice in the browser. Client-specific configuration, registration commands, paths, and documentation belong in the ZIP. Token management is a secondary region and follows the same section, control, and list grammar.
 
 ## Responsive behavior
 

@@ -26,6 +26,18 @@ class ScheduleRepository:
             )
         )
 
+    async def get_schedule(
+        self, workspace_id: UUID, schedule_id: UUID, *, lock: bool = False
+    ) -> Schedule | None:
+        statement = select(Schedule).where(
+            Schedule.id == schedule_id,
+            Schedule.workspace_id == workspace_id,
+            Schedule.deleted_at.is_(None),
+        )
+        if lock:
+            statement = statement.with_for_update()
+        return await self.session.scalar(statement)
+
     async def create_schedule(self, schedule: Schedule) -> None:
         self.session.add(schedule)
         await self.session.flush()

@@ -1,9 +1,11 @@
 """Organization management with scoped, transactional authorization and audit."""
 
+import re
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from sqlalchemy import delete, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.errors import ApplicationError, ConflictError, NotFoundError, PermissionDeniedError
@@ -35,6 +37,7 @@ from app.modules.organization.permissions import (
     WORKSPACE_PERMISSIONS,
     validate_permissions,
 )
+from app.modules.organization.repository import OrganizationRepository
 from app.modules.organization.schemas import InvitationCreate, MemberUpdate, RoleWrite, TeamWrite
 from app.modules.organization.system_roles import (
     ORGANIZATION_ADMIN_ROLE_ID,
@@ -50,6 +53,49 @@ class OrganizationService:
         self.principal = principal
         self.organization_id = organization_id
         self.repository = AuthorizationRepository(session)
+        self.storage = OrganizationRepository(session)
+
+    @classmethod
+    async def create(
+        cls,
+        session: AsyncSession,
+        principal: Principal,
+        name: str,
+        slug: str | None,
+    ) -> Organization:
+        organization_id = uuid4()
+        service = cls(session, principal, organization_id)
+        await service.repository.establish_scope(principal, AuthorizationScope(organization_id))
+        generated = re.sub(r"[^a-z0-9]+", "-", name.casefold()).strip("-")[:30].rstrip("-")
+        organization = Organization(
+            id=organization_id,
+            name=name,
+            slug=slug or f"{generated or 'organization'}-{organization_id.hex[:8]}",
+            is_personal=False,
+        )
+        try:
+            await service.storage.create_with_owner(
+                organization,
+                principal.user_id,
+                ORGANIZATION_OWNER_ROLE_ID,
+            )
+            service.audit("organization.create", organization_id)
+            await service.commit()
+            return organization
+        except IntegrityError as exc:
+            await service.storage.rollback()
+            raise ConflictError(
+                "organization_slug_exists", "이미 사용 중인 조직 식별자입니다."
+            ) from exc
+
+    async def commit(self) -> None:
+        try:
+            await self.storage.commit()
+        except IntegrityError as exc:
+            await self.storage.rollback()
+            raise ConflictError(
+                "organization_conflict", "중복된 이름 또는 사용 중인 항목입니다."
+            ) from exc
 
     async def require(self, key: str, workspace_id: UUID | None = None):
         return await AuthorizationService(self.repository).authorize(
@@ -793,6 +839,24 @@ class OrganizationService:
             {"email": payload.email, "role_id": str(payload.role_id), "workspace_grants": grants},
         )
         return invitation, token
+
+    async def resend_invitation(self, invitation_id: UUID):
+        await self.lock()
+        await self.require("member.invite")
+        invitation = await self.storage.get_invitation(self.organization_id, invitation_id)
+        if (
+            invitation is None
+            or invitation.accepted_at
+            or invitation.cancelled_at
+            or invitation.role_id is None
+        ):
+            raise ConflictError("invitation_closed", "재전송할 수 없는 초대입니다.")
+        payload = InvitationCreate(
+            email=invitation.email,
+            role_id=invitation.role_id,
+            workspace_grants=invitation.workspace_grants,
+        )
+        return await self.invite(payload, invitation_id)
 
     async def cancel_invitation(self, invitation_id: UUID):
         await self.lock()

@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.errors import NotFoundError, PermissionDeniedError
+from app.common.errors import ApplicationError, NotFoundError, PermissionDeniedError
 from app.db.tenant import TenantContext, apply_tenant_context
 from app.modules.auth.service import Principal
 from app.modules.organization.models import (
@@ -173,3 +173,11 @@ def require_context(context: AuthorizedContext, *permissions: str) -> None:
     for permission in permissions:
         if permission not in context.permissions:
             raise PermissionDeniedError("permission_required", f"Permission required: {permission}")
+
+
+def require_workspace_id(context: AuthorizedContext) -> UUID:
+    """Return the authorized Workspace ID or reject an organization-only context."""
+
+    if context.scope.workspace_id is None:
+        raise ApplicationError("workspace_scope_required", "Workspace scope is required", 400)
+    return context.scope.workspace_id

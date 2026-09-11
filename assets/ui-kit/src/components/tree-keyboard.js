@@ -17,7 +17,7 @@ export function bindTreeKeyboard(root, {items, isExpanded, onToggle, onActivate,
       if(row.folder && isExpanded(row))onToggle(row);
       else next=rows.find(item=>item.key===row.parentKey);
     } else if(event.key==='Enter') {
-      if(row.folder)onToggle(row);else onActivate(row,event);
+      if(row.folder && row.toggleOnClick !== false)onToggle(row);else onActivate(row,event);
     } else if(event.key===' ') {
       if(row.folder)onToggle(row);else onToggleSelection(row,event);
     } else if((event.ctrlKey||event.metaKey) && event.key.toLowerCase()==='a')onSelectAll(rows,event);

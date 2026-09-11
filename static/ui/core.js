@@ -24,6 +24,7 @@ var agentFactoryUI = (() => {
     bindCodeOperation: () => bindCodeOperation,
     bindNativeDialog: () => bindNativeDialog,
     bindResizeHandle: () => bindResizeHandle,
+    bindSidebarHost: () => bindSidebarHost,
     bindTabs: () => bindTabs,
     bindTreeKeyboard: () => bindTreeKeyboard,
     button: () => button,
@@ -499,7 +500,7 @@ var agentFactoryUI = (() => {
         if (row.folder && isExpanded(row)) onToggle(row);
         else next = rows.find((item) => item.key === row.parentKey);
       } else if (event.key === "Enter") {
-        if (row.folder) onToggle(row);
+        if (row.folder && row.toggleOnClick !== false) onToggle(row);
         else onActivate(row, event);
       } else if (event.key === " ") {
         if (row.folder) onToggle(row);
@@ -604,15 +605,26 @@ var agentFactoryUI = (() => {
   }
 
   // src/components/explorer-tree.js
-  function explorerTree({ label, items, onSelect = () => {
-  }, onActivate = () => {
-  }, renderIcon = materialResourceIcon }) {
+  function explorerTree({
+    label,
+    items,
+    multiSelect = true,
+    onSelect = () => {
+    },
+    onActivate = () => {
+    },
+    onToggle = () => {
+    },
+    onRender = () => {
+    },
+    renderIcon = materialResourceIcon
+  }) {
     if (!label || !Array.isArray(items)) throw new Error("Explorer requires a label and items.");
-    if (typeof renderIcon !== "function") throw new Error("Explorer icon renderer must be a function.");
+    if (![onSelect, onActivate, onToggle, onRender, renderIcon].every((callback) => typeof callback === "function")) throw new Error("Explorer callbacks must be functions.");
     const root = document.createElement("div");
     root.className = "af-explorer-tree";
     root.setAttribute("aria-label", label);
-    root.setAttribute("aria-multiselectable", "true");
+    root.setAttribute("aria-multiselectable", String(multiSelect));
     const keys = /* @__PURE__ */ new Set(), expanded = /* @__PURE__ */ new Set(), initialSelected = /* @__PURE__ */ new Set();
     const normalize = (entries2) => entries2.map((entry) => {
       if (!entry.id || keys.has(entry.id) || !entry.label) throw new Error("Invalid explorer item.");
@@ -624,14 +636,14 @@ var agentFactoryUI = (() => {
     const entries = normalize(items);
     let rows = [], selected = initialSelected, anchor = null;
     const select = (row, event = {}) => {
-      if (row.disabled) return;
+      if (row.disabled || row.selectable === false) return;
       ({ selected, anchor } = selectKeys({
-        keys: rows.filter((item) => !item.disabled).map((item) => item.key),
+        keys: rows.filter((item) => !item.disabled && item.selectable !== false).map((item) => item.key),
         selected,
         anchor,
         key: row.key,
-        range: !!event.shiftKey,
-        toggle: !!(event.ctrlKey || event.metaKey)
+        range: multiSelect && !!event.shiftKey,
+        toggle: multiSelect && !!(event.ctrlKey || event.metaKey)
       }));
       render(row.key);
       onSelect([...selected]);
@@ -641,6 +653,7 @@ var agentFactoryUI = (() => {
       if (expanded.has(row.key)) expanded.delete(row.key);
       else expanded.add(row.key);
       render(row.key);
+      onToggle(row.key, expanded.has(row.key));
     };
     function render(focusKey) {
       rows = renderNativeTree(root, {
@@ -654,7 +667,7 @@ var agentFactoryUI = (() => {
           element2.className = "af-explorer-item";
           element2.style.setProperty("--tree-depth", level - 1);
           element2.setAttribute("aria-label", row.label);
-          element2.setAttribute("aria-selected", String(selected.has(row.key)));
+          if (row.selectable !== false) element2.setAttribute("aria-selected", String(selected.has(row.key)));
           if (row.disabled) element2.setAttribute("aria-disabled", "true");
           const line = document.createElement("div");
           line.className = "af-explorer-row af-explorer-line";
@@ -673,7 +686,11 @@ var agentFactoryUI = (() => {
           element2.append(line);
           line.addEventListener("click", (event) => {
             element2.focus();
-            if (row.folder && (disclosure.contains(event.target) || !event.ctrlKey && !event.metaKey && !event.shiftKey)) toggle(row);
+            if (row.folder && disclosure.contains(event.target)) {
+              toggle(row);
+              return;
+            }
+            if (row.folder && row.toggleOnClick !== false && !event.ctrlKey && !event.metaKey && !event.shiftKey) toggle(row);
             select(row, event);
           });
           line.addEventListener("dblclick", () => {
@@ -682,6 +699,7 @@ var agentFactoryUI = (() => {
           return element2;
         }
       });
+      onRender(rows);
     }
     render();
     const keyboard = bindTreeKeyboard(root, {
@@ -693,7 +711,8 @@ var agentFactoryUI = (() => {
       },
       onToggleSelection: (row, event) => select(row, { shiftKey: event.shiftKey, ctrlKey: true }),
       onSelectAll: () => {
-        selected = new Set(rows.filter((row) => !row.disabled).map((row) => row.key));
+        if (!multiSelect) return;
+        selected = new Set(rows.filter((row) => !row.disabled && row.selectable !== false).map((row) => row.key));
         render();
         onSelect([...selected]);
       },
@@ -707,6 +726,86 @@ var agentFactoryUI = (() => {
       keyboard.destroy();
       root.remove();
     } };
+  }
+
+  // src/components/sidebar-host.js
+  var sharedParts = [
+    [".app-sidebar__section", "af-sidebar-section"],
+    [".app-sidebar__section-header", "af-sidebar-section__header"],
+    [".app-sidebar__section-content", "af-sidebar-section__content"],
+    [".app-sidebar__nav", "af-sidebar-navigation"],
+    [".app-sidebar__row", "af-sidebar-navigation__item"],
+    [".app-sidebar__state", "af-sidebar-state"]
+  ];
+  var adoptSharedParts = (root) => sharedParts.forEach(([selector, className]) => {
+    if (root.matches?.(selector)) root.classList.add(className);
+    root.querySelectorAll?.(selector).forEach((element2) => element2.classList.add(className));
+  });
+  var adoptNavigationRows = (root) => {
+    const rows = [];
+    if (root.matches?.(".app-sidebar__nav > .app-sidebar__row")) rows.push(root);
+    root.querySelectorAll?.(".app-sidebar__nav > .app-sidebar__row").forEach((row) => rows.push(row));
+    rows.forEach((row) => {
+      if (row.querySelector(":scope > .af-sidebar-navigation__marker")) return;
+      const marker = document.createElement("span");
+      marker.className = "af-sidebar-navigation__marker";
+      marker.setAttribute("aria-hidden", "true");
+      row.append(marker);
+    });
+  };
+  var adoptSidebarContent = (root) => {
+    adoptSharedParts(root);
+    adoptNavigationRows(root);
+  };
+  function bindSidebarHost(host, { header, body, title, items, defaultTitle = "" } = {}) {
+    if (![host, header, body, title].every((element2) => element2 instanceof Element) || !Array.isArray(items)) {
+      throw new Error("Sidebar host requires host, header, body, title, and items.");
+    }
+    const ids = /* @__PURE__ */ new Set();
+    const views = items.map((item) => {
+      if (!item?.id || ids.has(item.id) || !(item.element instanceof Element)) {
+        throw new Error("Sidebar views require unique ids and elements.");
+      }
+      ids.add(item.id);
+      item.element.classList.add("af-sidebar-view");
+      adoptSidebarContent(item.element);
+      return { ...item, title: item.title || item.id };
+    });
+    host.classList.add("af-kit", "af-sidebar-host");
+    header.classList.add("af-sidebar-host__header");
+    body.classList.add("af-sidebar-host__body");
+    title.classList.add("af-sidebar-host__title");
+    const observer = new MutationObserver((records) => records.forEach((record) => record.addedNodes.forEach((node) => {
+      if (node instanceof Element) adoptSidebarContent(node);
+    })));
+    observer.observe(body, { childList: true, subtree: true });
+    let selected = views.find((item) => !item.element.hidden)?.id ?? null;
+    const select = (id) => {
+      if (id !== null && !ids.has(id)) throw new Error(`Unknown sidebar view: ${id}`);
+      selected = id;
+      views.forEach((item) => {
+        item.element.hidden = item.id !== id;
+      });
+      title.textContent = views.find((item) => item.id === id)?.title || defaultTitle;
+    };
+    return {
+      host,
+      views: views.map((item) => item.element),
+      select,
+      get selected() {
+        return selected;
+      },
+      destroy() {
+        observer.disconnect();
+        host.classList.remove("af-kit", "af-sidebar-host");
+        header.classList.remove("af-sidebar-host__header");
+        body.classList.remove("af-sidebar-host__body");
+        title.classList.remove("af-sidebar-host__title");
+        views.forEach((item) => item.element.classList.remove("af-sidebar-view"));
+        sharedParts.forEach(([, className]) => host.querySelectorAll(`.${className}`).forEach((element2) => element2.classList.remove(className)));
+        host.querySelectorAll(".af-sidebar-navigation__marker").forEach((marker) => marker.remove());
+      }
+    };
   }
   return __toCommonJS(product_core_exports);
 })();

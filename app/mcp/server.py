@@ -9,24 +9,22 @@ from mcp.server.auth.settings import AuthSettings
 from app.common.errors import PermissionDeniedError
 from app.core.config import settings
 from app.db.session import get_session_factory
-from app.infrastructure.job_queue import CeleryJobPublisher
 from app.mcp.auth import ApiTokenVerifier
+from app.modules.agent.factory import agent_execution_service
 from app.modules.agent.repository import AgentRepository
-from app.modules.agent.service import AgentService
 from app.modules.auth.authorization import (
     AuthorizationRepository,
     AuthorizationScope,
     AuthorizationService,
+    AuthorizedContext,
 )
 from app.modules.auth.service import Principal
-from app.modules.auth.authorization import AuthorizedContext
-from app.modules.organization.permissions import token_permissions
 from app.modules.document.models import DocumentType
 from app.modules.document.repository import DocumentRepository
 from app.modules.integration.repository import IntegrationRepository
 from app.modules.integration.schemas import ConnectionResponse
+from app.modules.organization.permissions import token_permissions
 from app.modules.schedule.repository import ScheduleRepository
-from app.modules.schedule.service import ScheduleService
 from app.modules.workspace.repository import WorkspaceRepositoryStore
 
 ACTIVITIES = {
@@ -41,7 +39,14 @@ ACTIVITIES = {
 
 def _identity(required_scope: str) -> Principal:
     token = get_access_token()
-    if token is None or (required_scope not in token.scopes and required_scope.replace(":", ".") not in token_permissions(token.scopes)) or token.subject is None:
+    if (
+        token is None
+        or (
+            required_scope not in token.scopes
+            and required_scope.replace(":", ".") not in token_permissions(token.scopes)
+        )
+        or token.subject is None
+    ):
         raise PermissionDeniedError("mcp_scope_required", f"MCP scope required: {required_scope}")
     claims = token.claims or {}
     return Principal(
@@ -131,7 +136,9 @@ def create_mcp_server() -> MCPServer:
             rows = await WorkspaceRepositoryStore(session).list(scope.organization_id)
             visible = []
             for row in rows:
-                keys = await AuthorizationRepository(session).permission_keys(principal, AuthorizationScope(scope.organization_id, row.id))
+                keys = await AuthorizationRepository(session).permission_keys(
+                    principal, AuthorizationScope(scope.organization_id, row.id)
+                )
                 if "workspace.read" in keys:
                     visible.append(row)
             rows = visible
@@ -184,7 +191,10 @@ def create_mcp_server() -> MCPServer:
         )
         async with session:
             rows = await IntegrationRepository(session).list_connections(context.scope.workspace_id)  # type: ignore[arg-type]
-            return [ConnectionResponse.model_validate(row, from_attributes=True).model_dump(mode="json") for row in rows]
+            return [
+                ConnectionResponse.model_validate(row, from_attributes=True).model_dump(mode="json")
+                for row in rows
+            ]
 
     @server.tool(name="log_list", description="List durable Workspace job logs")
     async def log_list(
@@ -223,30 +233,23 @@ def create_mcp_server() -> MCPServer:
             organization_id, workspace_id, "agent:execute", "agent.execute"
         )
         async with session:
-            run = await AgentService(AgentRepository(session)).create_run(
+            execution = await agent_execution_service(session).submit(
                 context,
                 UUID(agent_definition_id),
                 UUID(agent_version_id) if agent_version_id else None,
                 idempotency_key,
                 input_payload,
             )
-            job = await ScheduleService(
-                ScheduleRepository(session), CeleryJobPublisher(), settings
-            ).enqueue(
-                context,
-                "agent.run",
-                "agents",
-                {"agent_run_id": str(run.id)},
-                f"agent-run:{run.id}",
-            )
-            return {"agent_run_id": str(run.id), "job_id": str(job.id), "status": job.status.value}
-
-    from app.mcp.reporting import install_reporting
-
-    from app.mcp.planning import install_planning
+            return {
+                "agent_run_id": str(execution.run.id),
+                "job_id": str(execution.job.id),
+                "status": execution.job.status.value,
+            }
 
     from app.mcp.documents import install_documents
     from app.mcp.integrations import install_integrations
+    from app.mcp.planning import install_planning
+    from app.mcp.reporting import install_reporting
 
     install_documents(server, _authorized_session)
     install_integrations(server, _authorized_session)

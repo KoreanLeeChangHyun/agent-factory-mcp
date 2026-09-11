@@ -267,9 +267,7 @@ def test_reporting_browser():
             page.route("**/api/**", route_request)
             base = f"http://127.0.0.1:{server.server_port}"
             page.goto(base + "/workspace/")
-            page.locator("[data-workspace-list]").get_by_role(
-                "button", name="Reports", exact=True
-            ).click()
+            page.locator('[data-workspace-list] [data-workspace-id="one"]').click()
             page.locator('[data-activity="agents"]').click()
             panel = page.locator("[data-reporting-panel]")
             sidebar = page.locator("[data-reporting-sidebar]")

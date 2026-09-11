@@ -24,6 +24,7 @@
   const profileButton = document.querySelector("[data-account-profile]");
   const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
   let requestVersion = 0;
+  let preferences = null;
   const setLoadStatus = (kind, text) => {
     status.classList.add('af-status--inline');
     ui.setStatus(status,{kind,text});
@@ -87,11 +88,13 @@
     }
   };
 
-  const open = (view) => {
+  const open = (view = preferences?.read({}).view || "dashboard") => {
+    if (!Object.hasOwn(titles, view)) view = "dashboard";
     profileButton?.classList.remove("is-selected");
     document.querySelector("[data-admin-view].is-selected")?.classList.remove("is-selected");
     document.querySelector(`[data-admin-view="${view}"]`)?.classList.add("is-selected");
     history.replaceState(null, "", "#admin");
+    preferences?.write({view});
     load(view);
   };
 
@@ -112,5 +115,6 @@
     if (catalogLink) catalogLink.hidden = true;
     content?.replaceChildren();
   };
-  window.agentFactoryAdmin = { load, open, profile, reset };
+  const setPreferences = (next) => { preferences = next; };
+  window.agentFactoryAdmin = { load, open, profile, reset, setPreferences };
 })();

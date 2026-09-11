@@ -57,6 +57,13 @@ class WorkspaceRepositoryStore:
             )
         )
 
+    async def permission_keys(self, principal, organization_id: UUID, workspace_id: UUID):
+        from app.modules.auth.authorization import AuthorizationRepository, AuthorizationScope
+
+        return await AuthorizationRepository(self.session).permission_keys(
+            principal, AuthorizationScope(organization_id, workspace_id)
+        )
+
     async def create(self, organization_id: UUID, name: str, slug: str) -> Workspace:
         workspace = Workspace(organization_id=organization_id, name=name, slug=slug)
         self.session.add(workspace)
@@ -216,6 +223,18 @@ class WorkspaceRepositoryStore:
             .order_by(WorkspaceRepository.canonical_location)
         )
         return list(result)
+
+    async def get_repository(
+        self, workspace_id: UUID, repository_id: UUID, *, lock: bool = False
+    ) -> WorkspaceRepository | None:
+        statement = select(WorkspaceRepository).where(
+            WorkspaceRepository.id == repository_id,
+            WorkspaceRepository.workspace_id == workspace_id,
+            WorkspaceRepository.deleted_at.is_(None),
+        )
+        if lock:
+            statement = statement.with_for_update()
+        return await self.session.scalar(statement)
 
     async def record_visit(self, user_id: UUID, workspace_id: UUID) -> None:
         now = datetime.now(UTC)

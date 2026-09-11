@@ -1,17 +1,13 @@
 """Planning hierarchy, concurrency and derived domain summaries."""
 
-from app.modules.auth.authorization import require_context
-
 from uuid import UUID
 
-from sqlalchemy import select
-
 from app.common.errors import ApplicationError, ConflictError
-from app.modules.auth.authorization import AuthorizedContext
+from app.modules.auth.authorization import AuthorizedContext, require_context, require_workspace_id
+from app.modules.planning.calendar import korean_public_holidays
 from app.modules.planning.models import PlanItem, PlanSettings
 from app.modules.planning.repository import PlanningRepository
 from app.modules.planning.schemas import ItemCreate, ItemResponse, ItemUpdate, SettingsWrite
-from app.modules.workspace.service import _workspace_id
 
 
 def validate_level(kind, payload):
@@ -68,7 +64,7 @@ class PlanningService:
 
     async def list(self, context: AuthorizedContext):
         require_context(context, "planning.read")
-        workspace_id = _workspace_id(context)
+        workspace_id = require_workspace_id(context)
         rows = await self.repository.list(workspace_id)
         items = []
         for row in rows:
@@ -77,9 +73,15 @@ class PlanningService:
                 item.update(domain_projection(row, [r for r in rows if r.parent_id == row.id]))
             items.append(item)
         settings = await self.repository.settings(workspace_id)
+        calendar_dates = [value for row in rows for value in (row.start_date, row.target_date)]
+        calendar_dates.append(settings.launch_date if settings else None)
         return {
             "items": items,
             "can_edit": "planning.update" in context.permissions,
+            "calendar": {
+                "country": "KR",
+                "holidays": korean_public_holidays(calendar_dates),
+            },
             "settings": {
                 "launch_date": settings.launch_date if settings else None,
                 "revision": settings.revision if settings else 0,
@@ -87,13 +89,13 @@ class PlanningService:
         }
 
     async def lock(self, context):
-        await self.repository.lock(context.scope.organization_id, _workspace_id(context))
+        await self.repository.lock(context.scope.organization_id, require_workspace_id(context))
 
     async def create(self, context: AuthorizedContext, payload: ItemCreate):
         require_context(context, "planning.create")
         await self.lock(context)
         validate_level(payload.kind, payload)
-        workspace_id = _workspace_id(context)
+        workspace_id = require_workspace_id(context)
         if payload.kind == "domain":
             if payload.parent_id is not None:
                 raise ApplicationError(
@@ -108,62 +110,52 @@ class PlanningService:
                     "invalid_parent", "선택한 상위 작업 바로 아래에 하위 작업을 추가하세요.", 422
                 )
         record = PlanItem(workspace_id=workspace_id, **payload.model_dump())
-        self.repository.session.add(record)
-        await self.repository.session.commit()
+        await self.repository.add_item(record)
+        await self.repository.commit()
         return record
 
     async def update(self, context: AuthorizedContext, item_id: UUID, payload: ItemUpdate):
         require_context(context, "planning.update")
         await self.lock(context)
-        record = await self.repository.get(_workspace_id(context), item_id)
+        record = await self.repository.get(require_workspace_id(context), item_id)
         self.check_revision(record, payload.revision)
         validate_level(record.kind, payload)
         for key, value in payload.model_dump(exclude={"revision"}).items():
             setattr(record, key, value)
         record.revision += 1
-        await self.repository.session.commit()
+        await self.repository.commit()
         return record
 
     async def delete(self, context: AuthorizedContext, item_id: UUID, revision: int):
         require_context(context, "planning.delete")
         await self.lock(context)
-        record = await self.repository.get(_workspace_id(context), item_id)
+        record = await self.repository.get(require_workspace_id(context), item_id)
         self.check_revision(record, revision)
-        rows = await self.repository.list(_workspace_id(context))
+        rows = await self.repository.list(require_workspace_id(context))
         if any(row.parent_id == item_id for row in rows):
             raise ConflictError("plan_has_children", "하위 항목을 먼저 삭제하세요.")
-        from app.modules.reporting.models import ReportTask
-
-        linked_report = await self.repository.session.scalar(
-            select(ReportTask.id)
-            .where(
-                ReportTask.workspace_id == _workspace_id(context),
-                ReportTask.plan_item_id == item_id,
-            )
-            .limit(1)
-        )
-        if linked_report:
+        if await self.repository.has_linked_report(require_workspace_id(context), item_id):
             raise ConflictError(
                 "plan_has_reports", "보고 작업이 연결된 일정 항목은 삭제할 수 없습니다."
             )
-        await self.repository.session.delete(record)
-        await self.repository.session.commit()
+        await self.repository.delete_item(record)
+        await self.repository.commit()
 
     async def update_settings(self, context: AuthorizedContext, payload: SettingsWrite):
         require_context(context, "planning.update")
         await self.lock(context)
-        record = await self.repository.settings(_workspace_id(context))
+        record = await self.repository.settings(require_workspace_id(context))
         if payload.revision != (record.revision if record else 0):
             raise ConflictError(
                 "plan_revision_conflict", "일정이 변경되었습니다. 새로고침 후 다시 수정하세요."
             )
         if record is None:
-            record = PlanSettings(workspace_id=_workspace_id(context), revision=1)
-            self.repository.session.add(record)
+            record = PlanSettings(workspace_id=require_workspace_id(context), revision=1)
+            await self.repository.add_settings(record)
         else:
             record.revision += 1
         record.launch_date = payload.launch_date
-        await self.repository.session.commit()
+        await self.repository.commit()
         return {"launch_date": record.launch_date, "revision": record.revision}
 
     @staticmethod

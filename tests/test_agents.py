@@ -5,10 +5,12 @@ from uuid import UUID
 import pytest
 
 from app.common.errors import ConflictError
+from app.modules.agent.execution_service import AgentExecutionService
 from app.modules.agent.models import AgentDefinition, AgentRun, AgentRunStatus, AgentStatus
 from app.modules.agent.service import TRANSITIONS, AgentService
 from app.modules.auth.authorization import AuthorizationScope, AuthorizedContext
 from app.modules.auth.service import Principal
+from app.modules.schedule.models import Job
 
 USER_ID = UUID("11111111-1111-4111-8111-111111111111")
 ORGANIZATION_ID = UUID("22222222-2222-4222-8222-222222222222")
@@ -16,6 +18,8 @@ WORKSPACE_ID = UUID("33333333-3333-4333-8333-333333333333")
 DEFINITION_ID = UUID("44444444-4444-4444-8444-444444444444")
 VERSION_ID = UUID("55555555-5555-4555-8555-555555555555")
 RUN_ID = UUID("66666666-6666-4666-8666-666666666666")
+RETRY_RUN_ID = UUID("77777777-7777-4777-8777-777777777777")
+JOB_ID = UUID("88888888-8888-4888-8888-888888888888")
 
 
 def context() -> AuthorizedContext:
@@ -60,6 +64,69 @@ class FakeAgentRepository:
 
     async def commit(self) -> None:
         self.commits += 1
+
+
+class FakeExecutionAgentService:
+    def __init__(self, submitted: AgentRun, retried: AgentRun) -> None:
+        self.repository = FakeAgentRepository(submitted)
+        self.submitted = submitted
+        self.retried = retried
+
+    async def prepare_run(self, *args: object) -> AgentRun:
+        del args
+        return self.submitted
+
+    async def prepare_retry(self, *args: object) -> AgentRun:
+        del args
+        return self.retried
+
+
+class FakeScheduleRepository:
+    def __init__(self) -> None:
+        self.commits = 0
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+
+class FakePublisher:
+    def __init__(self, repository: FakeScheduleRepository) -> None:
+        self.repository = repository
+        self.published: list[UUID] = []
+
+    def publish(self, job: Job) -> str:
+        assert self.repository.commits == 1
+        self.published.append(job.id)
+        return "celery-task-id"
+
+
+class FakeScheduleService:
+    def __init__(self) -> None:
+        self.repository = FakeScheduleRepository()
+        self.publisher = FakePublisher(self.repository)
+        self.jobs: list[Job] = []
+
+    async def prepare_enqueue(
+        self,
+        context: AuthorizedContext,
+        task_type: str,
+        queue: str,
+        payload: dict[str, object],
+        idempotency_key: str,
+    ) -> tuple[Job, bool]:
+        job = Job(
+            id=JOB_ID,
+            organization_id=context.scope.organization_id,
+            workspace_id=WORKSPACE_ID,
+            requested_by_user_id=USER_ID,
+            task_type=task_type,
+            queue=queue,
+            idempotency_key=idempotency_key,
+            payload=payload,
+            max_attempts=5,
+        )
+        self.jobs.append(job)
+        return job, True
 
 
 def test_run_state_machine_has_terminal_states() -> None:
@@ -112,3 +179,39 @@ def test_agent_definitions_start_without_a_mutable_version() -> None:
         revision=1,
     )
     assert definition.current_version_number == 0
+
+
+@pytest.mark.asyncio
+async def test_execution_submission_persists_run_and_job_before_publish() -> None:
+    submitted = run(AgentRunStatus.QUEUED)
+    retried = run(AgentRunStatus.QUEUED)
+    retried.id = RETRY_RUN_ID
+    agents = FakeExecutionAgentService(submitted, retried)
+    schedules = FakeScheduleService()
+    service = AgentExecutionService(agents, schedules)  # type: ignore[arg-type]
+
+    execution = await service.submit(
+        context(), DEFINITION_ID, VERSION_ID, "request-0001", {"prompt": "hello"}
+    )
+
+    assert execution.run is submitted
+    assert execution.job.payload == {"agent_run_id": str(RUN_ID)}
+    assert execution.job.celery_task_id == "celery-task-id"
+    assert schedules.repository.commits == 2
+    assert schedules.publisher.published == [JOB_ID]
+
+
+@pytest.mark.asyncio
+async def test_execution_retry_also_enqueues_a_durable_job() -> None:
+    submitted = run(AgentRunStatus.QUEUED)
+    retried = run(AgentRunStatus.QUEUED)
+    retried.id = RETRY_RUN_ID
+    agents = FakeExecutionAgentService(submitted, retried)
+    schedules = FakeScheduleService()
+    service = AgentExecutionService(agents, schedules)  # type: ignore[arg-type]
+
+    execution = await service.retry(context(), RUN_ID)
+
+    assert execution.run is retried
+    assert execution.job.payload == {"agent_run_id": str(RETRY_RUN_ID)}
+    assert schedules.publisher.published == [JOB_ID]

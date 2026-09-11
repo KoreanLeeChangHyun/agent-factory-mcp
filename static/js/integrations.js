@@ -32,7 +32,15 @@
   }
   const collectionList = document.querySelector("[data-collection-list]");
   const state = { context: null, providers: [], connections: [], collections: [], selected: null,
-    selectedCollection: null, selectedFolder: null, folders: [], nextFolderPage: null, generation: 0 };
+    selectedCollection: null, selectedFolder: null, folders: [], nextFolderPage: null, generation: 0,
+    preferredConnectionId: null, preferredCollectionId: null, catalogOpen: false };
+  const rememberState = (patch = {}) => state.context?.preferences?.write({
+    connectionId: state.preferredConnectionId,
+    collectionId: state.preferredCollectionId,
+    catalogOpen: state.catalogOpen,
+    tab: integrationTabs?.selected || 'status',
+    ...patch,
+  });
 
   const base = () => `/api/organizations/${state.context.organizationId}/workspaces/${state.context.workspaceId}`;
   const formatDate = (value) => value ? new Date(value).toLocaleString("ko-KR") : "아직 없음";
@@ -48,10 +56,12 @@
   const showCatalog = () => {
     clearConfirmation();
     state.selected = null;
+    state.catalogOpen = true;
     catalog.hidden = false;
     detail.hidden = true;
     document.querySelector("[data-integration-title]").textContent = "연동 / 추가";
     renderSidebar();
+    rememberState();
   };
 
   const renderSidebar = () => {
@@ -88,7 +98,10 @@
       const meta = document.createElement("span");
       meta.textContent = `${collection.enabled ? labelStatus(collection.last_refresh_status) : "연결 제거됨"} · ${formatDate(collection.last_refreshed_at)}`;
       button.append(title, meta);
-      button.addEventListener("click", () => { state.selectedCollection = collection; renderCollections(); renderConnection(); });
+      button.addEventListener("click", () => {
+        state.selectedCollection = collection; state.preferredCollectionId = collection.collection_id;
+        rememberState(); renderCollections(); renderConnection();
+      });
       collectionList.append(button);
     });
   };
@@ -105,8 +118,11 @@
     document.querySelector("[data-requested-scopes]").textContent = connection.cloud?.requested_scopes?.length
       ? connection.cloud.requested_scopes.join(", ") : "Drive 읽기 전용";
     document.querySelector("[data-integration-workspace-name]").textContent = state.context.workspaceName || "현재 작업공간";
-    const selectedCollection = state.selectedCollection || currentCollections().find((row) => row.enabled) || currentCollections()[0] || null;
+    const selectedCollection = state.selectedCollection
+      || currentCollections().find((row) => row.collection_id === state.preferredCollectionId)
+      || currentCollections().find((row) => row.enabled) || currentCollections()[0] || null;
     state.selectedCollection = selectedCollection;
+    state.preferredCollectionId = selectedCollection?.collection_id || null;
     document.querySelector("[data-refresh-state]").textContent = selectedCollection
       ? `${labelStatus(selectedCollection.last_refresh_status)} · ${formatDate(selectedCollection.last_refreshed_at)}` : "아직 없음";
     const authorize = document.querySelector("[data-authorize-connection]");
@@ -123,8 +139,13 @@
     clearConfirmation();
     if (state.selected?.id !== id) resetFolders();
     state.selected = state.connections.find((item) => item.id === id) || null;
-    state.selectedCollection = state.collections.find((item) => item.connection_id === id && item.enabled)
+    state.preferredConnectionId = state.selected?.id || null;
+    state.catalogOpen = false;
+    state.selectedCollection = state.collections.find((item) => item.connection_id === id && item.collection_id === state.preferredCollectionId)
+      || state.collections.find((item) => item.connection_id === id && item.enabled)
       || state.collections.find((item) => item.connection_id === id) || null;
+    state.preferredCollectionId = state.selectedCollection?.collection_id || null;
+    rememberState();
     renderConnection();
     if (state.selected) await inspect(false);
   };
@@ -158,9 +179,10 @@
       state.providers = Array.isArray(providers) ? providers : [];
       state.connections = Array.isArray(connections) ? connections : [];
       state.collections = Array.isArray(collections?.collections) ? collections.collections : [];
-      const selectedId = state.selected?.id;
+      const selectedId = state.selected?.id || state.preferredConnectionId;
       renderSidebar();
-      if (selectedId && state.connections.some((row) => row.id === selectedId)) await selectConnection(selectedId);
+      if (state.catalogOpen) showCatalog();
+      else if (selectedId && state.connections.some((row) => row.id === selectedId)) await selectConnection(selectedId);
       else if (state.connections.length) await selectConnection(state.connections[0].id);
       else showCatalog();
     } catch (error) {
@@ -274,13 +296,14 @@
     document.querySelector("[data-selected-folder]").textContent = folder.name;
     scopeForm.querySelector('[type="submit"]').disabled = false;
   });
-  ui.bindTabs({
+  const integrationTabItems = [...host.querySelectorAll('[data-integration-tab]')].map(button => ({
+    id:button.dataset.integrationTab, button,
+    panel:host.querySelector('[data-integration-panel="' + button.dataset.integrationTab + '"]'),
+  }));
+  const integrationTabs = ui.bindTabs({
     list:host.querySelector('[role="tablist"]'),
-    items:[...host.querySelectorAll('[data-integration-tab]')].map(button => ({
-      id:button.dataset.integrationTab, button,
-      panel:host.querySelector('[data-integration-panel="' + button.dataset.integrationTab + '"]'),
-    })),
-    onChange:id => { if (id === 'scope') void loadFolders(); },
+    items:integrationTabItems,
+    onChange:id => { rememberState({tab:id}); if (id === 'scope') void loadFolders(); },
   });
   scopeForm?.addEventListener("submit", async (event) => {
     event.preventDefault(); if (!state.selectedFolder || !state.selected) return;
@@ -297,7 +320,8 @@
         selection: { folder_id: state.selectedFolder.id, recursive: scopeForm.elements.recursive.checked,
           attachments: false, max_items: 1000, max_pages: 100, max_bytes: 5000000 },
       }) });
-      state.collections.push(created); state.selectedCollection = created; renderConnection(); await refreshCollection();
+      state.collections.push(created); state.selectedCollection = created; state.preferredCollectionId = created.collection_id;
+      rememberState(); renderConnection(); await refreshCollection();
     } catch (error) { setMessage(scopeError, error.message); }
     finally { scopeForm.removeAttribute("aria-busy"); submit.disabled = disabled || !state.selectedFolder; }
   });
@@ -323,8 +347,17 @@
   });
 
   window.agentFactoryIntegrations = Object.freeze({
-    open(context) { clearConfirmation(); state.context = context; resetFolders(); void reload(); },
-    reset() { state.generation += 1; clearConfirmation(); state.context = null; state.providers = []; state.connections = []; state.collections = []; state.selected = null; state.selectedCollection = null; resetFolders(); renderSidebar(); },
+    open(context) {
+      clearConfirmation(); state.context = context; resetFolders();
+      const saved=context.preferences?.read({})||{};
+      state.preferredConnectionId=typeof saved.connectionId==='string'?saved.connectionId:null;
+      state.preferredCollectionId=typeof saved.collectionId==='string'?saved.collectionId:null;
+      state.catalogOpen=saved.catalogOpen===true;
+      const tabIndex=integrationTabItems.findIndex(item=>item.id===saved.tab);
+      integrationTabs.select(tabIndex>=0?tabIndex:0, false, false);
+      void reload();
+    },
+    reset() { state.generation += 1; clearConfirmation(); state.context = null; state.providers = []; state.connections = []; state.collections = []; state.selected = null; state.selectedCollection = null; state.preferredConnectionId = null; state.preferredCollectionId = null; state.catalogOpen = false; resetFolders(); renderSidebar(); },
     add: showCatalog,
   });
 })();

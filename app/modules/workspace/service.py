@@ -16,8 +16,6 @@ from app.common.errors import (
 )
 from app.core.config import Settings
 from app.modules.auth.authorization import (
-    AuthorizationRepository,
-    AuthorizationScope,
     AuthorizedContext,
     require_context,
 )
@@ -45,11 +43,10 @@ class WorkspaceService:
         return await self._visible(context, rows)
 
     async def _visible(self, context, rows):
-        authorizer = AuthorizationRepository(self.repository.session)
         result = []
         for row in rows:
-            keys = await authorizer.permission_keys(
-                context.principal, AuthorizationScope(context.scope.organization_id, row.id)
+            keys = await self.repository.permission_keys(
+                context.principal, context.scope.organization_id, row.id
             )
             if "workspace.read" in keys:
                 result.append(row)
@@ -161,8 +158,8 @@ class WorkspaceService:
         workspace = await self.repository.get(context.scope.organization_id, workspace_id)
         if workspace is None:
             raise NotFoundError("workspace_not_found", "Workspace not found")
-        permissions = await AuthorizationRepository(self.repository.session).permission_keys(
-            context.principal, AuthorizationScope(context.scope.organization_id, workspace_id)
+        permissions = await self.repository.permission_keys(
+            context.principal, context.scope.organization_id, workspace_id
         )
         if "workspace.read" not in permissions:
             raise PermissionDeniedError(
@@ -219,17 +216,9 @@ class WorkspaceService:
     async def delete_repository(self, context: AuthorizedContext, repository_id: UUID) -> None:
         from datetime import UTC, datetime
 
-        from sqlalchemy import select
-
         require_context(context, "repository.delete")
-        record = await self.repository.session.scalar(
-            select(WorkspaceRepository)
-            .where(
-                WorkspaceRepository.id == repository_id,
-                WorkspaceRepository.workspace_id == _workspace_id(context),
-                WorkspaceRepository.deleted_at.is_(None),
-            )
-            .with_for_update()
+        record = await self.repository.get_repository(
+            _workspace_id(context), repository_id, lock=True
         )
         if record is None:
             raise NotFoundError("repository_not_found", "저장소를 찾을 수 없습니다.")

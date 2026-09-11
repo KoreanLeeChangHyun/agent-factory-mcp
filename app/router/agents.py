@@ -6,9 +6,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.db.session import get_session
-from app.infrastructure.job_queue import CeleryJobPublisher
+from app.modules.agent.execution_service import AgentExecutionService
+from app.modules.agent.factory import agent_execution_service
 from app.modules.agent.repository import AgentRepository
 from app.modules.agent.schemas import (
     AgentDefinitionCreate,
@@ -24,8 +24,6 @@ from app.modules.agent.service import AgentService
 from app.modules.auth.authorization import AuthorizedContext
 from app.modules.auth.authorization_dependencies import require_permission
 from app.modules.auth.dependencies import require_csrf
-from app.modules.schedule.repository import ScheduleRepository
-from app.modules.schedule.service import ScheduleService
 
 router = APIRouter(
     prefix="/api/organizations/{organization_id}/workspaces/{workspace_id}/agents",
@@ -37,6 +35,12 @@ def get_agent_service(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> AgentService:
     return AgentService(AgentRepository(session))
+
+
+def get_agent_execution_service(
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> AgentExecutionService:
+    return agent_execution_service(session)
 
 
 def _definition_response(record: object) -> AgentDefinitionResponse:
@@ -147,25 +151,16 @@ async def create_run(
     definition_id: UUID,
     payload: AgentRunCreate,
     context: Annotated[AuthorizedContext, Depends(require_permission("agent.execute"))],
-    service: Annotated[AgentService, Depends(get_agent_service)],
-    session: Annotated[AsyncSession, Depends(get_session)],
+    service: Annotated[AgentExecutionService, Depends(get_agent_execution_service)],
 ) -> AgentRunResponse:
-    run = await service.create_run(
+    execution = await service.submit(
         context,
         definition_id,
         payload.agent_version_id,
         payload.idempotency_key,
         payload.input,
     )
-    scheduler = ScheduleService(ScheduleRepository(session), CeleryJobPublisher(), settings)
-    await scheduler.enqueue(
-        context,
-        "agent.run",
-        "agents",
-        {"agent_run_id": str(run.id)},
-        f"agent-run:{run.id}",
-    )
-    return _run_response(run)
+    return _run_response(execution.run)
 
 
 @router.get("/runs/{run_id}", response_model=AgentRunResponse)
@@ -199,9 +194,9 @@ async def cancel_run(
 async def retry_run(
     run_id: UUID,
     context: Annotated[AuthorizedContext, Depends(require_permission("agent.execute"))],
-    service: Annotated[AgentService, Depends(get_agent_service)],
+    service: Annotated[AgentExecutionService, Depends(get_agent_execution_service)],
 ) -> AgentRunResponse:
-    return _run_response(await service.retry_run(context, run_id))
+    return _run_response((await service.retry(context, run_id)).run)
 
 
 @router.get("/runs/{run_id}/events", response_model=list[AgentRunEventResponse])
@@ -216,8 +211,12 @@ async def list_run_events(
     ]
 
 
-@router.delete("/definitions/{definition_id}", status_code=204, dependencies=[Depends(require_csrf)])
-async def delete_definition(definition_id: UUID,
+@router.delete(
+    "/definitions/{definition_id}", status_code=204, dependencies=[Depends(require_csrf)]
+)
+async def delete_definition(
+    definition_id: UUID,
     context: Annotated[AuthorizedContext, Depends(require_permission("agent.delete"))],
-    service: Annotated[AgentService, Depends(get_agent_service)]):
+    service: Annotated[AgentService, Depends(get_agent_service)],
+):
     await service.delete_definition(context, definition_id)

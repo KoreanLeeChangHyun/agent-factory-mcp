@@ -89,7 +89,7 @@ const docs = [
   };
   try {
     await page.goto(`http://127.0.0.1:${server.address().port}/factory/workspace/`);
-    await page.locator('[data-workspace-list] .workspace-row').first().click();
+    await page.locator('[data-workspace-list] [data-workspace-id]').first().click();
     await page.locator('[data-activity="documents"]').click();
     await file('a').waitFor();
     // Each explorer owns its search on the header row, outside the collapsed body.

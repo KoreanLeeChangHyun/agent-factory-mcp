@@ -55,22 +55,54 @@ class Settings(BaseSettings):
     document_chunk_overlap: int = 240
     integration_encryption_key: SecretStr = SecretStr("local-integration-key-change-me")
     integration_encryption_key_version: int = 1
-    google_drive_oauth_client_id: str | None = Field(default=None, validation_alias="AF_GOOGLE_DRIVE_OAUTH_CLIENT_ID")
-    google_drive_oauth_client_secret: SecretStr | None = Field(default=None, validation_alias="AF_GOOGLE_DRIVE_OAUTH_CLIENT_SECRET")
-    google_drive_oauth_redirect_uri: str | None = Field(default=None, validation_alias="AF_GOOGLE_DRIVE_OAUTH_REDIRECT_URI")
-    gmail_oauth_client_id: str | None = Field(default=None, validation_alias="AF_GMAIL_OAUTH_CLIENT_ID")
-    gmail_oauth_client_secret: SecretStr | None = Field(default=None, validation_alias="AF_GMAIL_OAUTH_CLIENT_SECRET")
-    gmail_oauth_redirect_uri: str | None = Field(default=None, validation_alias="AF_GMAIL_OAUTH_REDIRECT_URI")
-    onedrive_oauth_client_id: str | None = Field(default=None, validation_alias="AF_ONEDRIVE_OAUTH_CLIENT_ID")
-    onedrive_oauth_client_secret: SecretStr | None = Field(default=None, validation_alias="AF_ONEDRIVE_OAUTH_CLIENT_SECRET")
-    onedrive_oauth_redirect_uri: str | None = Field(default=None, validation_alias="AF_ONEDRIVE_OAUTH_REDIRECT_URI")
-    slack_oauth_client_id: str | None = Field(default=None, validation_alias="AF_SLACK_OAUTH_CLIENT_ID")
-    slack_oauth_client_secret: SecretStr | None = Field(default=None, validation_alias="AF_SLACK_OAUTH_CLIENT_SECRET")
-    slack_oauth_redirect_uri: str | None = Field(default=None, validation_alias="AF_SLACK_OAUTH_REDIRECT_URI")
-    notion_oauth_client_id: str | None = Field(default=None, validation_alias="AF_NOTION_OAUTH_CLIENT_ID")
-    notion_oauth_client_secret: SecretStr | None = Field(default=None, validation_alias="AF_NOTION_OAUTH_CLIENT_SECRET")
-    notion_oauth_redirect_uri: str | None = Field(default=None, validation_alias="AF_NOTION_OAUTH_REDIRECT_URI")
-    onedrive_oauth_tenant: str = Field(default="common", validation_alias="AF_ONEDRIVE_OAUTH_TENANT")
+    google_drive_oauth_client_id: str | None = Field(
+        default=None, validation_alias="AF_GOOGLE_DRIVE_OAUTH_CLIENT_ID"
+    )
+    google_drive_oauth_client_secret: SecretStr | None = Field(
+        default=None, validation_alias="AF_GOOGLE_DRIVE_OAUTH_CLIENT_SECRET"
+    )
+    google_drive_oauth_redirect_uri: str | None = Field(
+        default=None, validation_alias="AF_GOOGLE_DRIVE_OAUTH_REDIRECT_URI"
+    )
+    gmail_oauth_client_id: str | None = Field(
+        default=None, validation_alias="AF_GMAIL_OAUTH_CLIENT_ID"
+    )
+    gmail_oauth_client_secret: SecretStr | None = Field(
+        default=None, validation_alias="AF_GMAIL_OAUTH_CLIENT_SECRET"
+    )
+    gmail_oauth_redirect_uri: str | None = Field(
+        default=None, validation_alias="AF_GMAIL_OAUTH_REDIRECT_URI"
+    )
+    onedrive_oauth_client_id: str | None = Field(
+        default=None, validation_alias="AF_ONEDRIVE_OAUTH_CLIENT_ID"
+    )
+    onedrive_oauth_client_secret: SecretStr | None = Field(
+        default=None, validation_alias="AF_ONEDRIVE_OAUTH_CLIENT_SECRET"
+    )
+    onedrive_oauth_redirect_uri: str | None = Field(
+        default=None, validation_alias="AF_ONEDRIVE_OAUTH_REDIRECT_URI"
+    )
+    slack_oauth_client_id: str | None = Field(
+        default=None, validation_alias="AF_SLACK_OAUTH_CLIENT_ID"
+    )
+    slack_oauth_client_secret: SecretStr | None = Field(
+        default=None, validation_alias="AF_SLACK_OAUTH_CLIENT_SECRET"
+    )
+    slack_oauth_redirect_uri: str | None = Field(
+        default=None, validation_alias="AF_SLACK_OAUTH_REDIRECT_URI"
+    )
+    notion_oauth_client_id: str | None = Field(
+        default=None, validation_alias="AF_NOTION_OAUTH_CLIENT_ID"
+    )
+    notion_oauth_client_secret: SecretStr | None = Field(
+        default=None, validation_alias="AF_NOTION_OAUTH_CLIENT_SECRET"
+    )
+    notion_oauth_redirect_uri: str | None = Field(
+        default=None, validation_alias="AF_NOTION_OAUTH_REDIRECT_URI"
+    )
+    onedrive_oauth_tenant: str = Field(
+        default="common", validation_alias="AF_ONEDRIVE_OAUTH_TENANT"
+    )
     webhook_max_payload_bytes: int = 1024 * 1024
     auth_token_secret: SecretStr = SecretStr("local-development-secret-change-me")
     auth_session_ttl_hours: int = 24 * 7
@@ -136,4 +168,6 @@ class Settings(BaseSettings):
         return self
 
 
-settings = Settings(_env_file=os.environ.get("AGENT_FACTORY_ENV_FILE", ".env") or None)
+settings = Settings(  # type: ignore[call-arg]  # pydantic-settings runtime init option
+    _env_file=os.environ.get("AGENT_FACTORY_ENV_FILE", ".env") or None
+)

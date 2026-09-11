@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from app.modules.auth.authorization import require_context
-
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 from uuid import UUID, uuid4
@@ -14,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.common.errors import ApplicationError, ConflictError, NotFoundError
 from app.core.config import Settings
-from app.modules.auth.authorization import AuthorizedContext
+from app.modules.auth.authorization import AuthorizedContext, require_context
 from app.modules.schedule.models import Job, JobStatus, Schedule
 from app.modules.schedule.repository import ScheduleRepository
 
@@ -87,8 +85,6 @@ class ScheduleService:
     async def change_schedule(
         self, context, schedule_id, *, payload=None, enabled=None, revision=None, remove=False
     ):
-        from sqlalchemy import select
-
         permission = (
             "schedule.delete"
             if remove
@@ -97,15 +93,7 @@ class ScheduleService:
             else "schedule.update"
         )
         require_context(context, permission)
-        record = await self.repository.session.scalar(
-            select(Schedule)
-            .where(
-                Schedule.id == schedule_id,
-                Schedule.workspace_id == _workspace_id(context),
-                Schedule.deleted_at.is_(None),
-            )
-            .with_for_update()
-        )
+        record = await self.repository.get_schedule(_workspace_id(context), schedule_id, lock=True)
         if record is None:
             raise NotFoundError("schedule_not_found", "일정을 찾을 수 없습니다.")
         if revision is not None and record.revision != revision:
@@ -157,12 +145,45 @@ class ScheduleService:
         idempotency_key: str,
         priority: int = 5,
     ) -> Job:
+        try:
+            job, created = await self.prepare_enqueue(
+                context,
+                task_type,
+                queue,
+                payload,
+                idempotency_key,
+                priority,
+            )
+            if not created:
+                return job
+            await self.repository.commit()
+        except IntegrityError:
+            await self.repository.rollback()
+            existing = await self.repository.find_job(_workspace_id(context), idempotency_key)
+            if existing is None:
+                raise
+            return existing
+        job.celery_task_id = self.publisher.publish(job)
+        await self.repository.commit()
+        return job
+
+    async def prepare_enqueue(
+        self,
+        context: AuthorizedContext,
+        task_type: str,
+        queue: str,
+        payload: dict[str, object],
+        idempotency_key: str,
+        priority: int = 5,
+    ) -> tuple[Job, bool]:
+        """Stage a durable Job without committing or publishing it."""
+
         require_context(context, "agent.execute" if task_type == "agent.run" else "job.create")
         validate_task_queue(task_type, queue)
         workspace_id = _workspace_id(context)
         existing = await self.repository.find_job(workspace_id, idempotency_key)
         if existing is not None:
-            return existing
+            return existing, False
         job = Job(
             organization_id=context.scope.organization_id,
             workspace_id=workspace_id,
@@ -174,18 +195,8 @@ class ScheduleService:
             payload=payload,
             max_attempts=self.settings.job_max_attempts,
         )
-        try:
-            await self.repository.create_job(job)
-            await self.repository.commit()
-        except IntegrityError:
-            await self.repository.rollback()
-            existing = await self.repository.find_job(workspace_id, idempotency_key)
-            if existing is None:
-                raise
-            return existing
-        job.celery_task_id = self.publisher.publish(job)
-        await self.repository.commit()
-        return job
+        await self.repository.create_job(job)
+        return job, True
 
     async def list_jobs(self, context: AuthorizedContext) -> list[Job]:
         require_context(context, "job.read")

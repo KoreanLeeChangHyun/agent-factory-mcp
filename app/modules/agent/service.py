@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from app.modules.auth.authorization import require_context
-
 from uuid import UUID, uuid4
 
 from sqlalchemy.exc import IntegrityError
@@ -18,7 +16,7 @@ from app.modules.agent.models import (
     AgentVersion,
 )
 from app.modules.agent.repository import AgentRepository
-from app.modules.auth.authorization import AuthorizedContext
+from app.modules.auth.authorization import AuthorizedContext, require_context
 
 TRANSITIONS: dict[AgentRunStatus, frozenset[AgentRunStatus]] = {
     AgentRunStatus.QUEUED: frozenset({AgentRunStatus.RUNNING, AgentRunStatus.CANCELLED}),
@@ -103,17 +101,10 @@ class AgentService:
 
     async def delete_definition(self, context: AuthorizedContext, definition_id: UUID) -> None:
         from datetime import UTC, datetime
-        from sqlalchemy import select
 
         require_context(context, "agent.delete")
-        record = await self.repository.session.scalar(
-            select(AgentDefinition)
-            .where(
-                AgentDefinition.id == definition_id,
-                AgentDefinition.workspace_id == _workspace_id(context),
-                AgentDefinition.deleted_at.is_(None),
-            )
-            .with_for_update()
+        record = await self.repository.get_definition(
+            _workspace_id(context), definition_id, lock=True
         )
         if record is None:
             raise NotFoundError("agent_definition_not_found", "에이전트를 찾을 수 없습니다.")
@@ -136,6 +127,35 @@ class AgentService:
         idempotency_key: str,
         input_payload: dict[str, object],
     ) -> AgentRun:
+        try:
+            run = await self.prepare_run(
+                context,
+                definition_id,
+                version_id,
+                idempotency_key,
+                input_payload,
+            )
+            await self.repository.commit()
+            return run
+        except IntegrityError as exc:
+            await self.repository.rollback()
+            existing = await self.repository.find_run_by_idempotency(
+                _workspace_id(context), idempotency_key
+            )
+            if existing is not None:
+                return existing
+            raise ConflictError("agent_run_conflict", "Agent run could not be created") from exc
+
+    async def prepare_run(
+        self,
+        context: AuthorizedContext,
+        definition_id: UUID,
+        version_id: UUID | None,
+        idempotency_key: str,
+        input_payload: dict[str, object],
+    ) -> AgentRun:
+        """Stage an idempotent run without committing the surrounding use case."""
+
         require_context(context, "agent.execute")
         workspace_id = _workspace_id(context)
         definition = await self._definition(context, definition_id)
@@ -147,23 +167,14 @@ class AgentService:
         version = await self.repository.get_version(workspace_id, definition_id, version_id)
         if version is None:
             raise NotFoundError("agent_version_not_found", "Agent version not found")
-        try:
-            run = await self.repository.create_run(
-                workspace_id,
-                definition_id,
-                version.id,
-                context.principal.user_id,
-                idempotency_key,
-                input_payload,
-            )
-            await self.repository.commit()
-            return run
-        except IntegrityError as exc:
-            await self.repository.rollback()
-            existing = await self.repository.find_run_by_idempotency(workspace_id, idempotency_key)
-            if existing is not None:
-                return existing
-            raise ConflictError("agent_run_conflict", "Agent run could not be created") from exc
+        return await self.repository.create_run(
+            workspace_id,
+            definition_id,
+            version.id,
+            context.principal.user_id,
+            idempotency_key,
+            input_payload,
+        )
 
     async def list_runs(self, context: AuthorizedContext) -> list[AgentRun]:
         require_context(context, "agent.read")
@@ -191,13 +202,20 @@ class AgentService:
         return run
 
     async def retry_run(self, context: AuthorizedContext, run_id: UUID) -> AgentRun:
+        run = await self.prepare_retry(context, run_id)
+        await self.repository.commit()
+        return run
+
+    async def prepare_retry(self, context: AuthorizedContext, run_id: UUID) -> AgentRun:
+        """Stage a linked retry without committing the surrounding use case."""
+
         require_context(context, "agent.execute")
         original = await self._run(context, run_id)
         if original.status not in {AgentRunStatus.FAILED, AgentRunStatus.CANCELLED}:
             raise ConflictError(
                 "agent_run_not_retryable", "Only failed or cancelled runs can retry"
             )
-        run = await self.repository.create_run(
+        return await self.repository.create_run(
             original.workspace_id,
             original.agent_definition_id,
             original.agent_version_id,
@@ -206,8 +224,6 @@ class AgentService:
             original.input_payload,
             retry_of_run_id=original.id,
         )
-        await self.repository.commit()
-        return run
 
     async def transition(self, run: AgentRun, target: AgentRunStatus, **values: object) -> None:
         if target not in TRANSITIONS[run.status]:

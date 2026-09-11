@@ -10,6 +10,8 @@ from app.db.session import get_session
 from app.modules.auth.authorization import AuthorizedContext
 from app.modules.auth.authorization_dependencies import require_permission
 from app.modules.auth.dependencies import require_csrf
+from app.modules.planning.import_schemas import ImportApply, ImportProposal
+from app.modules.planning.import_service import PlanningImportService
 from app.modules.planning.repository import PlanningRepository
 from app.modules.planning.schemas import ItemCreate, ItemResponse, ItemUpdate, SettingsWrite
 from app.modules.planning.service import PlanningService
@@ -30,6 +32,24 @@ def get_planning_service(session: Annotated[AsyncSession, Depends(get_session)])
 
 
 Service = Annotated[PlanningService, Depends(get_planning_service)]
+
+
+def get_read_import_service(
+    context: ReadContext,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> PlanningImportService:
+    return PlanningImportService(session, context)
+
+
+def get_write_import_service(
+    context: ImportContext,
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> PlanningImportService:
+    return PlanningImportService(session, context)
+
+
+ReadImportService = Annotated[PlanningImportService, Depends(get_read_import_service)]
+WriteImportService = Annotated[PlanningImportService, Depends(get_write_import_service)]
 
 
 @router.get("")
@@ -62,31 +82,21 @@ async def update_settings(payload: SettingsWrite, context: WriteContext, service
     return await service.update_settings(context, payload)
 
 
-# Both browser and MCP adapters use the same owner-side import service.
-from app.modules.planning.import_schemas import ImportApply, ImportProposal
-from app.modules.planning.import_service import PlanningImportService
-
-
 @router.get("/imports")
-async def list_imports(context: ReadContext, service: Service):
-    return await PlanningImportService(service.repository.session, context).list()
+async def list_imports(service: ReadImportService):
+    return await service.list()
 
 
 @router.get("/imports/{import_id}")
-async def read_import(import_id: UUID, context: ReadContext, service: Service):
-    imports = PlanningImportService(service.repository.session, context)
-    return imports.response(await imports.get(import_id))
+async def read_import(import_id: UUID, service: ReadImportService):
+    return service.response(await service.get(import_id))
 
 
 @router.post("/imports", dependencies=[Depends(require_csrf)])
-async def preview_import(payload: ImportProposal, context: ImportContext, service: Service):
-    return await PlanningImportService(service.repository.session, context).preview(payload)
+async def preview_import(payload: ImportProposal, service: WriteImportService):
+    return await service.preview(payload)
 
 
 @router.post("/imports/{import_id}/apply", dependencies=[Depends(require_csrf)])
-async def apply_import(
-    import_id: UUID, payload: ImportApply, context: ImportContext, service: Service
-):
-    return await PlanningImportService(service.repository.session, context).apply(
-        import_id, payload
-    )
+async def apply_import(import_id: UUID, payload: ImportApply, service: WriteImportService):
+    return await service.apply(import_id, payload)

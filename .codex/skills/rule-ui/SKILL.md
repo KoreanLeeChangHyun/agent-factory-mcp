@@ -22,6 +22,7 @@ Keep this Skill Git-owned under `.codex/skills/`. It may later describe or call 
 
 - For UI implementation or redesign, read [references/design-rules.md](references/design-rules.md) and [references/workspace-ui.md](references/workspace-ui.md) completely before editing.
 - For shared controls or UI-kit adapters, also read [references/ui-components.md](references/ui-components.md) and [references/ui-kit-api.md](references/ui-kit-api.md).
+- For sidebar design, implementation, or migration, read [references/sidebar-assets.md](references/sidebar-assets.md) completely.
 - For UI review or consistency cleanup, read [references/audit-checklist.md](references/audit-checklist.md) completely and report evidence using its format.
 - Read both when auditing and fixing the same surface.
 

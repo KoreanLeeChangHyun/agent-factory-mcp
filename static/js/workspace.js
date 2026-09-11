@@ -6,7 +6,6 @@ const activityButtons = document.querySelectorAll("[data-activity]");
 const activityContextMenu = document.querySelector("[data-activity-context-menu]");
 const sidebarTitle = document.querySelector("[data-sidebar-title]");
 const documentConnectorsButton = document.querySelector("[data-document-connectors]");
-const sidebarViews = document.querySelectorAll("[data-sidebar-view]");
 const workspaceViews = document.querySelectorAll("[data-workspace-view]");
 const documentNavigationItems = document.querySelectorAll("[data-document-target]");
 const documentViews = document.querySelectorAll("[data-document-view]");
@@ -39,6 +38,9 @@ const rootPath = new URL("../", document.baseURI).pathname.replace(/\/$/, "");
 const tenant = { organizationId: null, workspaceId: null };
 const minimumSidebarWidth = 180;
 const maximumSidebarWidth = 520;
+const defaultSidebarWidth = Number.parseFloat(
+  getComputedStyle(workspaceShell).getPropertyValue("--primary-sidebar-width"),
+) || 280;
 const activityTitles = {
   organization: "조직",
   workspaces: "작업공간",
@@ -52,10 +54,58 @@ const activityTitles = {
   account: "계정",
   admin: "슈퍼 관리자",
 };
+const sidebarHost = window.agentFactoryUI.bindSidebarHost(primarySidebar, {
+  header: sidebarTitle.closest("header"),
+  body: document.querySelector("[data-sidebar-content]"),
+  title: sidebarTitle,
+  items: Array.from(document.querySelectorAll("[data-sidebar-view]"), (element) => ({
+    id: element.dataset.sidebarView,
+    title: activityTitles[element.dataset.sidebarView],
+    element,
+  })),
+  defaultTitle: "작업공간",
+});
 const activityOrderKey = "agentFactoryActivityOrder";
 const activityVisibilityKey = "agentFactoryActivityVisibility";
+const activityStateVersion = 1;
 let activityUserId = "";
 const activityPreferenceKey = (key) => `${key}:${activityUserId}:${tenant.organizationId}:${tenant.workspaceId}`;
+const activityStateKey = (activity, workspaceScoped) => `agentFactoryActivityState:v${activityStateVersion}:${activityUserId}:${tenant.organizationId}:${workspaceScoped ? tenant.workspaceId : "organization"}:${activity}`;
+const activityState = (activity, workspaceScoped = true) => Object.freeze({
+  read(fallback = {}) {
+    if (!activityUserId || !tenant.organizationId || (workspaceScoped && !tenant.workspaceId) || !Object.hasOwn(activityTitles, activity)) return fallback;
+    const value = storedJson(activityStateKey(activity, workspaceScoped), fallback);
+    return value && typeof value === "object" && !Array.isArray(value) ? value : fallback;
+  },
+  write(patch) {
+    if (!activityUserId || !tenant.organizationId || (workspaceScoped && !tenant.workspaceId) || !Object.hasOwn(activityTitles, activity)) return;
+    const current = this.read({});
+    try {
+      localStorage.setItem(activityStateKey(activity, workspaceScoped), JSON.stringify({ ...current, ...patch }));
+    } catch { /* Local UI restoration is best effort. */ }
+  },
+});
+const sidebarState = (activity) => activityState(activity, !["organization", "workspaces"].includes(activity));
+const currentSidebarActivity = () => {
+  if (workspaceShell.dataset.mode === "organization") return "organization";
+  if (workspaceShell.dataset.sidebar === "workspaces") return "workspaces";
+  return document.querySelector("[data-activity].is-active")?.dataset.activity || null;
+};
+const rememberSidebarState = (activity = currentSidebarActivity()) => {
+  if (!activity) return;
+  const width = Number.parseFloat(getComputedStyle(workspaceShell).getPropertyValue("--primary-sidebar-width"));
+  sidebarState(activity).write({
+    ...(Number.isFinite(width) ? {sidebarWidth:Math.round(width)} : {}),
+    sidebarCollapsed: workspaceShell.dataset.sidebarCollapsed === "true",
+  });
+};
+const restoreSidebarState = (activity, forceOpen = false) => {
+  const saved = sidebarState(activity).read({});
+  const hasSavedVisibility = typeof saved.sidebarCollapsed === "boolean";
+  const expanded = forceOpen || (hasSavedVisibility ? saved.sidebarCollapsed !== true : activity !== "schedule");
+  setSidebarWidth(Number.isFinite(saved.sidebarWidth) ? saved.sidebarWidth : defaultSidebarWidth, false);
+  setSidebarExpanded(expanded, forceOpen);
+};
 const defaultActivityOrder = Array.from(activityButtons, (button) => button.dataset.activity);
 const selectionStorageKey = () => `agentFactorySelection:${activityUserId}:${tenant.organizationId}`;
 const savedWorkspaceView = () => {
@@ -74,6 +124,13 @@ const rememberWorkspaceView = () => {
     specificationId: document.querySelector('[data-specification-link][aria-current="page"]')?.dataset.specificationLink,
   };
   try { localStorage.setItem(selectionStorageKey(), JSON.stringify(view)); } catch { /* Storage may be unavailable. */ }
+  if (view.activity === "documents") {
+    activityState("documents").write({
+      view: view.documentView || null,
+      processedId: view.processedId || null,
+      specificationId: view.specificationId || null,
+    });
+  }
 };
 let platformAdmin = false;
 let pendingActivityDrop = null;
@@ -245,6 +302,9 @@ const initializeOriginalSearch = () => {
 
     const applyGlobalSearch = () => {
       const query = originalSearchInput?.value.trim().toLocaleLowerCase("ko") || "";
+      if (activityUserId && tenant.organizationId && tenant.workspaceId) {
+        activityState("documents").write({originalSearch: originalSearchInput?.value.slice(0, 200) || ""});
+      }
       if (!query) {
         table.clearFilter(false);
         return;
@@ -348,7 +408,8 @@ const storedJson = (key, fallback) => {
 const orderedActivityButtons = () => Array.from(activityBar?.querySelectorAll("[data-activity]") || []);
 
 const saveActivityOrder = () => {
-  localStorage.setItem(activityPreferenceKey(activityOrderKey), JSON.stringify(orderedActivityButtons().map((button) => button.dataset.activity)));
+  try { localStorage.setItem(activityPreferenceKey(activityOrderKey), JSON.stringify(orderedActivityButtons().map((button) => button.dataset.activity))); }
+  catch { /* Local UI restoration is best effort. */ }
 };
 
 const applyActivityOrder = () => {
@@ -398,7 +459,8 @@ const setActivityVisibility = (activity, visible) => {
   if (!tenant.workspaceId) return;
   const visibility = activityVisibility();
   visibility[activity] = visible;
-  localStorage.setItem(activityPreferenceKey(activityVisibilityKey), JSON.stringify(visibility));
+  try { localStorage.setItem(activityPreferenceKey(activityVisibilityKey), JSON.stringify(visibility)); }
+  catch { /* Local UI restoration is best effort. */ }
   applyActivityVisibility();
   const active = document.querySelector("[data-activity].is-active");
   if (!active || active.hidden) {
@@ -462,10 +524,10 @@ const showActivityDropIndicator = (target, position) => {
   pendingActivityDrop = { target, position };
 };
 
-const selectActivity = (activity) => {
+const selectActivity = (activity, forceOpen = false) => {
+  rememberSidebarState();
   if (activity !== "admin") window.agentFactoryAdmin?.reset();
   if (activity !== null && !Object.hasOwn(activityTitles, activity)) return;
-  setSidebarExpanded(true);
   if (activity !== null && activity !== "workspaces") window.agentFactoryMCPConnection?.dismiss();
   documentEditor?.clearDrag();
   documentEditor?.closeMenu(false);
@@ -487,17 +549,15 @@ const selectActivity = (activity) => {
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
-  sidebarViews.forEach((view) => {
-    view.hidden = view.dataset.sidebarView !== activity;
-  });
+  sidebarHost.select(activity);
   workspaceViews.forEach((view) => {
     view.hidden = view.dataset.workspaceView !== activity;
   });
-  if (sidebarTitle) sidebarTitle.textContent = activityTitles[activity] || "작업공간";
   document.querySelector("[data-plan-header-actions]").hidden = activity !== "schedule";
   document.querySelector("[data-integration-header-actions]").hidden = activity !== "integrations";
   document.querySelector("[data-workspace-header-actions]").hidden = activity !== "workspaces";
   if (documentConnectorsButton) documentConnectorsButton.hidden = activity !== "documents";
+  restoreSidebarState(activity || "workspaces", forceOpen);
   rememberWorkspaceView();
 };
 
@@ -534,11 +594,11 @@ const selectDocumentView = (target) => {
   rememberWorkspaceView();
 };
 
-const setSidebarWidth = (width) => {
+const setSidebarWidth = (width, persist = true) => {
   if (!workspaceShell || !sidebarResizer) return;
 
   if (width < minimumSidebarWidth) {
-    setSidebarExpanded(false);
+    setSidebarExpanded(false, persist);
     return;
   }
 
@@ -555,11 +615,12 @@ const setSidebarWidth = (width) => {
   );
 
   workspaceShell.style.setProperty("--primary-sidebar-width", `${nextWidth}px`);
-  if (workspaceShell.dataset.sidebarCollapsed === "true") setSidebarExpanded(true);
+  if (workspaceShell.dataset.sidebarCollapsed === "true") setSidebarExpanded(true, persist);
   sidebarResizer.setAttribute("aria-valuenow", String(Math.round(nextWidth)));
+  if (persist) rememberSidebarState();
 };
 
-const setSidebarExpanded = (expanded) => {
+const setSidebarExpanded = (expanded, persist = true) => {
   if (!workspaceShell || !primarySidebar) return;
   workspaceShell.dataset.sidebarCollapsed = String(!expanded);
   primarySidebar.hidden = !expanded;
@@ -570,6 +631,7 @@ const setSidebarExpanded = (expanded) => {
     );
     sidebarResizer.setAttribute("aria-valuenow", String(expanded && Number.isFinite(width) ? Math.round(width) : 0));
   }
+  if (persist) rememberSidebarState();
 };
 
 const populateSelect = (select, rows) => {
@@ -610,14 +672,14 @@ const showWorkspaceList = (focus = false) => {
     button.classList.remove("is-active");
     button.setAttribute("aria-pressed", "false");
   });
-  selectActivity("workspaces");
+  selectActivity("workspaces", focus);
   if (tenant.workspaceId) window.agentFactoryMCPConnection?.show();
   applyActivityVisibility();
   if (!tenant.workspaceId) accountWorkspace.textContent = "—";
   history.replaceState(null, "", location.pathname + location.search);
   closeActivityContextMenu();
   rememberWorkspaceView();
-  if (focus) document.querySelector("[data-workspace-list] button, .workspace-picker-sidebar [data-create-workspace]")?.focus();
+  if (focus) document.querySelector("[data-workspace-list] [role='treeitem'], .workspace-picker-sidebar [data-create-workspace]")?.focus();
 };
 
 const renderWorkspaceMetadata = record => {
@@ -625,7 +687,7 @@ const renderWorkspaceMetadata = record => {
   const date = value => { const parsed = new Date(value); return value && !Number.isNaN(parsed.valueOf()) ? parsed.toLocaleString() : '—'; };
   const fields = [
     ['이름', record.name], ['소속', owner?.is_personal ? '개인' : owner?.name || '—'],
-    ['상태', { active: '활성', inactive: '비활성' }[record.status] || record.status || '—'],
+    ['작업공간 상태', { active: '활성', inactive: '비활성' }[record.status] || record.status || '—'],
     ['식별 이름', record.slug || '—'], ['생성일', date(record.created_at)], ['수정일', date(record.updated_at)],
     ['작업공간 ID', record.id],
   ];
@@ -658,18 +720,19 @@ const openRenameMenu = (event, rename) => {
   menu.onkeydown = window.agentFactoryUI.menuKeyboard({items:() => [action],close:() => closeWorkspaceRenameMenu(true)});
   action.focus();
 };
-const renameWorkspaceGroup = (heading, group) => {
+const renameWorkspaceGroup = (label, group) => {
   closeWorkspaceRenameMenu();
-  if (heading.querySelector('form')) return;
+  if (!label.isConnected) return;
+  const origin = label.closest('[role="treeitem"]') || label;
   const form = document.createElement('form'); form.className = 'workspace-rename';
   const input = document.createElement('input'); input.value = group.name; input.maxLength = 60; input.required = true;
   input.setAttribute('aria-label', '그룹 이름 변경');
   const error = document.createElement('span'); error.setAttribute('role', 'alert');
-  form.append(input, error); heading.replaceChildren(form); input.focus(); input.select();
+  form.append(input, error); label.replaceWith(form); input.focus(); input.select();
   form.addEventListener('click', event => event.stopPropagation());
   form.addEventListener('keydown', event => {
     event.stopPropagation();
-    if (event.key === 'Escape') { event.preventDefault(); heading.textContent = group.name; heading.focus(); }
+    if (event.key === 'Escape') { event.preventDefault(); form.replaceWith(label); origin.focus(); }
   });
   form.addEventListener('submit', async event => {
     event.preventDefault(); event.stopPropagation();
@@ -686,7 +749,7 @@ const renameWorkspaceGroup = (heading, group) => {
       if (!item) return;
       Object.assign(item, updated, { workspace_ids: item.workspace_ids });
       renderWorkspaces();
-      document.querySelector(`[data-workspace-group-id="${group.id}"] > summary`)?.focus();
+      document.querySelector(`[data-workspace-group-id="${group.id}"]`)?.focus();
     } catch (failure) {
       error.textContent = failure.status === 409 ? '다른 곳에서 변경되었거나 같은 이름의 그룹이 있습니다.' : '저장하지 못했습니다. 다시 시도하세요.';
       input.disabled = false; input.focus();
@@ -696,6 +759,7 @@ const renameWorkspaceGroup = (heading, group) => {
 
 const renameWorkspace = (button, record) => {
   closeWorkspaceRenameMenu();
+  const origin = button.closest('[role="treeitem"]') || button;
   const organizationId = tenant.organizationId;
   const form = document.createElement('form'); form.className = 'workspace-rename';
   const input = document.createElement('input'); input.value = record.name; input.maxLength = 200; input.required = true;
@@ -703,7 +767,7 @@ const renameWorkspace = (button, record) => {
   const error = document.createElement('span'); error.setAttribute('role', 'alert');
   form.append(input, error); button.replaceWith(form); input.focus(); input.select();
   let saving = false;
-  const restore = () => { if (form.isConnected) { form.replaceWith(button); button.focus(); } };
+  const restore = () => { if (form.isConnected) { form.replaceWith(button); origin.focus(); } };
   input.addEventListener('keydown', event => { if (event.key === 'Escape' && !saving) { event.preventDefault(); restore(); } });
   form.addEventListener('submit', async event => {
     event.preventDefault(); if (saving) return;
@@ -769,6 +833,7 @@ const moveWorkspaceToGroup = async (id, groupId) => {
   }
 };
 const groupDropTarget = (element, groupId) => {
+  if (!element) return;
   if (element.dataset.workspaceDropBound === 'true') return;
   element.dataset.workspaceDropBound = 'true';
   element.addEventListener("dragover", event => {
@@ -786,56 +851,113 @@ const groupDropTarget = (element, groupId) => {
     event.preventDefault(); event.stopPropagation(); void moveWorkspaceToGroup(id, groupId);
   });
 };
+let workspaceExplorer = null;
+let workspaceDefaultExpanded = true;
 const renderWorkspaces = () => {
   closeWorkspaceRenameMenu();
-  const defaultList = document.querySelector("[data-workspace-default-list]");
-  const groupList = document.querySelector("[data-workspace-group-list]");
+  workspaceExplorer?.destroy();
   const groups = workspaceGroups();
   const grouped = new Set(groups.flatMap(group => group.workspace_ids));
-  const rowWithGroup = record => {
-    const row = document.createElement("div"); row.className = "workspace-group-row";
-    const button = workspaceRow(record);
-    button.draggable = true;
-    button.addEventListener("dragstart", event => {
-      button.classList.add("is-dragging");
+  const records = new Map(workspaceRows.map(record => [record.id, record]));
+  const workspaceItem = record => ({
+    id: `workspace:${record.id}`,
+    label: record.name,
+    selected: record.id === tenant.workspaceId,
+  });
+  const items = [
+    {
+      id: 'workspace-group:default',
+      label: '기본 그룹',
+      selectable: false,
+      expanded: workspaceDefaultExpanded,
+      children: workspaceRows.filter(record => !grouped.has(record.id)).map(workspaceItem),
+    },
+    ...groups.map(group => ({
+      id: `workspace-group:${group.id}`,
+      label: group.name,
+      selectable: false,
+      expanded: !group.collapsed,
+      children: workspaceRows.filter(record => group.workspace_ids.includes(record.id)).map(workspaceItem),
+    })),
+  ];
+  const decorateWorkspaceRow = (element, record) => {
+    element.classList.add('workspace-explorer__workspace');
+    element.dataset.workspaceId = record.id;
+    element.setAttribute('aria-current', String(record.id === tenant.workspaceId));
+    element.draggable = true;
+    element.addEventListener("dragstart", event => {
+      element.classList.add("is-dragging");
       event.dataTransfer.setData("application/x-agent-factory-workspace", record.id);
       event.dataTransfer.effectAllowed = "move";
     });
-    button.addEventListener("dragend", () => {
-      button.classList.remove("is-dragging");
+    element.addEventListener("dragend", () => {
+      element.classList.remove("is-dragging");
       document.querySelectorAll(".is-drop-target").forEach(target => target.classList.remove("is-drop-target"));
     });
-    row.append(button);
-    return row;
+    const label = element.querySelector(':scope > .af-explorer-line .af-explorer-name');
+    element.addEventListener('keydown', event => {
+      if (event.key === 'F2') { event.preventDefault(); event.stopPropagation(); renameWorkspace(label, record); }
+    });
+    element.addEventListener('contextmenu', event => openRenameMenu(event, () => renameWorkspace(label, record)));
   };
-  defaultList.replaceChildren(...workspaceRows.filter(row => !grouped.has(row.id)).map(rowWithGroup));
-  groupDropTarget(defaultList, "");
-  groupList.replaceChildren();
-  groups.forEach(group => {
-    const section = document.createElement("details"); section.className = "workspace-group";
-    section.dataset.workspaceGroupId = group.id;
-    section.open = !group.collapsed;
-    const heading = document.createElement("summary"); heading.textContent = group.name;
-    heading.addEventListener('contextmenu', event => openRenameMenu(event, () => renameWorkspaceGroup(heading, group)));
-    heading.addEventListener('keydown', event => { if (event.key === 'F2') { event.preventDefault(); renameWorkspaceGroup(heading, group); } });
-    section.append(heading, ...workspaceRows.filter(row => group.workspace_ids.includes(row.id)).map(rowWithGroup));
-    section.addEventListener("toggle", async () => {
-      if (!section.isConnected) return;
-      const collapsed = !section.open;
-      if (group.collapsed === collapsed) return;
+  const explorer = window.agentFactoryUI.explorerTree({
+    label: '작업공간 탐색기',
+    items,
+    multiSelect: false,
+    renderIcon: () => null,
+    onSelect: keys => {
+      const key = keys.find(value => value.startsWith('workspace:'));
+      if (key) void enterWorkspace(key.slice('workspace:'.length));
+    },
+    onActivate: key => {
+      const id = key.startsWith('workspace:') ? key.slice('workspace:'.length) : '';
+      if (id && tenant.workspaceId !== id) void enterWorkspace(id);
+    },
+    onToggle: async (key, expanded) => {
+      if (key === 'workspace-group:default') { workspaceDefaultExpanded = expanded; return; }
+      if (!key.startsWith('workspace-group:')) return;
+      const group = groups.find(item => item.id === key.slice('workspace-group:'.length));
+      if (!group || group.collapsed === !expanded) return;
+      const previous = group.collapsed;
+      group.collapsed = !expanded;
       try {
         const updated = await api(`/api/organizations/${tenant.organizationId}/workspaces/groups/${group.id}`, {
-          method: 'PATCH', body: JSON.stringify({ collapsed, revision: group.revision }),
+          method: 'PATCH', body: JSON.stringify({ collapsed: group.collapsed, revision: group.revision }),
         });
         Object.assign(group, updated, { workspace_ids: group.workspace_ids });
       } catch {
-        group.collapsed = !collapsed;
-        section.open = !group.collapsed;
+        group.collapsed = previous;
+        renderWorkspaces();
         listState.textContent = '그룹 상태를 저장하지 못했습니다.';
       }
-    });
-    groupDropTarget(section, group.id); groupList.append(section);
+    },
+    onRender: rows => rows.forEach(row => {
+      if (row.key.startsWith('workspace:')) {
+        const record = records.get(row.key.slice('workspace:'.length));
+        if (record) decorateWorkspaceRow(row.element, record);
+        return;
+      }
+      const line = row.element.querySelector(':scope > .af-explorer-line');
+      if (row.key === 'workspace-group:default') {
+        row.element.classList.add('workspace-ungrouped');
+        row.element.dataset.workspaceDefaultGroup = '';
+        groupDropTarget(line, '');
+        return;
+      }
+      const group = groups.find(item => `workspace-group:${item.id}` === row.key);
+      if (!group) return;
+      row.element.classList.add('workspace-group');
+      row.element.dataset.workspaceGroupId = group.id;
+      const label = line.querySelector('.af-explorer-name');
+      row.element.addEventListener('contextmenu', event => openRenameMenu(event, () => renameWorkspaceGroup(label, group)));
+      row.element.addEventListener('keydown', event => {
+        if (event.key === 'F2') { event.preventDefault(); event.stopPropagation(); renameWorkspaceGroup(label, group); }
+      });
+      groupDropTarget(line, group.id);
+    }),
   });
+  document.querySelector("[data-workspace-explorer]").replaceChildren(explorer.root);
+  workspaceExplorer = explorer;
   listState.textContent = !workspaceRows.length ? "작업공간이 없습니다. 새로 만들어 시작하세요." : "";
   document.querySelector("[data-recent-workspaces]").replaceChildren(...recentRows.map(record => workspaceRow(record, { panel: true })));
   document.querySelector("[data-recent-state]").hidden = recentRows.length > 0;
@@ -873,28 +995,42 @@ const enterWorkspace = async (id) => {
   if (!record) return;
   resetWorkspaceDocuments();
   tenant.workspaceId = id;
+  const documentPreferences = activityState("documents");
+  documentEditor?.setPreferences(documentPreferences);
+  if (originalSearchInput) {
+    const restoredSearch = documentPreferences.read({}).originalSearch;
+    originalSearchInput.value = typeof restoredSearch === "string" ? restoredSearch.slice(0, 200) : "";
+    originalSearchInput.dispatchEvent(new Event("input"));
+  }
   renderWorkspaceMetadata(record);
-  document.querySelectorAll(".workspace-row[data-workspace-id]").forEach(button => button.setAttribute("aria-current", String(button.dataset.workspaceId === id)));
+  document.querySelectorAll("[data-workspace-id]").forEach(button => button.setAttribute("aria-current", String(button.dataset.workspaceId === id)));
   window.agentFactoryMCPConnection.open({ api, userId: activityUserId, organizationId: tenant.organizationId, workspaceId: id, name: record.name, rootPath });
-  window.agentFactoryPlanning?.open({ api, organizationId: tenant.organizationId, workspaceId: id });
+  window.agentFactoryAdmin?.setPreferences?.(activityState("admin"));
+  window.agentFactoryPlanning?.open({
+    api, organizationId: tenant.organizationId, workspaceId: id,
+    preferences: activityState("schedule"),
+  });
   window.agentFactoryIntegrations?.open({
     api, organizationId: tenant.organizationId, workspaceId: id, workspaceName: record.name,
+    preferences: activityState("integrations"),
     reloadDocuments: loadDocuments,
-    showOriginals: () => { selectActivity("documents"); selectDocumentView("original-search"); },
+    showOriginals: () => { selectActivity("documents", true); selectDocumentView("original-search"); },
   });
   const reportingOrganization = tenant.organizationId;
-  window.agentFactoryReporting?.open({ api, organizationId: reportingOrganization, workspaceId: id,
+  window.agentFactoryReporting?.open({
+    api, organizationId: reportingOrganization, workspaceId: id,
+    preferences: activityState("agents"),
     navigate: async (kind, targetId) => {
       const current = () => tenant.organizationId === reportingOrganization && tenant.workspaceId === id;
       if (!current()) return;
       if (kind === "plan") {
         const opened = await window.agentFactoryPlanning.openItem(targetId);
-        if (current() && opened) selectActivity("schedule");
+        if (current() && opened) selectActivity("schedule", true);
       } else {
         await loadDocuments();
         if (!current()) return;
         const record = documentEditor.docs.get(targetId);
-        if (record?.href) { selectActivity("documents"); documentEditor.open(targetId); }
+        if (record?.href) { selectActivity("documents", true); documentEditor.open(targetId); }
         else {
           // Original Documents use their authenticated immutable content endpoint.
           const doc = await api(`/api/organizations/${reportingOrganization}/workspaces/${id}/documents/${encodeURIComponent(targetId)}`);
@@ -950,6 +1086,7 @@ const loadWorkspaces = async () => {
   workspaceRows = [];
   recentRows = [];
   workspaceGroupRows = [];
+  workspaceDefaultExpanded = true;
   renderWorkspaces();
   document.querySelector("[data-retry-workspaces]").hidden = true;
   if (!tenant.organizationId) return;
@@ -977,8 +1114,9 @@ const loadWorkspaces = async () => {
     if (target) {
       selectActivity(target.dataset.activity);
       if (target.dataset.activity === "account") window.agentFactoryAdmin?.profile();
-      if (target.dataset.activity === "admin") window.agentFactoryAdmin?.open("dashboard");
+      if (target.dataset.activity === "admin") window.agentFactoryAdmin?.open();
     }
+    if (saved.activity === "organization") openOrganizationManagement();
     const documentLink = Array.from(document.querySelectorAll("[data-processed-link], [data-specification-link]"))
       .find((link) => (["processed-document", "document-editor"].includes(saved.documentView) && saved.processedId && link.dataset.processedLink === saved.processedId)
         || (["specification-document", "document-editor"].includes(saved.documentView) && saved.specificationId && link.dataset.specificationLink === saved.specificationId));
@@ -1064,9 +1202,12 @@ createForm.addEventListener("submit", async (event) => {
     document.querySelector("[data-create-error]").textContent = error.status === 403 ? "이 공간에 작업공간을 만들 권한이 없습니다." : "작업공간을 만들지 못했습니다. 다시 시도해 주세요.";
   } finally { submit.disabled = false; submit.removeAttribute("aria-busy"); }
 });
-const openOrganizationManagement = (view = "overview") => {
-  selectActivity("organization");
+const openOrganizationManagement = (view = "overview", forceOpen = false) => {
+  selectActivity("organization", forceOpen);
+  const preferences = activityState("organization", false);
+  const restoredView = view === "overview" ? preferences?.read({}).view || view : view;
   window.agentFactoryOrganizations?.open({ api, organizationId: tenant.organizationId, userId: activityUserId,
+    preferences,
     openWorkspace: enterWorkspace,
     createWorkspace: showCreateWorkspace,
     changed: async (id) => {
@@ -1081,10 +1222,10 @@ const openOrganizationManagement = (view = "overview") => {
       await loadWorkspaces();
       openOrganizationManagement(view);
     },
-  }, view);
+  }, restoredView);
 };
 document.querySelector("[data-open-organizations]").addEventListener("click", () => {
-  openOrganizationManagement();
+  openOrganizationManagement("overview", true);
   organizationSelect.focus();
 });
 document.querySelectorAll("[data-open-workspaces]").forEach((button) => button.addEventListener("click", () => showWorkspaceList(true)));
@@ -1129,7 +1270,9 @@ const openWorkspace = async (session) => {
   organizationRows = organizations;
   renderOrganizations();
   document.querySelectorAll("[data-create-workspace]").forEach((button) => { button.disabled = false; });
-  const savedOrganization = localStorage.getItem(`agentFactoryOrganizationId:${activityUserId}`);
+  let savedOrganization = null;
+  try { savedOrganization = localStorage.getItem(`agentFactoryOrganizationId:${activityUserId}`); }
+  catch { /* Organization restoration is optional. */ }
   tenant.organizationId = organizations.some((item) => item.id === savedOrganization)
     ? savedOrganization
     : organizations.find((row) => row.is_personal)?.id || organizations[0]?.id || null;
@@ -1139,7 +1282,7 @@ const openWorkspace = async (session) => {
   if (session.user.is_platform_admin && initialHash === "#admin") {
     workspaceShell.dataset.mode = "workspace";
     selectActivity("admin");
-    window.agentFactoryAdmin?.open("dashboard");
+    window.agentFactoryAdmin?.open();
   } else if (initialHash === "#account") {
     workspaceShell.dataset.mode = "workspace";
     selectActivity("account");
@@ -1165,7 +1308,7 @@ documentEditor = new window.AgentFactoryDocumentEditor({
   host: document.querySelector("#document-editor"),
   rootPath,
   reveal: () => {
-    if (document.querySelector('[data-activity="documents"]')?.getAttribute("aria-pressed") !== "true") selectActivity("documents");
+    if (document.querySelector('[data-activity="documents"]')?.getAttribute("aria-pressed") !== "true") selectActivity("documents", true);
     selectDocumentView("document-editor");
   },
   onSelection: () => rememberWorkspaceView(),
@@ -1181,16 +1324,18 @@ document.querySelector("[data-configure-activities]").addEventListener("click", 
 
 documentConnectorsButton?.addEventListener("click", () => {
   setActivityVisibility("integrations", true);
-  selectActivity("integrations");
+  selectActivity("integrations", true);
   document.querySelector('[data-activity="integrations"]')?.focus();
 });
 
 activityButtons.forEach((button) => {
   button.draggable = true;
   button.addEventListener("click", () => {
-    selectActivity(button.dataset.activity);
+    const activity = button.dataset.activity;
+    const forceOpen = activity !== "schedule" || button.getAttribute("aria-pressed") === "true";
+    selectActivity(activity, forceOpen);
     if (button.dataset.activity === "account") window.agentFactoryAdmin?.profile();
-    if (button.dataset.activity === "admin") window.agentFactoryAdmin?.open("dashboard");
+    if (button.dataset.activity === "admin") window.agentFactoryAdmin?.open();
   });
   button.addEventListener("dragstart", (event) => {
     event.dataTransfer.effectAllowed = "move";
@@ -1302,7 +1447,7 @@ document.addEventListener("keydown", (event) => {
 documentNavigationItems.forEach((item) => {
   item.addEventListener("click", (event) => {
     event.preventDefault();
-    selectActivity("documents");
+    selectActivity("documents", true);
     selectDocumentView(item.dataset.documentTarget);
   });
 });
@@ -1334,7 +1479,10 @@ organizationSelect?.addEventListener("change", async () => {
   const wasOrganization = workspaceShell.dataset.mode === "organization";
   window.agentFactoryOrganizations?.reset();
   tenant.organizationId = organizationSelect.value || null;
-  if (tenant.organizationId) localStorage.setItem(`agentFactoryOrganizationId:${activityUserId}`, tenant.organizationId);
+  if (tenant.organizationId) {
+    try { localStorage.setItem(`agentFactoryOrganizationId:${activityUserId}`, tenant.organizationId); }
+    catch { /* Organization restoration is optional. */ }
+  }
   if (accountOrganization) accountOrganization.textContent = organizationSelect.selectedOptions[0]?.textContent || "—";
   await loadWorkspaces();
   if (wasOrganization) openOrganizationManagement();

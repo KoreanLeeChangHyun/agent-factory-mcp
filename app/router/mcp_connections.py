@@ -22,7 +22,7 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 class ConnectionCreate(BaseModel):
-    name: str = Field(default="VS Code", min_length=1, max_length=120)
+    name: str = Field(min_length=1, max_length=120)
 
     @field_validator("name", mode="before")
     @classmethod

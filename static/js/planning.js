@@ -5,15 +5,18 @@
   const panel = document.querySelector('[data-workspace-view="schedule"]');
   if (!sidebar || !panel) return;
   const ui = window.agentFactoryUI;
+  const iconBase = new URL('../images/planning-explorer/', document.currentScript.src);
   const statuses = { pending: '대기', active: '진행 중', done: '완료' };
   const kinds = { domain: '작업', feature: '하위 작업', issue: '하위 작업' };
-  let scope = null, epoch = 0, snapshot = { items: [], settings: {}, can_edit: false };
+  let scope = null, epoch = 0, snapshot = { items: [], settings: {}, calendar: {}, can_edit: false };
   let importView = false, importVersion = 0;
   let selected = null, activeView = 'timeline', collapsed = new Set(), expanded = new Set(), drafts = new Map(), loadVersion = 0;
   let scale = 'week', fitted = false, anchor = today(), timelineScroll = 0, busy = false;
+  let planningExplorer = null;
+  let scrollStateTimer = null;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const icon = name => {
-    const shared = {add:'plus',right:'chevron-right',down:'chevron-down',done:'check'};
+    const shared = {add:'plus',left:'chevron-right',right:'chevron-right',down:'chevron-down',done:'check'};
     if (shared[name]) return ui.icon(shared[name]).outerHTML;
     return `<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">${({ pending: '<circle cx="8" cy="8" r="5"/>', active: '<circle cx="8" cy="8" r="5"/><path d="M8 3v10"/>', milestone: '<path d="m8 2 6 6-6 6-6-6Z"/>' })[name]}</svg>`;
   };
@@ -24,16 +27,27 @@
   const children = id => snapshot.items.filter(r => r.parent_id === id);
   const domains = () => snapshot.items.filter(r => r.kind === 'domain');
   const features = () => snapshot.items.filter(r => r.kind === 'feature');
+  const rememberState = () => scope?.preferences?.write({
+    view: activeView,
+    selectedId: selected,
+    importView,
+    collapsedIds: [...collapsed],
+    expandedIds: [...expanded],
+    scale,
+    fitted,
+    anchor,
+    timelineScroll,
+  });
   const period = r => r.period_conflict ? `시작 ${r.start_date} · 목표 ${r.target_date} (기간 확인 필요)` : r.start_date && r.target_date ? `${r.start_date} – ${r.target_date}` : r.target_date ? `목표 ${r.target_date}` : r.start_date ? `${r.start_date} 시작 · 종료 미정` : '기간 미정';
   const status = r => `<span class="plan-status status-${r.status}">${icon(r.status)}${statuses[r.status]}</span>`;
   const flags = r => `${r.blocked_reason ? '<span class="plan-warning">막힘</span>' : ''}${r.target_date && r.target_date < today() && r.status !== 'done' ? '<span class="plan-warning">기한 초과</span>' : ''}`;
-  const button = (action, label, extra = '') => {
+  const button = (action, label, extra = '', variant = '') => {
     // label/extra are the existing escaped template fragments (including owned SVG).
     const fragment = document.createElement('template');
     fragment.innerHTML = `<button ${extra}>${label}</button>`;
     const source = fragment.content.firstElementChild;
     const node = ui.button({label:source.textContent || source.getAttribute('aria-label') || source.title || action,
-      variant:action === 'delete' ? 'danger' : action === 'import-apply' ? 'primary' : 'secondary'});
+      variant:variant || (action === 'delete' ? 'danger' : action === 'import-apply' ? 'primary' : 'secondary')});
     for (const attr of source.attributes) {
       if (attr.name === 'class') node.classList.add(...attr.value.split(/\s+/).filter(Boolean));
       else node.setAttribute(attr.name,attr.value);
@@ -43,23 +57,72 @@
     return node.outerHTML;
   };
   const editButton = r => snapshot.can_edit ? button('edit', '수정', `data-id="${r.id}"`) : '';
-  const addButton = (kind, parent = '') => snapshot.can_edit ? button('add', `${icon('add')}${kinds[kind]} 추가`, `data-kind="${kind}" data-parent="${parent}"`) : '';
-  const navButton = r => `<button type="button" class="app-sidebar__row${selected === r.id ? ' is-selected' : ''}" data-plan-action="select" data-id="${r.id}" title="${esc(r.name)}" ${selected === r.id ? 'aria-current="page"' : ''}><span>${esc(r.name)}</span></button>`;
-  const sidebarGroup = r => `<section class="app-sidebar__section plan-task-group${selected === r.id ? ' is-selected' : ''}" aria-labelledby="plan-domain-${r.id}-label">
-    <header class="app-sidebar__section-header app-sidebar__section-header--toggle"><button class="app-sidebar__icon-button" type="button" title="${esc(r.name)} 펼치기·접기" aria-label="${esc(r.name)} ${collapsed.has(r.id) ? '펼치기' : '접기'}" aria-expanded="${!collapsed.has(r.id)}" aria-controls="plan-domain-${r.id}-content" data-plan-action="toggle-domain" data-id="${r.id}">${icon(collapsed.has(r.id) ? 'right' : 'down')}</button><button class="app-sidebar__section-toggle plan-domain-select" type="button" data-plan-action="select" data-id="${r.id}" title="${esc(r.name)}" ${selected === r.id ? 'aria-current="page"' : ''}><span class="app-sidebar__section-title" id="plan-domain-${r.id}-label">${esc(r.name)}</span></button></header>
-    <div class="app-sidebar__section-content" id="plan-domain-${r.id}-content" ${collapsed.has(r.id) ? 'hidden' : ''}><nav class="app-sidebar__nav app-sidebar__nav--flush" aria-label="${esc(r.name)} 하위 작업">${children(r.id).map(navButton).join('')}</nav>${!children(r.id).length ? '<p class="app-sidebar__state plan-muted">하위 작업이 없습니다.</p>' : ''}</div>
-  </section>`;
-  const views = { timeline: '전체 일정', week: '주별 일정', today: '오늘 할 일', kanban: '칸반' };
+  const addButton = (kind, parent = '', primary = false) => snapshot.can_edit ? button('add', `${icon('add')}${kinds[kind]} 추가`, `data-kind="${kind}" data-parent="${parent}"`,primary?'primary':'secondary') : '';
+  const planningExplorerIcon = (row, open) => {
+    const name = row.folder ? (open ? 'task-open' : 'task') : 'subtask';
+    const image = document.createElement('img');
+    image.className = 'af-explorer-icon plan-explorer__icon';
+    image.src = new URL(`${name}.svg`, iconBase).href;
+    image.alt = '';
+    image.dataset.planExplorerIcon = name;
+    return image;
+  };
+  const views = { timeline: '전체 일정', today: '오늘 할 일', kanban: '칸반' };
   const dashboardViews = () => `<div class="plan-dashboard-views" role="group" aria-label="일정 대시보드 보기">${Object.entries(views).map(([view,name])=>`<button type="button" data-plan-action="view" data-view="${view}" aria-pressed="${activeView===view}">${name}</button>`).join('')}</div>`;
   function renderSidebar() {
     headerActions.querySelector('[data-plan-action="add"]').hidden = !snapshot.can_edit;
     headerActions.querySelector('[data-plan-action="dashboard"]').setAttribute('aria-pressed',String(selected===null&&!importView));
-    sidebar.innerHTML = domains().map(sidebarGroup).join('') || '<p class="app-sidebar__state plan-muted">작업을 추가해 일정을 시작하세요.</p>';
+    planningExplorer?.destroy(); planningExplorer = null;
+    const rows = domains();
+    if (!rows.length) {
+      sidebar.innerHTML = '<p class="app-sidebar__state plan-muted">작업을 추가해 일정을 시작하세요.</p>';
+      return;
+    }
+    planningExplorer = ui.explorerTree({
+      label: '일정 탐색기',
+      items: rows.map(domain => ({
+        id: domain.id,
+        label: domain.name,
+        selected: selected === domain.id,
+        expanded: !collapsed.has(domain.id),
+        toggleOnClick: false,
+        children: children(domain.id).map(feature => ({
+          id: feature.id,
+          label: feature.name,
+          selected: selected === feature.id,
+        })),
+      })),
+      multiSelect: false,
+      renderIcon: planningExplorerIcon,
+      onSelect: keys => {
+        const id = keys[0];
+        if (!id || selected === id) return;
+        importView = false; importVersion++; selected = id; rememberState(); render(); panel.querySelector('h1')?.focus();
+      },
+      onActivate: id => {
+        if (!item(id) || selected === id) return;
+        importView = false; importVersion++; selected = id; rememberState(); render(); panel.querySelector('h1')?.focus();
+      },
+      onToggle: (id, open) => {
+        if (open) collapsed.delete(id); else collapsed.add(id);
+        rememberState();
+      },
+      onRender: visible => visible.forEach(row => {
+        row.element.dataset.planId = row.key;
+        row.element.classList.add(row.folder ? 'plan-explorer__task' : 'plan-explorer__subtask');
+        if (selected === row.key) row.element.setAttribute('aria-current','page');
+      }),
+    });
+    sidebar.replaceChildren(planningExplorer.root);
   }
   function header(title, actions = '') {
     return `<header class="plan-header ui-section-header"><h1 tabindex="-1">${esc(title)}</h1><div class="plan-actions">${actions}</div></header><p class="ui-message plan-message" role="status" aria-live="polite"></p>`;
   }
-  const dashboardHeader = (actions='') => `<header class="plan-dashboard-header"><h1 tabindex="-1">일정 대시보드</h1>${dashboardViews()}<div class="plan-actions">${actions}</div></header><p class="ui-message plan-message plan-dashboard-message" role="status" aria-live="polite"></p>`;
+  function detailHeader(title, actions = '') {
+    const back=button('dashboard',`${icon('left')}<span>일정 대시보드</span>`,'class="plan-back-button" aria-label="일정 대시보드로 돌아가기" title="일정 대시보드로 돌아가기"');
+    return `<header class="plan-header plan-detail-header"><div class="plan-detail-heading">${back}<span class="plan-header-divider" aria-hidden="true"></span><h1 tabindex="-1" title="${esc(title)}">${esc(title)}</h1></div><div class="plan-actions">${actions}</div></header><p class="ui-message plan-message" role="status" aria-live="polite"></p>`;
+  }
+  const dashboardHeader = (actions='') => `<header class="plan-dashboard-header"><h1 tabindex="-1">일정 대시보드</h1>${dashboardViews()}<div class="plan-actions">${actions}${addButton('domain')}</div></header><p class="ui-message plan-message plan-dashboard-message" role="status" aria-live="polite"></p>`;
   function rememberDrafts() {
     panel.querySelectorAll('[data-plan-form]').forEach(form => {
       drafts.set(form.dataset.id, {...Object.fromEntries(new FormData(form)), revision: Number(form.dataset.revision)});
@@ -80,7 +143,7 @@
     else renderFeature(record);
   }
   function featureTable(rows) {
-    return `<div class="plan-table-scroll"><table class="plan-table"><thead><tr><th>작업 이름</th><th>상태</th><th>목표 기간</th><th>하위 작업</th></tr></thead><tbody>${rows.map(r => {
+    return `<div class="plan-table-scroll"><table class="plan-table plan-detail-table"><thead><tr><th>작업 이름</th><th>상태</th><th>목표 기간</th><th>하위 작업</th></tr></thead><tbody>${rows.map(r => {
       const issues = children(r.id);
       return `<tr><td>${button('select',esc(r.name),`data-id="${r.id}"`)}</td><td>${status(r)} ${flags(r)}</td><td>${esc(period(r))} ${issueWarning(r,item(r.parent_id))}</td><td>${issues.filter(i=>i.status==='done').length}/${issues.length} 완료</td></tr>`;
     }).join('')}</tbody></table></div>`;
@@ -88,7 +151,10 @@
   function renderDomain(r) {
     panel.classList.remove('is-timeline');
     const rows = children(r.id);
-    panel.innerHTML = header(r.name,`${editButton(r)}${addButton('feature',r.id)}`) + `<div class="plan-summary">${status(r)}<span>${esc(period(r))}</span><span class="plan-muted">${dateOrigin(r)}</span></div><p class="plan-description">${esc(r.description)}</p>${rows.length?featureTable(rows):'<p class="plan-empty">하위 작업을 추가하면 요약 일정이 표시됩니다.</p>'}`;
+    const completed=rows.filter(i=>i.status==='done').length;
+    panel.innerHTML = detailHeader(r.name,editButton(r)) + `<div class="plan-detail"><dl class="plan-resource-summary"><div><dt>상태</dt><dd>${status(r)}</dd></div><div><dt>기간</dt><dd>${esc(period(r))}</dd></div><div><dt>날짜 기준</dt><dd>${esc(dateOrigin(r))}</dd></div></dl>
+      ${r.description?`<section class="plan-detail-section"><h2>설명</h2><p class="plan-description">${esc(r.description)}</p></section>`:''}
+      <section class="plan-detail-section plan-subtasks"><header class="plan-subtasks-header"><div><h2>하위 작업</h2><span class="plan-progress-summary">${completed}/${rows.length} 완료</span></div>${addButton('feature',r.id,true)}</header>${rows.length?featureTable(rows):'<p class="plan-empty">하위 작업을 추가하면 요약 일정이 표시됩니다.</p>'}</section></div>`;
   }
   function dateOrigin(r) {
     const label={explicit:'직접 지정',derived:'하위 작업에서 집계',unspecified:'미정'};
@@ -103,19 +169,15 @@
   function renderFeature(r) {
     panel.classList.remove('is-timeline');
     const rows = children(r.id);
-    panel.innerHTML = header(r.name,`${editButton(r)}${addButton('issue',r.id)}`) + `<div class="plan-summary">${status(r)}${flags(r)}${issueWarning(r,item(r.parent_id))}<span>담당자 ${esc(r.assignee || '미지정')}</span><span>${esc(period(r))}</span></div>
-      ${r.blocked_reason?`<p class="plan-warning">막힘: ${esc(r.blocked_reason)}</p>`:''}
-      <section class="plan-acceptance"><h2>완료 조건</h2><p>${esc(r.acceptance || '완료 조건을 작성하세요.')}</p></section>
-      ${r.description?`<p class="plan-description">${esc(r.description)}</p>`:''}
-      <h2>하위 작업 <span class="plan-muted">${rows.filter(i=>i.status==='done').length}/${rows.length} 완료</span></h2>
-      ${rows.length?`<div class="plan-table-scroll"><table class="plan-table"><thead><tr><th>작업 이름</th><th>담당자</th><th>상태</th><th>목표일</th></tr></thead><tbody>${rows.map(i=>`<tr><td>${button('expand',`${icon(expanded.has(i.id)?'down':'right')}${esc(i.name)}`,`data-id="${i.id}" aria-expanded="${expanded.has(i.id)}" aria-controls="issue-${i.id}"`)}</td><td>${esc(i.assignee || '미지정')}</td><td>${status(i)}${flags(i)}</td><td>${esc(i.target_date || '미정')} ${issueWarning(i,r)}</td></tr><tr id="issue-${i.id}" ${expanded.has(i.id)?'':'hidden'}><td colspan="4"><div class="plan-issue-detail">${snapshot.can_edit?(expanded.has(i.id)?editor(i):''):`<p class="plan-description">${esc(i.description || '설명이 없습니다.')}</p>${i.blocked_reason?`<p>막힘: ${esc(i.blocked_reason)}</p>`:''}`}</div></td></tr>`).join('')}</tbody></table></div>`:'<p class="plan-empty">하위 작업을 추가하세요. 목표일은 필요한 작업에만 입력합니다.</p>'}`;
+    const completed=rows.filter(i=>i.status==='done').length;
+    panel.innerHTML = detailHeader(r.name,editButton(r)) + `<div class="plan-detail"><dl class="plan-resource-summary"><div><dt>상태</dt><dd>${status(r)}${flags(r)}</dd></div><div><dt>담당자</dt><dd>${esc(r.assignee || '미지정')}</dd></div><div><dt>기간</dt><dd>${esc(period(r))}${issueWarning(r,item(r.parent_id))}</dd></div></dl>
+      ${r.blocked_reason?`<p class="plan-warning plan-blocked-reason">막힘: ${esc(r.blocked_reason)}</p>`:''}
+      <section class="plan-detail-section plan-acceptance"><h2>완료 조건</h2><p>${esc(r.acceptance || '완료 조건을 작성하세요.')}</p></section>
+      ${r.description?`<section class="plan-detail-section"><h2>설명</h2><p class="plan-description">${esc(r.description)}</p></section>`:''}
+      <section class="plan-detail-section plan-subtasks"><header class="plan-subtasks-header"><div><h2>하위 작업</h2><span class="plan-progress-summary">${completed}/${rows.length} 완료</span></div>${addButton('issue',r.id,true)}</header>
+      ${rows.length?`<div class="plan-table-scroll"><table class="plan-table plan-detail-table plan-subtask-table"><thead><tr><th>작업 이름</th><th>담당자</th><th>상태</th><th>목표일</th></tr></thead><tbody>${rows.map(i=>`<tr><td>${button('expand',`${icon(expanded.has(i.id)?'down':'right')}${esc(i.name)}`,`data-id="${i.id}" aria-expanded="${expanded.has(i.id)}" aria-controls="issue-${i.id}"`)}</td><td>${esc(i.assignee || '미지정')}</td><td>${status(i)}${flags(i)}</td><td>${esc(i.target_date || '미정')} ${issueWarning(i,r)}</td></tr><tr id="issue-${i.id}" ${expanded.has(i.id)?'':'hidden'}><td colspan="4"><div class="plan-issue-detail">${snapshot.can_edit?(expanded.has(i.id)?editor(i):''):`<p class="plan-description">${esc(i.description || '설명이 없습니다.')}</p>${i.blocked_reason?`<p>막힘: ${esc(i.blocked_reason)}</p>`:''}`}</div></td></tr>`).join('')}</tbody></table></div>`:'<p class="plan-empty">하위 작업을 추가하세요. 목표일은 필요한 작업에만 입력합니다.</p>'}</section></div>`;
   }
   const opensOn = (r, date) => !r.period_conflict && ((r.start_date && r.target_date && r.start_date <= date && date <= r.target_date) || r.start_date === date || r.target_date === date);
-  const overlaps = (r, start, end) => {
-    if (r.period_conflict || (!r.start_date && !r.target_date)) return false;
-    const first=r.start_date||r.target_date, last=r.target_date||r.start_date;
-    return first < end && last >= start;
-  };
   const viewRow = r => `<li><button type="button" data-plan-action="view-item" data-id="${r.id}" title="${esc(r.name)}"><strong>${esc(r.name)}</strong><span>${statuses[r.status] || esc(r.status)} · ${esc(period(r))}</span></button></li>`;
   const taskList = (label,rows) => `<section class="plan-today-group"><h2>${label} <span>${rows.length}</span></h2>${rows.length?`<ul class="plan-view-list" aria-label="${label}">${rows.map(viewRow).join('')}</ul>`:'<p class="plan-muted">작업 없음</p>'}</section>`;
   function renderToday() {
@@ -134,28 +196,33 @@
   }
   function renderTimeline() {
     panel.classList.add('is-timeline');
-    const weekly=activeView==='week', timelineScale=weekly?'week':scale;
+    const timelineScale=scale;
     const rows = features();
     const dates = [...rows,...domains()].flatMap(r=>[r.start_date,r.target_date]).filter(Boolean);
     if (snapshot.settings.launch_date) dates.push(snapshot.settings.launch_date);
     let start, end;
-    if (weekly) { const current=day(anchor), weekday=new Date(current*86400000).getUTCDay(); start=current-((weekday+6)%7); end=start+7; }
-    else if (fitted && dates.length) { start = Math.min(...dates.map(day))-3; end = Math.max(...dates.map(day))+4; }
+    if (fitted && dates.length) { start = Math.min(...dates.map(day))-3; end = Math.max(...dates.map(day))+4; }
     else {
-      const windowStart=day(anchor)-7, windowDays=timelineScale==='week'?56:180;
+      const windowStart=day(anchor)-7, windowDays=timelineScale==='day'?28:timelineScale==='week'?56:180;
       start=dates.length?Math.min(windowStart,Math.min(...dates.map(day))-3):windowStart;
       end=Math.max(windowStart+windowDays,dates.length?Math.max(...dates.map(day))+4:windowStart+windowDays);
     }
     const labelWidth = parseFloat(getComputedStyle(panel).getPropertyValue('--plan-label-width')) || 280;
+    const pixelsPerDay=timelineScale==='day'?44:timelineScale==='week'?14:5;
+    const minimumChartWidth=timelineScale==='day'?880:timelineScale==='week'?784:900;
     const chartWidth = fitted
       ? Math.max(120, panel.clientWidth - labelWidth - 34)
-      : weekly ? Math.max(420, panel.clientWidth - labelWidth - 34) : Math.max(timelineScale==='week'?784:900,(end-start)*(timelineScale==='week'?14:5));
-    const maxLabels = Math.max(1, Math.floor(chartWidth / 88));
-    const tickInterval = Math.max(1, Math.ceil((end-start) / (timelineScale==='week'?7:30) / maxLabels));
+      : Math.max(minimumChartWidth,(end-start)*pixelsPerDay);
+    const maxLabels = Math.max(1, Math.floor(chartWidth / (timelineScale==='day'?44:88)));
+    const tickInterval = Math.max(1, Math.ceil((end-start) / (timelineScale==='day'?1:timelineScale==='week'?7:30) / maxLabels));
     const ticks = [];
-    if (weekly) {
-      const weekdays=['일','월','화','수','목','금','토'];
-      for(let d=start;d<end;d++) { const weekday=new Date(d*86400000).getUTCDay(),date=iso(d);ticks.push(`<span class="${weekday===0||weekday===6?'is-weekend ':''}${date===today()?'is-today':''}" data-plan-left="${(d-start)/(end-start)*100}">${date.slice(5)} ${weekdays[weekday]}</span>`); }
+    const holidayName=date=>snapshot.calendar?.holidays?.[date]||'';
+    const calendarClass=(date,weekday)=>`${weekday===0||weekday===6?'is-weekend ':''}${holidayName(date)?'is-holiday ':''}${date===today()?'is-today':''}`;
+    if (timelineScale === 'day') {
+      for(let d=start;d<=end;d+=tickInterval) {
+        const weekday=new Date(d*86400000).getUTCDay(),date=iso(d),holiday=holidayName(date);
+        ticks.push(`<span class="${calendarClass(date,weekday)}" data-plan-date="${date}" data-plan-left="${(d-start)/(end-start)*100}" title="${esc(holiday||((weekday===0||weekday===6)?'주말':''))}">${date.slice(5)}</span>`);
+      }
     } else if (timelineScale === 'week') {
       const weekday = new Date(start * 86400000).getUTCDay();
       for (let d = start + ((8-weekday)%7); d <= end; d += 7*tickInterval) ticks.push(`<span data-plan-left="${(d-start)/(end-start)*100}">${iso(d).slice(5)}</span>`);
@@ -171,39 +238,49 @@
     const position = d => (day(d)-start)/(end-start)*100;
     const marker = (date,label,cls,caption=false) => date && position(date)>=0 && position(date)<=100 ? `<div class="${caption?'plan-marker-caption':'plan-marker'} ${cls}${position(date)>60?' near-end':''}" data-plan-left="${position(date)}" ${caption?'':'aria-hidden="true"'}>${caption?`<span>${cls==='launch'?icon('milestone'):''}${label} ${esc(date)}</span>`:''}</div>`:'';
     const minWidth = chartWidth;
-    const dayBands=weekly?Array.from({length:7},(_,offset)=>{const d=start+offset,weekday=new Date(d*86400000).getUTCDay(),date=iso(d);return `<i class="plan-day-band ${weekday===0||weekday===6?'is-weekend ':''}${date===today()?'is-today':''}" data-plan-left="${offset/7*100}" data-plan-width="${100/7}"></i>`;}).join(''):'';
-    const originLabel = r => {
-      if(r.kind!=='domain' || (!r.start_date && !r.target_date)) return '';
-      const sources=[r.start_date_source,r.target_date_source].filter(v=>v && v!=='unspecified');
-      const label=sources.includes('explicit')?(sources.includes('derived')?'직접 지정·집계':'직접 지정'):'집계';
-      return `<span class="plan-origin" title="${esc(dateOrigin(r))}">${label}</span>`;
-    };
+    const bandDays=end-start;
+    const showWeekendBands=timelineScale==='day'||(timelineScale==='week'&&!fitted);
+    const dayBands=Array.from({length:bandDays},(_,offset)=>{const d=start+offset,weekday=new Date(d*86400000).getUTCDay(),date=iso(d),holiday=holidayName(date),weekend=weekday===0||weekday===6,classes=`${showWeekendBands&&weekend?'is-weekend ':''}${holiday?'is-holiday ':''}${date===today()?'is-today':''}`;return `<i class="plan-day-band ${classes}" data-plan-date="${date}" data-plan-left="${offset/bandDays*100}" data-plan-width="${100/bandDays}" title="${esc(holiday||(showWeekendBands&&weekend?'주말':''))}" aria-hidden="true"></i>`;}).join('');
+    let timelineRowIndex=0;
     const timelineRow = (r, summary=false) => {
+      const rowIndex=++timelineRowIndex;
       let bar='';
       const label=`${r.name} · ${period(r)} · ${statuses[r.status]}`;
+      const childRows=summary?children(r.id):[];
+      const completed=childRows.filter(child=>child.status==='done').length;
+      const progress=childRows.length?completed/childRows.length*100:0;
+      const barContent=summary
+        ? `${childRows.length?`<span class="plan-bar-progress" data-plan-width="${progress}" aria-hidden="true"></span>`:''}`
+        : '';
       if(r.start_date && r.target_date && !r.period_conflict) {
         const left=Math.max(0,position(r.start_date)), right=Math.min(100,position(iso(day(r.target_date)+1)));
-        bar=right>left?`<button type="button" class="plan-bar status-${r.status}${summary?' plan-summary-bar':''}" data-plan-left="${left}" data-plan-width="${Math.max(.4,right-left)}" data-plan-action="select" data-id="${r.id}" aria-label="${esc(label)}" title="${esc(label)}">${esc(r.name)}</button>`:button('locate','기간으로 이동',`data-date="${r.start_date}"`);
+        bar=right>left?`<button type="button" class="plan-bar status-${r.status}${summary?' plan-summary-bar':''}" data-plan-left="${left}" data-plan-width="${Math.max(.4,right-left)}" data-plan-action="select" data-id="${r.id}" aria-label="${esc(label)}" title="${esc(label)}">${barContent}</button>`:button('locate','기간으로 이동',`data-date="${r.start_date}"`);
       } else if(!r.period_conflict && (r.start_date || r.target_date)) {
         const date=r.start_date||r.target_date;
         if(position(date)>=0 && position(date)<=100) bar=`<button type="button" class="plan-date-point status-${r.status}" data-plan-left="${position(date)}" data-plan-action="select" data-id="${r.id}" aria-label="${esc(label)}" title="${esc(label)}">${icon('milestone')}</button>`;
         else bar=button('locate','날짜로 이동',`data-date="${date}"`);
       }
-      return `<div class="${summary?'plan-time-group':'plan-time-row'}"><div class="plan-time-label${summary?'':' is-child'}"><div class="plan-task-title">${button('select',`${icon(r.status)}${esc(r.name)}`,`data-id="${r.id}" title="${esc(r.name)}"`)}${flags(r)}</div><div class="plan-task-meta">${snapshot.can_edit && !r.start_date && !r.target_date ? button('edit-period','기간 미정',`class="plan-period-edit" data-id="${r.id}" aria-label="${esc(r.name)} 기간 설정" title="날짜 입력"`) : `<span title="${esc(period(r))}">${esc(period(r))}</span>`}${originLabel(r)}</div>${issueWarning(r,item(r.parent_id))}</div><div class="plan-time-track">${bar}</div></div>`;
+      const rowMeta=snapshot.can_edit && !r.start_date && !r.target_date
+        ? button('edit-period','기간 미정',`class="plan-period-edit" data-id="${r.id}" aria-label="${esc(r.name)} 기간 설정" title="날짜 입력"`)
+        : summary&&childRows.length?`<span class="plan-progress-text" aria-label="${completed}/${childRows.length} 완료" title="하위 작업 ${childRows.length}개 중 ${completed}개 완료">${completed}/${childRows.length}</span>`:'';
+      return `<div class="${summary?'plan-time-group':'plan-time-row'}${rowIndex%2===0?' is-even':''}"><div class="plan-time-label${summary?'':' is-child'}"><span class="plan-row-index" aria-hidden="true">${rowIndex}</span><div class="plan-task-content"><div class="plan-task-title">${button('select',`${icon(r.status)}${esc(r.name)}`,`data-id="${r.id}" title="${esc(r.name)} · ${esc(period(r))}"`)}${flags(r)}</div>${rowMeta?`<div class="plan-task-meta">${rowMeta}</div>`:''}${issueWarning(r,item(r.parent_id))}</div></div><div class="plan-time-track">${bar}</div></div>`;
     };
-    const visibleDomains=weekly?domains().filter(d=>overlaps(d,iso(start),iso(end))||children(d.id).some(r=>overlaps(r,iso(start),iso(end)))):domains();
-    const unscheduled=weekly?snapshot.items.filter(r=>r.kind!=='domain'&&!r.start_date&&!r.target_date):[];
-    const actions=weekly?`${button('shift-week','이전 주','data-days="-7"')}${button('today','이번 주')}${button('shift-week','다음 주','data-days="7"')}`:`${button('imports','가져오기')}${button('today','오늘')}${button('fit','전체 맞춤',`aria-pressed="${fitted}"`)}<label>단위 <select data-plan-scale aria-label="타임라인 단위"><option value="week" ${scale==='week'?'selected':''}>주</option><option value="month" ${scale==='month'?'selected':''}>월</option></select></label>${snapshot.can_edit?button('launch','출시 목표일'):''}`;
-    const context=`${iso(start)} – ${iso(weekly?end-1:end)}${snapshot.settings.launch_date?` · 출시 목표 ${snapshot.settings.launch_date}`:''}`;
+    const visibleDomains=domains();
+    const actions=`${button('imports','가져오기')}${button('today','오늘')}${button('fit','전체 맞춤',`aria-pressed="${fitted}"`)}<label>단위 <select data-plan-scale aria-label="타임라인 단위"><option value="day" ${scale==='day'?'selected':''}>일</option><option value="week" ${scale==='week'?'selected':''}>주</option><option value="month" ${scale==='month'?'selected':''}>월</option></select></label>${snapshot.can_edit?button('launch','출시 목표일'):''}`;
+    const context=`${iso(start)} – ${iso(end)}${snapshot.settings.launch_date?` · 출시 목표 ${snapshot.settings.launch_date}`:''}`;
     panel.innerHTML = dashboardHeader(actions) + `<p class="plan-muted plan-dashboard-context">${esc(context)}</p>` +
-      `${weekly&&unscheduled.length?`<details class="plan-unscheduled"><summary>날짜 미정 작업 ${unscheduled.length}</summary><div>${unscheduled.map(r=>button('view-item',esc(r.name),`data-id="${r.id}"`)).join('')}</div></details>`:''}${!visibleDomains.length?`<p class="plan-empty">${weekly?'이 주에 예정된 작업이 없습니다.':'하위 작업에 목표 기간을 입력하면 전체 일정이 표시됩니다.'}</p>`:`<div class="plan-timeline-scroll" tabindex="0" aria-label="${weekly?'주별 일정':'전체 일정'} 타임라인"><div class="plan-timeline${fitted&&!weekly?' is-fitted':''}" data-plan-chart-width="${minWidth}"><div class="plan-time-header"><strong>작업 이름 · 기간</strong><div>${ticks.join('')}${marker(today(),'오늘','today',true)}</div></div><div class="plan-time-body"><div class="plan-day-band-layer" aria-hidden="true">${dayBands}</div>${visibleDomains.map(d=>timelineRow(d,true)+children(d.id).filter(r=>!weekly||overlaps(r,iso(start),iso(end))).map(f=>timelineRow(f)).join('')).join('')}<div class="plan-grid-layer" aria-hidden="true">${ticks.map(t=>t.replace('<span','<i class="plan-grid-line"').replace(/>[^<]*<\/span>/,'></i>')).join('')}</div><div class="plan-marker-layer">${marker(today(),'오늘','today')}${marker(snapshot.settings.launch_date,'출시','launch')}</div></div></div></div>`}`;
+      `${!visibleDomains.length?'<p class="plan-empty">하위 작업에 목표 기간을 입력하면 전체 일정이 표시됩니다.</p>':`<div class="plan-timeline-scroll" tabindex="0" aria-label="전체 일정 타임라인"><div class="plan-timeline${fitted?' is-fitted':''}" data-plan-chart-width="${minWidth}"><div class="plan-time-header"><strong><span class="plan-index-heading">#</span><span>작업</span></strong><div>${ticks.join('')}${marker(today(),'오늘','today',true)}</div></div><div class="plan-time-body"><div class="plan-day-band-layer" aria-hidden="true">${dayBands}</div>${visibleDomains.map(d=>timelineRow(d,true)+children(d.id).map(f=>timelineRow(f)).join('')).join('')}<div class="plan-grid-layer" aria-hidden="true">${ticks.map(t=>t.replace('<span','<i class="plan-grid-line"').replace(/>[^<]*<\/span>/,'></i>')).join('')}</div><div class="plan-marker-layer">${marker(today(),'오늘','today')}${marker(snapshot.settings.launch_date,'출시','launch')}</div></div></div></div>`}`;
     // Assign individual CSS properties; HTML style attributes are blocked by the server CSP.
     panel.querySelectorAll('[data-plan-left]').forEach(el=>{el.style.left=`${Number(el.dataset.planLeft)}%`;});
     panel.querySelectorAll('[data-plan-width]').forEach(el=>{el.style.width=`${Number(el.dataset.planWidth)}%`;});
     const timeline=panel.querySelector('[data-plan-chart-width]');
     if(timeline) timeline.style.setProperty('--plan-chart-width',`${Number(timeline.dataset.planChartWidth)}px`);
     const scroller = panel.querySelector('.plan-timeline-scroll');
-    if(scroller) { scroller.scrollLeft=timelineScroll; scroller.addEventListener('scroll',()=>{timelineScroll=scroller.scrollLeft;}); }
+    if(scroller) { scroller.scrollLeft=timelineScroll; scroller.addEventListener('scroll',()=>{
+      timelineScroll=scroller.scrollLeft;
+      clearTimeout(scrollStateTimer);
+      scrollStateTimer=setTimeout(rememberState, 120);
+    }); }
   }
   async function renderImports(id = null) {
     panel.classList.remove('is-timeline');
@@ -293,7 +370,12 @@
       const data=await current.api(current.path);
       if(own!==epoch || requestVersion!==loadVersion) return;
       if (!Array.isArray(data.items) || !data.settings) throw new Error('일정 응답을 확인할 수 없습니다.');
-      snapshot=data; render();
+      snapshot=data;
+      const ids = new Set(snapshot.items.map(row => row.id));
+      if (selected && !ids.has(selected)) selected = null;
+      collapsed = new Set([...collapsed].filter(id => ids.has(id)));
+      expanded = new Set([...expanded].filter(id => ids.has(id)));
+      render(); rememberState();
       return true;
     } catch(error) {
       if(own!==epoch || requestVersion!==loadVersion) return;
@@ -325,20 +407,19 @@
     const b=event.target.closest('[data-plan-action]'); if(!b || busy) return;
     const id=b.dataset.id, record=item(id);
     switch(b.dataset.planAction) {
-      case 'dashboard': importView=false;importVersion++;selected=null;render();panel.querySelector('h1')?.focus();break;
-      case 'imports': rememberDrafts(); importView=true; void renderImports(); break;
+      case 'dashboard': importView=false;importVersion++;selected=null;rememberState();render();panel.querySelector('h1')?.focus();break;
+      case 'imports': rememberDrafts(); importView=true; rememberState(); void renderImports(); break;
       case 'import-detail': void renderImports(id); break;
       case 'import-apply': await applyImport(b); break;
-      case 'view': importView=false; importVersion++; selected=null; activeView=b.dataset.view; if(activeView==='week'){anchor=today();fitted=false;} try{localStorage.setItem(`agent-factory:plan-view:${scope?.organizationId}:${scope?.workspaceId}`,activeView);}catch{} render(); panel.querySelector('h1')?.focus(); break;
+      case 'view': importView=false; importVersion++; selected=null; activeView=b.dataset.view; rememberState(); render(); panel.querySelector('h1')?.focus(); break;
       case 'view-item': {
         const target=item(id); if(!target) break;
         importView=false; selected=target.kind==='issue'?target.parent_id:target.id;
         if(target.kind==='issue') expanded.add(target.id);
-        render(); panel.querySelector('h1')?.focus(); break;
+        rememberState(); render(); panel.querySelector('h1')?.focus(); break;
       }
-      case 'select': importView=false; importVersion++; selected=id||null; if(!id)activeView='timeline'; render(); panel.querySelector('h1')?.focus(); break;
-      case 'toggle-domain': collapsed.has(id)?collapsed.delete(id):collapsed.add(id); renderSidebar(); sidebar.querySelector(`[data-plan-action="toggle-domain"][data-id="${id}"]`)?.focus(); break;
-      case 'expand': expanded.has(id)?expanded.delete(id):expanded.add(id); render(); panel.querySelector(`[data-plan-action="expand"][data-id="${id}"]`)?.focus(); break;
+      case 'select': importView=false; importVersion++; selected=id||null; if(!id)activeView='timeline'; rememberState(); render(); panel.querySelector('h1')?.focus(); break;
+      case 'expand': expanded.has(id)?expanded.delete(id):expanded.add(id); rememberState(); render(); panel.querySelector(`[data-plan-action="expand"][data-id="${id}"]`)?.focus(); break;
       case 'add': openEditor({kind:b.dataset.kind,parent_id:b.dataset.parent,status:'pending'},true); break;
       case 'edit-period': openEditor(record); dialog.querySelector('[name="start_date"],[name="target_date"]')?.focus(); break;
       case 'edit': openEditor(record); break;
@@ -347,10 +428,9 @@
         if(!confirm(`“${record.name}”을 삭제하시겠습니까? 하위 항목이 있으면 삭제되지 않습니다.`)) return;
         await mutate(`/items/${id}?revision=${b.dataset.revision}`,{method:'DELETE'},b.closest('form'),()=>{if(dialog.open)dialog.close(); if(selected===id)selected=record.parent_id;}); break;
       case 'refresh': await reload(); break;
-      case 'today': fitted=false;anchor=today();timelineScroll=0;renderTimeline();break;
-      case 'shift-week': fitted=false;anchor=iso(day(anchor)+Number(b.dataset.days));timelineScroll=0;renderTimeline();break;
-      case 'locate': fitted=false;anchor=b.dataset.date;timelineScroll=0;renderTimeline();break;
-      case 'fit': fitted=true;timelineScroll=0;renderTimeline();break;
+      case 'today': fitted=false;anchor=today();timelineScroll=0;rememberState();renderTimeline();break;
+      case 'locate': fitted=false;anchor=b.dataset.date;timelineScroll=0;rememberState();renderTimeline();break;
+      case 'fit': fitted=true;timelineScroll=0;rememberState();renderTimeline();break;
       case 'launch':
         dialog.innerHTML=`<h2 id="plan-dialog-title">출시 목표일</h2><form class="plan-form" data-plan-settings data-revision="${snapshot.settings.revision}"><label class="ui-field">목표일<input type="date" name="launch_date" value="${snapshot.settings.launch_date||''}"></label><p class="ui-message plan-form-error" role="alert"></p><footer>${button('cancel','취소')}<button class="ui-button ui-button--primary" type="submit">저장</button></footer></form>`;showEditorDialog();break;
     }
@@ -374,14 +454,14 @@
   }
   [sidebar,panel,dialog,headerActions].forEach(el=>el.addEventListener('click',onClick));
   [panel,dialog].forEach(el=>el.addEventListener('submit',onSubmit));
-  panel.addEventListener('change',async e=>{if(e.target.matches('[data-plan-scale]')){scale=e.target.value;fitted=false;renderTimeline();return;}if(e.target.matches('[data-plan-status]')){const r=item(e.target.dataset.id);if(r&&r.status!==e.target.value)await mutate(`/items/${r.id}`,{method:'PUT',body:JSON.stringify(updatePayload(r,{status:e.target.value}))},panel);}});
+  panel.addEventListener('change',async e=>{if(e.target.matches('[data-plan-scale]')){scale=e.target.value;fitted=false;rememberState();renderTimeline();return;}if(e.target.matches('[data-plan-status]')){const r=item(e.target.dataset.id);if(r&&r.status!==e.target.value)await mutate(`/items/${r.id}`,{method:'PUT',body:JSON.stringify(updatePayload(r,{status:e.target.value}))},panel);}});
   panel.addEventListener('dragstart',e=>{const card=e.target.closest('[data-plan-card]');if(card&&snapshot.can_edit)e.dataTransfer.setData('text/plain',card.dataset.id);});
   panel.addEventListener('dragover',e=>{if(snapshot.can_edit&&e.target.closest('[data-plan-column]'))e.preventDefault();});
   panel.addEventListener('drop',async e=>{const column=e.target.closest('[data-plan-column]');if(!column||!snapshot.can_edit)return;e.preventDefault();const r=item(e.dataTransfer.getData('text/plain'));if(r&&r.status!==column.dataset.planColumn)await mutate(`/items/${r.id}`,{method:'PUT',body:JSON.stringify(updatePayload(r,{status:column.dataset.planColumn}))},panel);});
   let resizeTimer;
   new ResizeObserver(() => {
     clearTimeout(resizeTimer);
-    resizeTimer=setTimeout(() => {if(scope && !importView && selected===null && (activeView==='week'||fitted) && panel.clientWidth) renderTimeline();},80);
+    resizeTimer=setTimeout(() => {if(scope && !importView && selected===null && fitted && panel.clientWidth) renderTimeline();},80);
   }).observe(panel);
   window.agentFactoryPlanning = {
     async openItem(id) {
@@ -393,12 +473,25 @@
       if (!record) throw new Error('연결된 일정 항목을 찾을 수 없습니다.');
       selected=record.kind==='issue'?record.parent_id:record.id;
       if(record.kind==='issue') expanded.add(record.id);
-      render();
+      rememberState(); render();
       if(record.kind==='issue') panel.querySelector(`[aria-controls="issue-${record.id}"]`)?.focus();
       else panel.querySelector('h1')?.focus();
       return true;
     },
-    reset() { importView=false; importVersion++; epoch++;scope=null;snapshot={items:[],settings:{},can_edit:false};selected=null;activeView='timeline';collapsed=new Set();expanded=new Set();drafts=new Map();loadVersion++;busy=false;timelineScroll=0;anchor=today();fitted=false;if(dialog.open)dialog.close(); panel.classList.remove('is-timeline');sidebar.replaceChildren();panel.replaceChildren();headerActions.querySelector('[data-plan-action="dashboard"]').setAttribute('aria-pressed','false');headerActions.querySelector('[data-plan-action="add"]').hidden=true; },
-    open({api,organizationId,workspaceId}) {this.reset();scope={api,organizationId,workspaceId,path:`/api/organizations/${organizationId}/workspaces/${workspaceId}/plan`};try{const saved=localStorage.getItem(`agent-factory:plan-view:${organizationId}:${workspaceId}`);if(saved in views)activeView=saved;}catch{}sidebar.innerHTML='<p class="ui-message" role="status">일정 불러오는 중…</p>';panel.innerHTML='<p class="ui-message" role="status">일정 불러오는 중…</p>';void reload();},
+    reset() { importView=false; importVersion++; epoch++;clearTimeout(scrollStateTimer);scope=null;snapshot={items:[],settings:{},calendar:{},can_edit:false};selected=null;activeView='timeline';collapsed=new Set();expanded=new Set();drafts=new Map();loadVersion++;busy=false;timelineScroll=0;anchor=today();scale='week';fitted=false;if(dialog.open)dialog.close(); panel.classList.remove('is-timeline');planningExplorer?.destroy();planningExplorer=null;sidebar.replaceChildren();panel.replaceChildren();headerActions.querySelector('[data-plan-action="dashboard"]').setAttribute('aria-pressed','false');headerActions.querySelector('[data-plan-action="add"]').hidden=true; },
+    open({api,organizationId,workspaceId,preferences}) {
+      this.reset();scope={api,organizationId,workspaceId,preferences,path:`/api/organizations/${organizationId}/workspaces/${workspaceId}/plan`};
+      const saved=preferences?.read({}) || {};
+      if(saved.view in views)activeView=saved.view;
+      selected=typeof saved.selectedId==='string'?saved.selectedId:null;
+      importView=saved.importView===true;
+      collapsed=new Set(Array.isArray(saved.collapsedIds)?saved.collapsedIds.filter(id=>typeof id==='string'):[]);
+      expanded=new Set(Array.isArray(saved.expandedIds)?saved.expandedIds.filter(id=>typeof id==='string'):[]);
+      if(['day','week','month'].includes(saved.scale))scale=saved.scale;
+      fitted=saved.fitted===true;
+      if(/^\d{4}-\d{2}-\d{2}$/.test(saved.anchor||''))anchor=saved.anchor;
+      if(Number.isFinite(saved.timelineScroll)&&saved.timelineScroll>=0)timelineScroll=saved.timelineScroll;
+      sidebar.innerHTML='<p class="ui-message" role="status">일정 불러오는 중…</p>';panel.innerHTML='<p class="ui-message" role="status">일정 불러오는 중…</p>';void reload();
+    },
   };
 })();

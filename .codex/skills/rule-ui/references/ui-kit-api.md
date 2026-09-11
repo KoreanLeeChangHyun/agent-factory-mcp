@@ -35,19 +35,32 @@ layouts.js 함수는 외부 HTML 문자열이 아닌 DOM 노드를 받는다.
   고정 헤더는 `af-workbench-panel__header`, 독립 스크롤 본문은
   `af-workbench-panel__body`를 함께 사용한다. 간격과 모서리는
   `--ui-workbench-panel-gap`, `--ui-workbench-panel-radius` 토큰을 따른다.
+- sidebar-host.js `bindSidebarHost(host,{header,body,title,items,defaultTitle})` →
+  `{host,views,select,selected,destroy}`. 하나의 기본 사이드바 호스트 안에서 도메인별
+  뷰를 전환하고 제목과 `hidden` 상태를 함께 갱신한다. 각 item은 고유 id/title/element를
+  제공한다. 호스트에는 공통 `af-kit`·`af-sidebar-host`, 뷰에는 `af-sidebar-view`를
+  적용한다. 기존 사이드바의 섹션·섹션 헤더·본문·탐색·행·상태는 대응하는
+  `af-sidebar-*` 공통 요소로 채택하며, 이후 동적으로 렌더되는 항목도 같은 계약을 따른다.
+  평면 탐색 행은 오른쪽 공통 탐색 표시 슬롯을 사용하고, 상태 문구는 공통 상태 표면으로
+  표시한다. 기존 버튼 노드와 이벤트·데이터 속성은 교체하지 않는다.
+  데이터 조회와 도메인별 헤더 동작은 호출자가 소유한다.
 
 ## 입력·탐색
 
-- explorer-tree.js `explorerTree({label,items,onSelect,onActivate,renderIcon})` → `{root,destroy}`.
+- explorer-tree.js `explorerTree({label,items,multiSelect,onSelect,onActivate,onToggle,onRender,renderIcon})` → `{root,destroy}`.
   계층 탐색의 우선 공통 에셋이다. 22px 행·12px 들여쓰기·항목 아이콘·긴 이름
   말줄임·계층 안내선을 사용한다. item은 고유 id/label, 선택적 children/expanded/disabled/selected다.
   기본 renderIcon은 Material Icon Theme 5.38.1 원본이며 공식 파일명·확장자·폴더명 매핑을 사용한다.
   다른 리소스 계층은 renderIcon 콜백으로 항목 종류에 맞는 Node를 제공하거나 아이콘을 생략할 수 있다.
   현재 묶음에서 지원하지 않는 이름에는 공식 기본 file/folder 아이콘을 사용한다.
   선택 행은 회색 배경, 포커스 행은 파란 테두리로 표시하고 초기 selected는 콜백을 호출하지 않는다.
-  children이 있으면 폴더다. 방향키·Home/End·Enter·Space, Ctrl/Meta 다중 선택,
+  children이 있으면 폴더다. 폴더의 `toggleOnClick=false`는 행/Enter 선택과 disclosure
+  토글을 분리한다. 방향키·Home/End·Enter·Space, Ctrl/Meta 다중 선택,
   Shift 범위 선택을 제공한다. 권한 없는 항목은 선택/활성화하지 않는다.
+  `multiSelect=false`는 단일 선택 트리로 사용하며, `selectable=false`인 폴더는 펼침만 허용한다.
   onSelect는 선택 ID 배열, onActivate는 활성화할 항목 ID를 받으며 네트워크 요청을 수행하지 않는다.
+  onToggle은 항목 ID와 펼침 상태를 받고, onRender는 렌더링할 때마다 현재 행을 받아
+  소유자가 드래그·메뉴 같은 도메인 동작을 다시 연결할 수 있게 한다.
   데이터 갱신 시 소유자가 destroy 후 새 투영을 생성한다. 기존 renderNativeTree와
   bindTreeKeyboard를 재사용한다. 원본 아이콘의 색상·도형과 MIT 고지를 보존한다.
 

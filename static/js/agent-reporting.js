@@ -18,8 +18,9 @@
   const statusBadge = status => ui.badge(labels[status] || status,
     status==='completed'?'success':status==='failed'?'error':status==='input_required'?'warning':'neutral').outerHTML;
   const metadata = entries => ui.metadataGrid(entries).outerHTML;
-  let scope, epoch=0, loadVersion=0, detailVersion=0, timer, selected=null, taskId=null;
+  let scope, epoch=0, loadVersion=0, detailVersion=0, timer, selected=null, taskId=null, logsOpen=false;
   let snapshot={agents:[],tasks:[]}, detail=null, error='', detailError='', loading=false, loadingDetail=false, received=0;
+  const rememberState = () => scope?.preferences?.write({selectedAgentId:selected, selectedTaskId:taskId, logsOpen});
   function freshness(row) {
     if (!row.last_report_at) return '보고 없음';
     if (!terminal.has(row.status) && Date.now()-Date.parse(row.last_report_at) > 300000) return '보고 오래됨 · 마지막 상태 유지';
@@ -62,7 +63,7 @@
       ${taskList('하위 작업',snapshot.tasks.filter(r=>r.parent_id===t.id))}
       <h3>보고 이력</h3><ol class="reporting-history">${detail.reports.map(r=>`<li><strong>${labels[r.status]} · 수정 ${r.revision}</strong><small>${date(r.received_at)} · 보고자 ${esc(r.reporter_user_id)} · 연결 ${esc(r.connection_id||'일반 API 토큰')}</small><p>${esc(r.message)}</p><ul>${detail.results.filter(x=>x.report_id===r.id).map(resultView).join('')}</ul></li>`).join('')||'<li>보고 없음</li>'}</ol>
       ${detail.next_before_revision?button('older','이전 보고 더 보기'):''}
-      <div data-reporting-logs hidden tabindex="-1"><h3>관련 MCP 보고 로그</h3><p>이 작업의 표시된 보고와 함께 저장된 호출 기록입니다.</p><ul>${detail.logs.map(l=>`<li>${date(l.occurred_at)} · ${esc(l.action)} · ${esc(l.outcome)}<small>기록 ${esc(l.id)} · 보고자 ${esc(l.actor_user_id)}</small></li>`).join('')||'<li>기록 없음</li>'}</ul></div></section>`;
+      <div data-reporting-logs ${logsOpen?'':'hidden'} tabindex="-1"><h3>관련 MCP 보고 로그</h3><p>이 작업의 표시된 보고와 함께 저장된 호출 기록입니다.</p><ul>${detail.logs.map(l=>`<li>${date(l.occurred_at)} · ${esc(l.action)} · ${esc(l.outcome)}<small>기록 ${esc(l.id)} · 보고자 ${esc(l.actor_user_id)}</small></li>`).join('')||'<li>기록 없음</li>'}</ul></div></section>`;
   }
   function render() {
     const focus=document.activeElement?.closest('[data-reporting-action]');
@@ -83,7 +84,7 @@
   async function loadTask(id, older=false, quiet=false) {
     if(!scope)return;
     const own=epoch, version=++detailVersion, current=scope;
-    taskId=id;detailError='';loadingDetail=true;
+    taskId=id;logsOpen=older?logsOpen:false;detailError='';loadingDetail=true;rememberState();
     if(!older&&!quiet)detail=null;
     render();
     const before=older?detail?.next_before_revision:null;
@@ -105,6 +106,8 @@
       if(!Array.isArray(data.agents)||!Array.isArray(data.tasks))throw new Error('에이전트 응답 형식 오류');
       snapshot=data;error='';received=Date.now();
       if(selected&&!snapshot.agents.some(a=>a.id===selected)){selected=null;taskId=null;detail=null;detailVersion++;}
+      if(taskId&&!snapshot.tasks.some(t=>t.id===taskId)){taskId=null;detail=null;logsOpen=false;detailVersion++;}
+      rememberState();
       if(taskId&&!loadingDetail)void loadTask(taskId,false,true);
     }catch(e){if(own!==epoch||version!==loadVersion)return;error=`보고를 불러오지 못했습니다. ${e.message}`;}
     finally{if(own===epoch&&version===loadVersion){loading=false;render();}}
@@ -113,8 +116,8 @@
     const b=event.target.closest('[data-reporting-action]');if(!b||!scope)return;
     const id=b.dataset.id;
     switch(b.dataset.reportingAction){
-      case 'overall': selected=null;taskId=null;detail=null;detailVersion++;render();break;
-      case 'agent': selected=id;taskId=null;detail=null;detailVersion++;render();break;
+      case 'overall': selected=null;taskId=null;logsOpen=false;detail=null;detailVersion++;rememberState();render();break;
+      case 'agent': selected=id;taskId=null;logsOpen=false;detail=null;detailVersion++;rememberState();render();break;
       case 'task': await loadTask(id);panel.querySelector('.reporting-detail h2')?.focus();break;
       case 'refresh': await reload();break;
       case 'older': await loadTask(taskId,true);break;
@@ -122,13 +125,20 @@
         const own=epoch;
         try {await scope.navigate(b.dataset.reportingAction,id);}catch(e){if(own===epoch){detailError=e.message;render();}}break;
       }
-      case 'logs': {const logs=panel.querySelector('[data-reporting-logs]');logs.hidden=false;logs.focus();break;}
+      case 'logs': {const logs=panel.querySelector('[data-reporting-logs]');logsOpen=true;rememberState();logs.hidden=false;logs.focus();break;}
     }
   }
   sidebar.addEventListener('click',click);panel.addEventListener('click',click);
   window.addEventListener('online',()=>{if(scope)void reload();});
   window.agentFactoryReporting={
-    reset(){epoch++;loadVersion++;detailVersion++;clearInterval(timer);scope=null;selected=null;taskId=null;detail=null;snapshot={agents:[],tasks:[]};error='';detailError='';loading=false;loadingDetail=false;received=0;sidebar.replaceChildren();panel.replaceChildren();},
-    open({api,organizationId,workspaceId,navigate}){this.reset();scope={api,navigate,path:`/api/organizations/${organizationId}/workspaces/${workspaceId}/reporting`};void reload();timer=setInterval(()=>{if(!document.hidden&&!loading)void reload();},15000);},
+    reset(){epoch++;loadVersion++;detailVersion++;clearInterval(timer);scope=null;selected=null;taskId=null;logsOpen=false;detail=null;snapshot={agents:[],tasks:[]};error='';detailError='';loading=false;loadingDetail=false;received=0;sidebar.replaceChildren();panel.replaceChildren();},
+    open({api,organizationId,workspaceId,navigate,preferences}){
+      this.reset();scope={api,navigate,preferences,path:`/api/organizations/${organizationId}/workspaces/${workspaceId}/reporting`};
+      const saved=preferences?.read({})||{};
+      selected=typeof saved.selectedAgentId==='string'?saved.selectedAgentId:null;
+      taskId=typeof saved.selectedTaskId==='string'?saved.selectedTaskId:null;
+      logsOpen=saved.logsOpen===true;
+      void reload();timer=setInterval(()=>{if(!document.hidden&&!loading)void reload();},15000);
+    },
   };
 })();

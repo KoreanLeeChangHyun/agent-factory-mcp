@@ -18,6 +18,7 @@ dependencies = [
     "croniter",
     "email-validator",
     "fastapi",
+    "holidays>=0.81,<1",
     "httpx",
     "itsdangerous",
     "mcp>=2,<3",
