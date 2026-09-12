@@ -30,7 +30,7 @@
 
 | 영역 | 현재 상태 | 현재 근거 | 다음 완료 지점 |
 | --- | --- | --- | --- |
-| 목표 아키텍처 | 부분 완료 | 모노레포·Workbench·포팅 방향 문서 존재 | ADR-001~010 기록 및 의존성 규칙 자동 검사 |
+| 목표 아키텍처 | 부분 완료 | 모노레포·Workbench·포팅 방향과 [ADR-001~010](../adr/) 적용 결정 존재 | 신규 apps/packages 의존성 규칙 자동 검사 |
 | 현행 서비스 경계 | 부분 완료 | `app/modules`, 얇은 router를 검사하는 architecture test, 공유 서비스 일부 존재 | core port와 adapter 경계를 목표 패키지에서 강제 |
 | 모노레포 골격 | 미착수 | 루트 `apps/`, `packages/`, `contracts/`, pnpm/uv workspace 없음 | 최소 앱·패키지·계약 fixture가 한 공통 gate에서 동작 |
 | 공통 UI 기반 | 부분 완료 | `assets/ui-kit`, `static/ui`, `ui.css`, 제품 적용·브라우저 검증 기록 존재 | `packages/design-system`으로 포팅하고 공개 카탈로그 계약 제공 |
@@ -55,9 +55,9 @@
 | --- | --- | --- | --- | --- |
 | RF-000 | 목표 아키텍처와 상세 디렉터리 구조 작성 | 완료 | 변경 시 유지관리 구조 계약과 동기화 | 목표 문서와 구조 계약이 같은 경계·명칭 사용 |
 | RF-001 | 다중 공통 에셋과 사용자별 테마를 범위에 포함 | 완료 | 구현 ADR과 schema에서 구체화 | 작업 목록·사이드바·패널 카탈로그와 `ThemeProfile`이 계획·완료 조건에 존재 |
-| RF-002 | ADR-001~010 작성 | 미착수 | 모노레포, 계약, registry, sandbox, persistence, rollback, theme 결정을 구현과 함께 기록 | `docs/adr/`에 결정·대안·결과와 적용 상태 기록 |
-| RF-003 | 현행 핵심 흐름 characterization 기준선 | 부분 완료 | 기존 테스트를 선별해 깨끗한 환경에서 재실행하고 결과 기록 | 조직·작업공간·문서·일정·에이전트·연동·MCP 핵심 흐름 기준선 통과 |
-| RF-004 | 현행 파일의 목표 소유자 매핑 | 미착수 | `app`, `template`, `static`, UI kit, migration별 이동/잔류/폐기 표 작성 | 모든 포팅 대상에 목표 경로·호환 경계·제거 조건 존재 |
+| RF-002 | ADR-001~010 작성 | 완료 | 후속 구현과 실제 결과가 결정을 변경하면 같은 ADR의 상태·결과 갱신 | `docs/adr/`에 결정·대안·결과·계약 소유·rollout과 적용 상태 기록 |
+| RF-003 | 현행 핵심 흐름 characterization 기준선 | 부분 완료 | [실행 계획](2026-09-12-workbench-baseline.md)의 fixture/API·browser·disposable DB matrix를 독립 Verification에서 실행하고 결과 기록 | 조직·작업공간·문서·일정·에이전트·연동·MCP 핵심 흐름 기준선 통과 |
+| RF-004 | 현행 파일의 목표 소유자 매핑 | 완료 | 실제 포팅 때 tracked inventory 변화와 removal checkpoint를 행별 갱신 | [migration map](2026-09-12-workbench-migration-map.md)에 모든 포팅 대상의 목표 경로·호환 경계·제거 조건 존재 |
 
 ### 1. 계약과 의존성 기반
 
@@ -217,11 +217,11 @@ MCP Apps host(RF-900~903)는 대표 native Workbench가 완성되고 실제 외�
 
 ## 현 시점의 다음 작업
 
-1. RF-002: ADR-001~010을 구현 판단과 적용 상태를 담은 실제 문서로 만든다.
-2. RF-003: 리팩터링 전 핵심 흐름의 실행 가능한 기준선과 결과를 기록한다.
-3. RF-004: 현행 파일을 목표 소유자에 매핑해 첫 이동 범위를 고정한다.
-4. RF-100~105: Workbench·에셋·테마 계약과 의존성 검사를 먼저 구현한다.
-5. RF-200~204: 계약 fixture가 실제로 동작하는 최소 모노레포 골격을 만든다.
+1. RF-003: [기준선 matrix](2026-09-12-workbench-baseline.md)를 독립 Verification에서
+   실행하고 명령·결과·한계를 기록한다. 현재는 계획만 존재하므로 부분 완료를 유지한다.
+2. RF-100~105: ADR-003·010과 [migration map](2026-09-12-workbench-migration-map.md)에
+   따라 Workbench·에셋·테마 계약과 의존성 검사를 먼저 구현한다.
+3. RF-200~204: 계약 fixture가 실제로 동작하는 최소 모노레포 골격을 만든다.
 
 단순 디렉터리 생성만으로 상태를 완료로 바꾸지 않는다. 각 행의 완료 조건과 해당 검증이
 함께 충족된 경우에만 완료로 갱신한다.
