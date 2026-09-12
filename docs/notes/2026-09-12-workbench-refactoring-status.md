@@ -33,11 +33,11 @@
 | 목표 아키텍처         | 부분 완료 | 모노레포·Workbench·포팅 방향과 [ADR-001~010](../adr/) 적용 결정 존재                                             | 신규 apps/packages 의존성 규칙 자동 검사                      |
 | 현행 서비스 경계      | 부분 완료 | `app/modules`, 얇은 router를 검사하는 architecture test, 공유 서비스 일부 존재                                   | core port와 adapter 경계를 목표 패키지에서 강제               |
 | 모노레포 골격         | 완료      | Stage 1 독립 Verification에서 frozen install, 공통 gate, worker smoke, web/Python build와 no-cleanup 재실행 통과 | 후속 slice에서 같은 gate 유지                                 |
-| 공통 UI 기반          | 부분 완료 | `packages/design-system` semantic theme, React 에셋 registry와 별도 catalog preview 구현                         | Stage 2 독립 component/browser/visual 검증                    |
-| 작업 목록 에셋        | 부분 완료 | 현재 작업 아이콘은 템플릿 inline SVG와 일부 Tabler SVG로 분산                                                    | 다수 SVG를 출처·버전·상태가 있는 작업 아이콘 registry로 제공  |
-| 사이드바 에셋         | 부분 완료 | `bindSidebarHost`, `explorerTree`, native tree, 상태·리사이저 어댑터 존재                                        | 여러 조합을 versioned asset으로 등록하고 작성기에서 선택 가능 |
-| 패널 레이아웃         | 부분 완료 | vanilla UI 키트에 page/list-detail/collection/settings layout 존재                                               | 여러 React 레이아웃과 schema·상태·미리보기 카탈로그 제공      |
-| 사용자 테마           | 미착수    | 고정 공통 토큰과 단일 제품 테마만 존재                                                                           | 서버 저장 `ThemeProfile`, 검증, 캐시와 전체 화면 적용         |
+| 공통 UI 기반          | 완료      | Stage 2 독립 Verification에서 17 design-system tests, Chromium matrix와 10 screenshots 통과                     | 후속 소비자 전환 동안 같은 catalog gate 유지                 |
+| 작업 목록 에셋        | 완료      | 16개 versioned React SVG와 상태·provenance가 Stage 2 독립 catalog/Chromium gate 통과                              | 후속 registry/runtime 소비에서 호환성 유지                    |
+| 사이드바 에셋         | 완료      | 단일 host의 7개 조합과 keyboard/width behavior가 Stage 2 독립 gate 통과                                          | 작성기와 표준 Workbench에서 같은 registry 사용                |
+| 패널 레이아웃         | 완료      | 9개 React 조합과 responsive split/remount behavior가 Stage 2 독립 gate 통과                                      | 작성기와 표준 Workbench에서 같은 registry 사용                |
+| 사용자 테마           | 부분 완료 | core/PostgreSQL/API와 React resolver/cache/editor 구현; 독립 DB·browser gate 대기                                 | RF-400~405 검증 뒤 legacy 소비자 전환                         |
 | Workbench 계약        | 완료      | 닫힌 schema, 제한, 예제, 생성 Python/TypeScript 패키지가 Stage 1 parity/codegen gate 통과                        | Stage 2 확장 enum 재검증 및 이후 호환성 유지                  |
 | Workbench runtime     | 미착수    | component/action/binding registry와 선언형 renderer 없음                                                         | 등록 에셋만으로 대표 정의를 안전하게 렌더링                   |
 | 사용자 작성기         | 미착수    | React editor, asset/layout palette, theme editor 없음                                                            | 편집→검증→상태별 미리보기→게시 흐름 통과                      |
@@ -84,26 +84,26 @@
 
 | ID     | 작업                                                | 상태      | 선행           | 완료 조건                                                                      |
 | ------ | --------------------------------------------------- | --------- | -------------- | ------------------------------------------------------------------------------ |
-| RF-300 | 기존 UI kit 자산·라이선스·검증 포팅 계획            | 부분 완료 | RF-004         | exact-byte SVG/provenance와 vendor 보존 정책 구현; 독립 hash/license gate 필요 |
-| RF-301 | semantic token과 기본 dark/light/high-contrast 테마 | 부분 완료 | RF-200         | 세 foundation과 React 소비 구현; 독립 contrast/visual 검증 필요                |
-| RF-302 | 작업 목록 SVG 카탈로그                              | 부분 완료 | RF-101, RF-300 | 16개 React SVG와 선택·비활성·알림 상태 구현; 미리보기 검증 필요                |
-| RF-303 | 사이드바 에셋 카탈로그                              | 부분 완료 | RF-101, RF-300 | 단일 host의 7개 조합과 footer 구현; 폭·키보드 검증 필요                        |
-| RF-304 | 패널 레이아웃 카탈로그                              | 부분 완료 | RF-101, RF-300 | 9개 실제 조합과 조절 split 구현; browser/remount 검증 필요                     |
-| RF-305 | 기본 입력·표시·피드백 컴포넌트                      | 부분 완료 | RF-101, RF-300 | 입력·표시·overlay·8개 상태 구현; 접근성 component 검증 필요                    |
-| RF-306 | 카탈로그 metadata와 미리보기                        | 부분 완료 | RF-302~305     | 단일 descriptor/registry와 `/catalog` 대화형 preview 구현; Chromium 검증 필요  |
-| RF-307 | 중복·폐기 정책                                      | 부분 완료 | RF-306         | alias 금지와 major deprecation 정책 구현; compatibility gate 검증 필요         |
-| RF-308 | 접근성·반응형·visual gate                           | 부분 완료 | RF-302~306     | 180/268/520px와 390px 구현; 독립 keyboard/focus/contrast/screenshot gate 필요  |
+| RF-300 | 기존 UI kit 자산·라이선스·검증 포팅 계획            | 완료 | RF-004         | Stage 2 독립 frozen install, provenance/catalog 및 Chromium gate 통과 |
+| RF-301 | semantic token과 기본 dark/light/high-contrast 테마 | 완료 | RF-200         | 세 foundation과 React 소비가 독립 component/visual gate 통과         |
+| RF-302 | 작업 목록 SVG 카탈로그                              | 완료 | RF-101, RF-300 | 16개 React SVG와 상태가 catalog/Chromium matrix 통과                  |
+| RF-303 | 사이드바 에셋 카탈로그                              | 완료 | RF-101, RF-300 | 단일 host 7개 조합과 폭·키보드 검증 통과                              |
+| RF-304 | 패널 레이아웃 카탈로그                              | 완료 | RF-101, RF-300 | 9개 조합과 responsive split/remount 검증 통과                         |
+| RF-305 | 기본 입력·표시·피드백 컴포넌트                      | 완료 | RF-101, RF-300 | 공통 component와 상태의 접근성 test 통과                              |
+| RF-306 | 카탈로그 metadata와 미리보기                        | 완료 | RF-302~305     | 단일 registry와 `/catalog` production Chromium preview 통과           |
+| RF-307 | 중복·폐기 정책                                      | 완료 | RF-306         | alias/descriptor/compatibility gate 통과                               |
+| RF-308 | 접근성·반응형·visual gate                           | 완료 | RF-302~306     | 180/268/520px, 390px, focus와 10 screenshots 검증 통과                 |
 
 ### 4. 사용자별 테마
 
 | ID     | 작업                                         | 상태   | 선행               | 완료 조건                                                              |
 | ------ | -------------------------------------------- | ------ | ------------------ | ---------------------------------------------------------------------- |
-| RF-400 | `ThemeProfile` 도메인과 PostgreSQL migration | 미착수 | RF-102, RF-201     | 사용자 소유, revision, 기본값과 RLS가 있는 append-only migration 통과  |
-| RF-401 | 테마 조회·저장 API와 권한                    | 미착수 | RF-400             | 현재 사용자만 조회·수정하고 optimistic conflict와 감사 정책 처리       |
-| RF-402 | 테마 해석·검증기                             | 미착수 | RF-102, RF-301     | token allowlist, 색상 형식, contrast와 focus 가시성 검증               |
-| RF-403 | 초기 렌더링과 브라우저 캐시                  | 미착수 | RF-401~402         | 깜박임을 줄이는 캐시, 서버 권위 재조정, 로그아웃·사용자 전환 격리      |
-| RF-404 | Theme editor와 전체 적용                     | 미착수 | RF-306, RF-401~403 | shell·작성기·native Workbench가 즉시 미리보기하고 저장 후 기기 간 복원 |
-| RF-405 | 접근성 우선순위                              | 미착수 | RF-402~404         | 사용자 고대비·reduced motion 설정이 조직/Workspace 기본값보다 우선     |
+| RF-400 | `ThemeProfile` 도메인과 PostgreSQL migration | 부분 완료 | RF-102, RF-201     | core/adapter/0025 구현; disposable PostgreSQL migration·RLS gate 대기  |
+| RF-401 | 테마 조회·저장 API와 권한                    | 부분 완료 | RF-400             | session owner, CAS conflict, audit 구현; 실제 HTTP/DB gate 대기         |
+| RF-402 | 테마 해석·검증기                             | 부분 완료 | RF-102, RF-301     | Python/TypeScript allowlist·contrast 구현; parity gate 대기             |
+| RF-403 | 초기 렌더링과 브라우저 캐시                  | 부분 완료 | RF-401~402         | 인증 후 scoped cache와 stale 취소 구현; browser context gate 대기       |
+| RF-404 | Theme editor와 전체 적용                     | 부분 완료 | RF-306, RF-401~403 | React shell/editor preview 구현; legacy 전체 소비자 전환은 RF-800~804 의존 |
+| RF-405 | 접근성 우선순위                              | 부분 완료 | RF-402~404         | 사용자 고대비/reduced motion 적용 구현; server/browser gate 대기        |
 
 ### 5. Workbench runtime과 작성기
 
@@ -217,11 +217,11 @@ MCP Apps host(RF-900~903)는 대표 native Workbench가 완성되고 실제 외�
 
 ## 현 시점의 다음 작업
 
-1. RF-300~308: [Stage 2 구현 기록](2026-09-12-workbench-stage2-evidence.md)의 package,
-   Chromium, 접근성, visual, remount와 production build gate를 독립 Verification에서 실행한다.
+1. RF-400~405: [Stage 3 구현 기록](2026-09-12-workbench-stage3-evidence.md)의 validator
+   parity, authenticated API, disposable PostgreSQL RLS/concurrency와 browser context gate를 독립 Verification에서 실행한다.
 2. RF-003: 전체 legacy [기준선 matrix](2026-09-12-workbench-baseline.md)의 fixture/API,
    browser와 disposable infrastructure 범위를 별도 실행하고 전역 제한을 해소한다.
-3. Stage 2 통과 뒤 RF-400~405 사용자별 테마 domain/API/editor vertical slice로 진행한다.
+3. Stage 3 통과 뒤 RF-500~507 Workbench runtime과 사용자 작성기 vertical slice로 진행한다.
 
 단순 디렉터리 생성만으로 상태를 완료로 바꾸지 않는다. 각 행의 완료 조건과 해당 검증이
 함께 충족된 경우에만 완료로 갱신한다.

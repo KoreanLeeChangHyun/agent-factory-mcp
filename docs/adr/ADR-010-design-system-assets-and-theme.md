@@ -40,3 +40,9 @@ license는 보존 대상으로 분리한다. 기능 전용 chart 좌표나 docum
 UI 행동 계약은 `rule-ui`, 제품별 행동은 `spec-platform`, 목표 배치는 `rule-workbench-structure`가
 소유한다. legacy asset 제거 조건은 byte/provenance 비교, public ID/state/accessibility/visual gate,
 모든 소비자 전환과 rollback 관측 기간의 완료다.
+
+Stage 3에서 `ThemeProfile`의 core port/use case, PostgreSQL adapter와 forced user RLS,
+revision `0` 기본값에서 시작하는 compare-and-set 저장, semantic palette 검증기,
+인증 HTTP compatibility mount 및 React cache/bootstrap/editor 경계를 구현했다. 현행
+vanilla Workspace 전체 소비자 전환은 RF-800~804와 RF-1004, sandboxed MCP App theme
+context는 RF-903 이후 완료 대상으로 유지한다.

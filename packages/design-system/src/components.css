@@ -363,3 +363,8 @@
     cursor: row-resize;
   }
 }
+.af-theme-editor {
+  display: grid;
+  gap: var(--af-space-2);
+  max-width: 520px;
+}

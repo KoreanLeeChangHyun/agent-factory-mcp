@@ -74,6 +74,20 @@ body {
   outline: 2px solid var(--af-focus);
   outline-offset: 2px;
 }
+[data-af-density="comfortable"] {
+  --af-control-height: 36px;
+  --af-control-compact: 32px;
+  --af-space-2: 10px;
+  --af-space-3: 14px;
+}
+[data-af-reduced-motion="true"] *,
+[data-af-reduced-motion="true"] *::before,
+[data-af-reduced-motion="true"] *::after {
+  scroll-behavior: auto !important;
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

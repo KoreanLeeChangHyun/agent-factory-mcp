@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.core.observability import router as observability_router
 from app.router.account import router as account_router
+from app.router.appearance import router as appearance_router
 from app.router.admin import router as admin_router
 from app.router.agents import router as agents_router
 from app.router.audit import router as audit_router
@@ -27,6 +28,7 @@ from app.router.organizations import router as organizations_router
 api_router = APIRouter()
 api_router.include_router(organizations_router)
 api_router.include_router(account_router)
+api_router.include_router(appearance_router)
 api_router.include_router(admin_router)
 api_router.include_router(agents_router)
 api_router.include_router(auth_router)

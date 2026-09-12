@@ -13,6 +13,7 @@ Read only the domains touched by the task, but read each selected document compl
 | Relational persistence and tenant isolation | [database](database.md) |
 | Security baseline | [security](security.md) |
 | Audit, logs, metrics, and traces | [observability](observability.md) |
+| Per-user appearance and accessibility preferences | [ThemeProfile](theme-profiles.md) |
 | Production release, rollback, backup, and alerts | [operations](operations.md) |
 
 ## Workspace domains

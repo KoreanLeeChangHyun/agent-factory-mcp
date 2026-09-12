@@ -267,3 +267,21 @@ dd {
     resize: none;
   }
 }
+.theme-loading,
+.theme-settings,
+.theme-status {
+  padding: var(--af-space-3);
+}
+.theme-status {
+  border-bottom: 1px solid var(--af-border);
+  background: var(--af-surface);
+  color: var(--af-muted);
+  font-size: 11px;
+}
+.theme-settings {
+  border-top: 1px solid var(--af-border);
+  background: var(--af-surface);
+}
+.theme-settings h2 {
+  margin: 0 0 var(--af-space-2);
+}

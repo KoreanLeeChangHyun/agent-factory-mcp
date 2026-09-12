@@ -1,4 +1,4 @@
-.PHONY: dev-up dev-down dev-logs db-upgrade db-downgrade admin-bootstrap lint typecheck test security check workbench-format workbench-lint workbench-typecheck workbench-test workbench-codegen-check workbench-contracts workbench-dependencies workbench-build workbench-check
+.PHONY: dev-up dev-down dev-logs db-upgrade db-downgrade admin-bootstrap lint typecheck test security check workbench-format workbench-lint workbench-typecheck workbench-test workbench-codegen-check workbench-contracts workbench-dependencies workbench-build workbench-check verify-theme-profiles
 
 dev-up:
 	docker compose --env-file .env -f deploy/compose.yaml up --build -d
@@ -61,6 +61,9 @@ workbench-dependencies:
 workbench-build:
 	pnpm build
 	uv build --all-packages
+
+verify-theme-profiles:
+	bash scripts/verify-theme-profiles.sh
 
 workbench-check: workbench-format workbench-lint workbench-typecheck workbench-codegen-check workbench-contracts workbench-dependencies workbench-test
 

@@ -129,3 +129,15 @@ addresses RF2-R2-V001 through RF2-R2-V006:
 
 These are Work corrections only. The independent no-cleanup checks, build, browser
 matrix, screenshots, and geometry assertions remain pending Verification.
+
+## Final independent Verification
+
+Verification run `run-20260912T121543075174Z-70a142f9` passed the final Stage 2 Work
+run `run-20260912T121403471303Z-1ed3b0ef` with no remaining findings. It passed frozen
+pnpm and uv installs, `git diff --check`, the full `make workbench-check` before and
+after an intervening `make workbench-build`, 17 design-system tests, the other package
+tests and 14 Python tests. The production Chromium catalog matrix exercised routing,
+all theme and region-width combinations, the 390-pixel viewport, keyboard focus,
+remount and overflow behavior, and produced ten screenshots in
+`/tmp/agent-factory-catalog-r6`. The existing Python deprecation warnings and unrelated
+legacy/full-refactor limitations remain unchanged.

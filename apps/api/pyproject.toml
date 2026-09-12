@@ -6,7 +6,13 @@ build-backend = "hatchling.build"
 name = "agent-factory-api"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["agent-factory-adapters", "agent-factory-core", "fastapi"]
+dependencies = [
+    "agent-factory-adapters",
+    "agent-factory-core",
+    "fastapi",
+    "pydantic>=2,<3",
+    "sqlalchemy[asyncio]>=2,<3",
+]
 
 [tool.uv.sources]
 agent-factory-adapters = { workspace = true }

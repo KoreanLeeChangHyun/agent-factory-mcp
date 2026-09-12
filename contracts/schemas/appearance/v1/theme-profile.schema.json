@@ -8,11 +8,11 @@
   "properties": {
     "schemaVersion": {"const": "1.0"},
     "userId": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
-    "revision": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+    "revision": {"type": "integer", "minimum": 0, "maximum": 2147483647},
     "base": {"enum": ["dark", "light", "high-contrast"]},
     "density": {"enum": ["compact", "comfortable"]},
     "overrides": {
-      "type": "object", "additionalProperties": false,
+      "type": "object", "additionalProperties": false, "maxProperties": 4,
       "properties": {
         "accent": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
         "focus": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"},
