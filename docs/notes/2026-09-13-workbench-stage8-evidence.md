@@ -237,11 +237,17 @@ were supplied.
 The same Verification event stream records that the unignored scoped Bandit command exited 1 for
 `B101` at `packages/platform-core/src/agent_factory_core/organizations/use_cases.py:175`. Closure
 Work run `run-20260912T230625862522Z-db8d383e` replaces that assertion with the established explicit
-`organization_member_not_found` 404 domain path before delegation. This note does not claim that
-correction has passed: independent closure Verification must run Bandit without a B101 ignore, the
-focused missing-member/delegation/core cases, package type checks, and the mandatory
-`uv run mypy app` command.
+`organization_member_not_found` 404 domain path before delegation.
+
+Final closure Verification run `run-20260912T231126169506Z-9ecd224c`, bound to that recovery Work
+run and request hash `3485b4a5d535a92e4ee51f272bb2f68bb838ac33a66ad2615690d3e116949240`,
+recorded a pass receipt with no findings. It ran scoped Bandit without a B101 ignore and found no
+issues; 19 focused core tests passed together with the explicit missing-member probe. It typechecked
+64 target files and 173 legacy files, and the complete Workbench gate passed with 61 TypeScript and
+55 Python tests. The prior forced-RLS database, browser, and offline package records remain accepted
+with the limitations already recorded above; the closure did not rerun or broaden those unchanged
+checks. The pending B101 closure is therefore resolved.
 
 This evidence accepts only the Stage 8 organization/Workspace/account backend port. RF-605–607 and
 RF-800 remain partial because the other domains, worker composition, administrator and standard UI
-porting, rollout, and removal checkpoints remain outside this slice.
+porting, rollout, and removal checkpoints remain outside Stage 8.

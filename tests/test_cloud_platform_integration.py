@@ -371,6 +371,338 @@ async def call(p, name, arguments, *, error=False, **kwargs):
     return json.loads(result["content"][0]["text"])
 
 
+async def test_stage9_real_http_platform_administration(platform):
+    """Exercise every admin API with live sessions and the forced-RLS application role."""
+    p = platform
+    from app.modules.audit.models import AuditEvent
+    from app.modules.auth.crypto import token_digest
+    from app.modules.auth.models import AuthSession
+    from app.modules.identity.models import User
+    from app.modules.integration.models import IntegrationConnection, IntegrationProvider
+    from app.modules.organization.models import OrganizationMembership
+    from app.modules.schedule.models import Job
+    from app.modules.workspace.models import WorkspaceMembership
+
+    now = datetime.now(UTC)
+    admin_id, subject_id = uuid4(), uuid4()
+    admin_cookie, subject_cookie = uuid4().hex, uuid4().hex
+    expired_admin_cookie, revoked_admin_cookie = uuid4().hex, uuid4().hex
+    provider_id, connection_id = uuid4(), uuid4()
+    queued_id, running_id, failed_id = uuid4(), uuid4(), uuid4()
+    ciphertext = b"stage9-disposable-ciphertext"
+    async with p.admin() as session:
+        session.add_all(
+            [
+                User(
+                    id=admin_id,
+                    email=f"{admin_id}@example.test",
+                    display_name="Stage 9 admin",
+                    is_platform_admin=True,
+                ),
+                User(
+                    id=subject_id,
+                    email=f"{subject_id}@example.test",
+                    display_name="Stage 9 subject",
+                ),
+            ]
+        )
+        await session.flush()
+        session.add_all(
+            [
+                AuthSession(
+                    user_id=admin_id,
+                    token_digest=token_digest(
+                        admin_cookie, p.settings.auth_token_secret.get_secret_value()
+                    ),
+                    expires_at=now + timedelta(hours=1),
+                ),
+                AuthSession(
+                    user_id=admin_id,
+                    token_digest=token_digest(
+                        expired_admin_cookie, p.settings.auth_token_secret.get_secret_value()
+                    ),
+                    expires_at=now - timedelta(seconds=1),
+                ),
+                AuthSession(
+                    user_id=admin_id,
+                    token_digest=token_digest(
+                        revoked_admin_cookie, p.settings.auth_token_secret.get_secret_value()
+                    ),
+                    expires_at=now + timedelta(hours=1),
+                    revoked_at=now,
+                ),
+                AuthSession(
+                    user_id=subject_id,
+                    token_digest=token_digest(
+                        subject_cookie, p.settings.auth_token_secret.get_secret_value()
+                    ),
+                    expires_at=now + timedelta(hours=1),
+                ),
+            ]
+        )
+        session.add(
+            IntegrationProvider(
+                id=provider_id,
+                key=f"stage9-{provider_id}",
+                display_name="Stage 9 provider",
+                auth_type="api_key",
+                capabilities=["read"],
+                configuration_schema={"secret": "must-not-serialize"},
+            )
+        )
+        await session.flush()
+        session.add(
+            IntegrationConnection(
+                id=connection_id,
+                workspace_id=p.workspace,
+                provider_id=provider_id,
+                name="Stage 9 connection",
+                status="active",
+                encrypted_credentials=ciphertext,
+                encryption_key_version=1,
+                sync_cursor={"opaque": "cursor-secret"},
+            )
+        )
+        for job_id, status in (
+            (queued_id, "queued"),
+            (running_id, "running"),
+            (failed_id, "failed"),
+        ):
+            session.add(
+                Job(
+                    id=job_id,
+                    organization_id=p.org,
+                    workspace_id=p.workspace,
+                    requested_by_user_id=p.user,
+                    task_type="document.import",
+                    queue="documents",
+                    status=status,
+                    idempotency_key=f"stage9-{job_id}",
+                    attempt_count=2,
+                    next_attempt_at=now + timedelta(minutes=1),
+                    celery_task_id=f"secret-task-{job_id}",
+                    started_at=now,
+                    finished_at=now if status == "failed" else None,
+                    dead_lettered_at=None,
+                    error_code="fixture_error" if status == "failed" else None,
+                    error_message="safe fixture error" if status == "failed" else None,
+                )
+            )
+        session.add(
+            AuditEvent(
+                occurred_at=now,
+                actor_user_id=admin_id,
+                organization_id=p.org,
+                workspace_id=p.workspace,
+                action="stage9.fixture",
+                outcome="success",
+                request_id="stage9-request",
+                source="http",
+                event_metadata={"safe": True},
+            )
+        )
+        await session.commit()
+
+    # Tenant owner/member and bearer tokens never become platform administrators.
+    for cookie in (p.cookie, p.reader_cookie, subject_cookie):
+        p.client.cookies.clear()
+        p.client.cookies.set(p.settings.session_cookie_name, cookie)
+        assert (
+            await p.client.get(
+                "/api/admin/dashboard",
+                headers={
+                    "X-Platform-Admin": "true",
+                    "X-Organization-ID": str(p.org),
+                },
+            )
+        ).status_code == 403
+    p.client.cookies.clear()
+    assert (
+        await p.client.get(
+            "/api/admin/dashboard", headers={"Authorization": "Bearer " + p.tokens["writer"]}
+        )
+    ).status_code in {401, 403}
+    for cookie in (expired_admin_cookie, revoked_admin_cookie):
+        p.client.cookies.clear()
+        p.client.cookies.set(p.settings.session_cookie_name, cookie)
+        assert (await p.client.get("/api/admin/dashboard")).status_code == 401
+
+    csrf = uuid4().hex
+    p.client.cookies.clear()
+    p.client.cookies.set(p.settings.session_cookie_name, admin_cookie)
+    p.client.cookies.set("agent_factory_csrf", csrf)
+    headers = {"X-CSRF-Token": csrf}
+    for path in (
+        "/api/admin/dashboard",
+        "/api/admin/users",
+        "/api/admin/organizations",
+        "/api/admin/workspaces",
+        "/api/admin/jobs",
+        "/api/admin/integrations",
+        "/api/admin/feature-flags",
+        "/api/admin/runtime",
+        "/api/admin/audit",
+    ):
+        response = await p.client.get(path)
+        assert response.status_code == 200, (path, response.text)
+        assert "ciphertext" not in response.text and "cursor-secret" not in response.text
+
+    assert (
+        await p.client.put(
+            f"/api/admin/users/{admin_id}/status",
+            headers=headers,
+            json={"status": "suspended"},
+        )
+    ).status_code == 409
+    assert (
+        await p.client.put(
+            f"/api/admin/users/{subject_id}/status",
+            headers=headers,
+            json={"status": "suspended"},
+        )
+    ).status_code == 200
+    revoked = await p.client.post(f"/api/admin/users/{subject_id}/revoke-sessions", headers=headers)
+    assert revoked.status_code == 200 and revoked.json()["revoked_sessions"] == 1
+
+    owner_grant = {
+        "scope": "workspace",
+        "resource_id": str(p.other),
+        "user_id": str(p.reader_user),
+    }
+    organization_owner_grant = {
+        "scope": "organization",
+        "resource_id": str(p.org),
+        "user_id": str(p.reader_user),
+    }
+    assert (
+        await p.client.post("/api/admin/ownership", headers=headers, json=organization_owner_grant)
+    ).status_code == 204
+    assert (
+        await p.client.post("/api/admin/ownership", headers=headers, json=owner_grant)
+    ).status_code == 204
+    missing_owner_grant = {**owner_grant, "resource_id": str(uuid4())}
+    assert (
+        await p.client.post("/api/admin/ownership", headers=headers, json=missing_owner_grant)
+    ).status_code == 404
+    async with p.admin() as session:
+        from app.modules.organization.system_roles import ORGANIZATION_OWNER_ROLE_ID
+
+        assert (
+            await session.scalar(
+                select(OrganizationMembership.role_id).where(
+                    OrganizationMembership.organization_id == p.org,
+                    OrganizationMembership.user_id == p.user,
+                )
+            )
+            == ORGANIZATION_OWNER_ROLE_ID
+        )
+        assert (
+            await session.scalar(
+                select(OrganizationMembership.role_id).where(
+                    OrganizationMembership.organization_id == p.org,
+                    OrganizationMembership.user_id == p.reader_user,
+                )
+            )
+            == ORGANIZATION_OWNER_ROLE_ID
+        )
+        assert (
+            await session.scalar(
+                select(WorkspaceMembership.id).where(
+                    WorkspaceMembership.workspace_id == p.workspace,
+                    WorkspaceMembership.user_id == p.user,
+                )
+            )
+            is not None
+        )
+        assert (
+            await session.scalar(
+                select(WorkspaceMembership.id).where(
+                    WorkspaceMembership.workspace_id == p.other,
+                    WorkspaceMembership.user_id == p.reader_user,
+                )
+            )
+            is not None
+        )
+        assert (
+            await session.scalar(
+                select(OrganizationMembership.status).where(
+                    OrganizationMembership.organization_id == p.org,
+                    OrganizationMembership.user_id == p.reader_user,
+                )
+            )
+            == "active"
+        )
+
+    cancelled = await p.client.post(f"/api/admin/jobs/{queued_id}/cancel", headers=headers)
+    requested = await p.client.post(f"/api/admin/jobs/{running_id}/cancel", headers=headers)
+    retried = await p.client.post(f"/api/admin/jobs/{failed_id}/retry", headers=headers)
+    assert cancelled.json()["status"] == "cancelled"
+    assert requested.json()["status"] == "cancel_requested"
+    assert retried.status_code == 202 and retried.json()["status"] == "queued"
+    async with p.admin() as session:
+        retried_row = await session.get(Job, failed_id)
+        assert retried_row is not None
+        assert retried_row.attempt_count == 0 and retried_row.celery_task_id is None
+        assert retried_row.started_at is None and retried_row.finished_at is None
+        assert retried_row.error_code is None and retried_row.error_message is None
+
+    disconnected = await p.client.delete(
+        f"/api/admin/integrations/{connection_id}", headers=headers
+    )
+    assert disconnected.status_code == 200 and disconnected.json()["status"] == "disconnected"
+    async with p.admin() as session:
+        stored_connection = await session.get(IntegrationConnection, connection_id)
+        assert stored_connection is not None
+        assert stored_connection.encrypted_credentials is None
+        assert stored_connection.encryption_key_version is None
+        assert stored_connection.sync_cursor == {}
+    missing_disconnect = await p.client.delete(
+        f"/api/admin/integrations/{uuid4()}", headers=headers
+    )
+    assert missing_disconnect.status_code == 404
+    assert (
+        "ciphertext" not in missing_disconnect.text
+        and "cursor-secret" not in missing_disconnect.text
+    )
+
+    flag = await p.client.put(
+        "/api/admin/feature-flags/react-workbench",
+        headers=headers,
+        json={
+            "is_enabled": True,
+            "description": "Stage 9 rollout",
+            "rules": {"workspaceIds": [str(p.workspace)]},
+        },
+    )
+    assert flag.status_code == 200
+    p.client.cookies.clear()
+    p.client.cookies.set(p.settings.session_cookie_name, p.cookie)
+    entry = await p.client.get(f"/workspace/{p.org}/{p.workspace}/entry", follow_redirects=False)
+    assert entry.status_code == 307 and "/workbench/" in entry.headers["location"]
+    # A non-admin request after the admin transaction cannot inherit cross-tenant RLS authority.
+    denied = await p.client.get(
+        f"/api/organizations/{uuid4()}/workspaces/{uuid4()}/workbench/selection"
+    )
+    assert denied.status_code in {403, 404}
+
+    p.client.cookies.clear()
+    p.client.cookies.set(p.settings.session_cookie_name, admin_cookie)
+    assert (await p.client.get("/api/admin/dashboard")).status_code == 200
+    assert (await p.client.post("/api/admin/audit", headers=headers)).status_code == 405
+    async with p.admin() as session:
+        await session.execute(update(User).where(User.id == admin_id).values(status="suspended"))
+        await session.commit()
+    assert (await p.client.get("/api/admin/dashboard")).status_code == 401
+    async with p.admin() as session:
+        await session.execute(
+            update(User)
+            .where(User.id == admin_id)
+            .values(status="active", deleted_at=datetime.now(UTC))
+        )
+        await session.commit()
+    assert (await p.client.get("/api/admin/dashboard")).status_code == 401
+
+
 async def test_stage8_real_http_organization_workspace_and_invitation_composition(platform):
     """Exercise Stage 8 target composition through real sessions and forced RLS."""
 

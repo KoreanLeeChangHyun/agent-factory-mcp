@@ -1,3 +1,8 @@
+from .administration import (
+    AdminWorkspace,
+    WorkspaceAdministration,
+    WorkspaceAdministrationRepository,
+)
 from .domain import (
     OrganizationSummary,
     OrganizationUserRecord,
@@ -10,9 +15,12 @@ from .domain import (
 from .use_cases import WorkspaceUseCases
 
 __all__ = [
+    "AdminWorkspace",
     "OrganizationSummary",
     "OrganizationUserRecord",
     "RepositoryRecord",
+    "WorkspaceAdministration",
+    "WorkspaceAdministrationRepository",
     "WorkspaceGroupRecord",
     "WorkspaceRecord",
     "WorkspaceRoleRecord",

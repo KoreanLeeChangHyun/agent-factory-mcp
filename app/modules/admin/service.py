@@ -1,128 +1,92 @@
-"""Platform administrator use cases."""
+"""Compatibility translation bridge to target administration use cases."""
 
-from importlib.metadata import PackageNotFoundError, version
+from typing import Mapping
 from uuid import UUID
 
-from app.common.errors import ConflictError, NotFoundError
+from agent_factory_api.composition.admin import AdminApplication, admin_application
+from agent_factory_core.identity import Principal, UserStatus
+
 from app.core.config import Settings
-from app.modules.admin.models import FeatureFlag
 from app.modules.admin.repository import AdminRepository
-from app.modules.audit.repository import AuditRepository
-from app.modules.auth.service import Principal
-from app.modules.identity.models import User, UserStatus
-from app.modules.organization.models import Organization
-from app.modules.schedule.models import Job, JobStatus
-from app.modules.workspace.models import Workspace
 
 
 class AdminService:
     def __init__(self, repository: AdminRepository, settings: Settings) -> None:
-        self.repository = repository
-        self.settings = settings
-        self.principal: Principal | None = None
+        self._application: AdminApplication = admin_application(
+            repository.session,
+            environment=settings.environment,
+            debug=settings.debug,
+            embedding_provider=settings.embedding_provider,
+        )
 
     async def establish(self, principal: Principal) -> None:
-        self.principal = principal
-        await self.repository.establish_platform_context(principal.user_id)
+        await self._application.establish(principal)
 
     async def dashboard(self) -> dict[str, int]:
-        return await self.repository.dashboard()
+        result = await self._application.dashboard()
+        return {
+            "users": result.users,
+            "organizations": result.organizations,
+            "workspaces": result.workspaces,
+            "jobs": result.jobs,
+            "integrations": result.integrations,
+        }
 
-    async def users(self) -> list[User]:
-        return await self.repository.list_users()
+    async def users(self) -> list[object]:
+        return await self._application.users()
 
-    async def set_user_status(self, user_id: UUID, status: UserStatus) -> User:
-        if self.principal and user_id == self.principal.user_id and status != UserStatus.ACTIVE:
-            raise ConflictError("admin_self_lockout", "Administrator cannot suspend itself")
-        user = await self.repository.set_user_status(user_id, status)
-        if user is None:
-            raise NotFoundError("user_not_found", "User not found")
-        await self.repository.commit()
-        return user
+    async def set_user_status(
+        self, user_id: UUID, status: object, expected_revision: int | None = None
+    ) -> object:
+        raw_status = getattr(status, "value", status)
+        return await self._application.set_user_status(
+            user_id, UserStatus(str(raw_status)), expected_revision
+        )
 
     async def revoke_sessions(self, user_id: UUID) -> int:
-        count = await self.repository.revoke_user_sessions(user_id)
-        await self.repository.commit()
-        return count
+        return await self._application.revoke_sessions(user_id)
 
-    async def organizations(self) -> list[Organization]:
-        return await self.repository.list_organizations()
+    async def organizations(self) -> list[object]:
+        return await self._application.list_organizations()
 
-    async def workspaces(self) -> list[Workspace]:
-        return await self.repository.list_workspaces()
+    async def workspaces(self) -> list[object]:
+        return await self._application.list_workspaces()
 
     async def grant_ownership(self, scope: str, resource_id: UUID, user_id: UUID) -> None:
-        if scope == "organization":
-            await self.repository.grant_organization_owner(resource_id, user_id)
-        else:
-            await self.repository.grant_workspace_owner(resource_id, user_id)
-        await self.repository.commit()
+        await self._application.grant_ownership(scope, resource_id, user_id)
 
-    async def jobs(self) -> list[Job]:
-        return await self.repository.list_jobs()
+    async def jobs(self) -> list[object]:
+        return await self._application.jobs()
 
-    async def cancel_job(self, job_id: UUID) -> Job:
-        current = await self.repository.get_job(job_id)
-        if current is None:
-            raise NotFoundError("job_not_found", "Job not found")
-        if current.status in {JobStatus.QUEUED, JobStatus.RETRY}:
-            target = JobStatus.CANCELLED
-        elif current.status == JobStatus.RUNNING:
-            target = JobStatus.CANCEL_REQUESTED
-        else:
-            raise ConflictError("job_not_cancellable", "Job is not cancellable")
-        job = await self.repository.set_job_status(job_id, target)
-        if job is None:
-            raise NotFoundError("job_not_found", "Job not found")
-        await self.repository.commit()
-        return job
+    async def cancel_job(self, job_id: UUID) -> object:
+        return await self._application.cancel_job(job_id)
 
-    async def retry_job(self, job_id: UUID) -> Job:
-        current = await self.repository.get_job(job_id)
-        if current is None:
-            raise NotFoundError("job_not_found", "Job not found")
-        if current.status not in {JobStatus.FAILED, JobStatus.DEAD, JobStatus.CANCELLED}:
-            raise ConflictError("job_not_retryable", "Job is not retryable")
-        job = await self.repository.requeue_job(job_id)
-        if job is None:
-            raise NotFoundError("job_not_found", "Job not found")
-        await self.repository.commit()
-        return job
+    async def retry_job(self, job_id: UUID) -> object:
+        return await self._application.retry_job(job_id)
 
     async def integrations(self) -> list[object]:
-        return await self.repository.list_integrations()
+        return await self._application.integrations()
 
     async def disconnect_integration(self, connection_id: UUID) -> object:
-        connection = await self.repository.disconnect_integration(connection_id)
-        if connection is None:
-            raise NotFoundError(
-                "integration_connection_not_found", "Integration connection not found"
-            )
-        await self.repository.commit()
-        return connection
+        return await self._application.disconnect_integration(connection_id)
 
-    async def flags(self) -> list[FeatureFlag]:
-        return await self.repository.list_flags()
+    async def flags(self) -> list[object]:
+        return await self._application.flags()
 
     async def set_flag(
-        self, key: str, enabled: bool, description: str, rules: dict[str, object]
-    ) -> FeatureFlag:
-        flag = await self.repository.set_flag(key, enabled, description, rules)
-        await self.repository.commit()
-        return flag
+        self, key: str, enabled: bool, description: str, rules: Mapping[str, object]
+    ) -> object:
+        return await self._application.set_flag(key, enabled, description, rules)
 
     async def runtime_info(self) -> dict[str, object]:
-        try:
-            application_version = version("agent-factory-mcp")
-        except PackageNotFoundError:
-            application_version = "development"
+        result = await self._application.runtime_info()
         return {
-            "application_version": application_version,
-            "migration_version": await self.repository.migration_version(),
-            "environment": self.settings.environment,
-            "debug": self.settings.debug,
-            "embedding_provider": self.settings.embedding_provider,
+            "application_version": result.application_version,
+            "migration_version": result.migration_version,
+            "environment": result.environment,
+            "debug": result.debug,
+            "embedding_provider": result.embedding_provider,
         }
 
     async def audit_events(self) -> list[object]:
-        return await AuditRepository(self.repository.session).list()
+        return await self._application.audit_events()

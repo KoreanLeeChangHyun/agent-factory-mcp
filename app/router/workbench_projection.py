@@ -7,11 +7,11 @@ from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_factory_api.composition.admin import react_workbench_rollout
+
 from app.db.session import get_session
-from app.modules.admin.models import FeatureFlag
 from app.modules.auth.authorization import AuthorizedContext
 from app.modules.auth.authorization_dependencies import require_permission
-from app.modules.workspace.workbench_selection import WORKBENCH_FEATURE_KEY, react_workbench_enabled
 
 router = APIRouter(
     prefix="/api/organizations/{organization_id}/workspaces/{workspace_id}/workbench",
@@ -36,13 +36,11 @@ async def workbench_selection(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> WorkbenchSelectionResponse:
     started = monotonic()
-    flag = await session.get(FeatureFlag, WORKBENCH_FEATURE_KEY)
     workspace_id = context.scope.workspace_id
     if workspace_id is None:
         raise RuntimeError("workspace authorization returned no Workspace")
-    enabled = flag is not None and react_workbench_enabled(
-        is_enabled=flag.is_enabled,
-        rules=flag.rules if isinstance(flag.rules, dict) else {},
+    enabled = await react_workbench_rollout(
+        session,
         organization_id=context.scope.organization_id,
         workspace_id=workspace_id,
     )

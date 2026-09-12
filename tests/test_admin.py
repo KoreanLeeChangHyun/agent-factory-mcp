@@ -4,17 +4,14 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from pydantic import SecretStr
 
+from agent_factory_core.identity import IdentityAdministration, UserStatus
 from app.common.errors import AuthenticationError, ConflictError, PermissionDeniedError
-from app.core.config import Settings
 from app.core.ui_catalog import catalog_files
 from app.main import create_app
-from app.modules.admin.service import AdminService
 from app.modules.auth.authorization_dependencies import require_platform_admin
 from app.modules.auth.dependencies import get_current_principal
 from app.modules.auth.service import Principal
-from app.modules.identity.models import UserStatus
 
 ADMIN_ID = UUID("11111111-1111-4111-8111-111111111111")
 
@@ -100,22 +97,23 @@ def test_catalog_manifest_is_cached_and_returned_as_a_copy(tmp_path) -> None:
 
 class FakeAdminRepository:
     def __init__(self) -> None:
-        self.established: UUID | None = None
+        self.called = False
 
-    async def establish_platform_context(self, user_id: UUID) -> None:
-        self.established = user_id
+    async def set_user_status(self, **values: object) -> None:
+        self.called = True
+
+
+class FakeClock:
+    def now(self) -> object:
+        raise AssertionError("self-lockout must fail before reading the clock")
 
 
 @pytest.mark.asyncio
 async def test_admin_cannot_suspend_own_account() -> None:
     repository = FakeAdminRepository()
-    service = AdminService(
-        repository,  # type: ignore[arg-type]
-        Settings(environment="test", auth_token_secret=SecretStr("test-secret")),
-    )
-    await service.establish(principal(admin=True))
+    service = IdentityAdministration(repository, FakeClock())  # type: ignore[arg-type]
 
     with pytest.raises(ConflictError, match="cannot suspend itself"):
-        await service.set_user_status(ADMIN_ID, UserStatus.SUSPENDED)
+        await service.set_user_status(principal(admin=True), ADMIN_ID, UserStatus.SUSPENDED)
 
-    assert repository.established == ADMIN_ID
+    assert not repository.called

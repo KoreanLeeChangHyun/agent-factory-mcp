@@ -15,14 +15,6 @@ from tests.support.auth import PageAuthService
 from tests.support.fastapi import dependency_override
 
 
-class SelectionSession:
-    def __init__(self, flag: object | None) -> None:
-        self.flag = flag
-
-    async def get(self, _model, _key):
-        return self.flag
-
-
 def test_workspace_switch_is_fail_closed_and_requires_exact_workspace() -> None:
     organization_id = UUID("11111111-1111-4111-8111-111111111111")
     workspace_id = UUID("22222222-2222-4222-8222-222222222222")
@@ -53,19 +45,26 @@ def test_workspace_switch_is_fail_closed_and_requires_exact_workspace() -> None:
 
 
 @pytest.mark.asyncio
-async def test_authenticated_workspace_entry_selects_react_and_preserves_deep_state() -> None:
+async def test_authenticated_workspace_entry_selects_react_and_preserves_deep_state(
+    monkeypatch,
+) -> None:
     organization_id = UUID("11111111-1111-4111-8111-111111111111")
     workspace_id = UUID("22222222-2222-4222-8222-222222222222")
     context = SimpleNamespace(scope=SimpleNamespace(organization_id=organization_id))
-    enabled = SimpleNamespace(
-        is_enabled=True,
-        rules={"workspaceIds": [str(workspace_id)], "organizationIds": [str(organization_id)]},
-    )
+    session = object()
+    rollout = {"enabled": True}
+    calls = []
+
+    async def rollout_selection(actual_session, *, organization_id, workspace_id):
+        calls.append((actual_session, organization_id, workspace_id))
+        return rollout["enabled"]
+
+    monkeypatch.setattr(workspace_routes, "react_workbench_rollout", rollout_selection)
     response = await workspace_routes.workspace_entry(
         organization_id,
         workspace_id,
         context,
-        SelectionSession(enabled),
+        session,
         "documents",
         "33333333-3333-4333-8333-333333333333",
     )
@@ -75,13 +74,18 @@ async def test_authenticated_workspace_entry_selects_react_and_preserves_deep_st
         "&workspace=22222222-2222-4222-8222-222222222222&task=documents"
         "&document=33333333-3333-4333-8333-333333333333"
     )
+    rollout["enabled"] = False
     fallback = await workspace_routes.workspace_entry(
         organization_id,
         workspace_id,
         context,
-        SelectionSession(None),
+        session,
     )
     assert fallback.headers["location"].endswith("/workspace/")
+    assert calls == [
+        (session, organization_id, workspace_id),
+        (session, organization_id, workspace_id),
+    ]
 
 
 def test_shadow_route_serves_deep_links_and_immutable_assets(tmp_path: Path, monkeypatch) -> None:

@@ -8,17 +8,17 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_factory_api.composition.admin import react_workbench_rollout
+
 from app.common.errors import AuthenticationError
 from app.core.config import settings
 from app.core.paths import TEMPLATE_ROOT, WORKBENCH_WEB_ROOT
 from app.core.urls import public_path
 from app.db.session import get_session
-from app.modules.admin.models import FeatureFlag
 from app.modules.auth.authorization import AuthorizedContext
 from app.modules.auth.authorization_dependencies import require_permission
 from app.modules.auth.dependencies import get_auth_service
 from app.modules.auth.service import AuthService
-from app.modules.workspace.workbench_selection import WORKBENCH_FEATURE_KEY, react_workbench_enabled
 
 router = APIRouter(tags=["workspace"])
 WORKSPACE_TEMPLATE = TEMPLATE_ROOT / "workspace" / "index.html"
@@ -92,10 +92,8 @@ async def workspace_entry(
     document: Annotated[str | None, Query(max_length=128)] = None,
 ) -> RedirectResponse:
     """Resolve an authenticated Workspace's server-owned React or legacy entry."""
-    flag = await session.get(FeatureFlag, WORKBENCH_FEATURE_KEY)
-    enabled = flag is not None and react_workbench_enabled(
-        is_enabled=flag.is_enabled,
-        rules=flag.rules if isinstance(flag.rules, dict) else {},
+    enabled = await react_workbench_rollout(
+        session,
         organization_id=context.scope.organization_id,
         workspace_id=workspace_id,
     )

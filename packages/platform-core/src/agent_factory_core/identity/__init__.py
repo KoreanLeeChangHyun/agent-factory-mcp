@@ -1,3 +1,4 @@
+from .administration import AdminUser, IdentityAdministration, IdentityAdministrationRepository
 from .authorization import (
     AuthorizationScope,
     AuthorizationService,
@@ -23,6 +24,7 @@ from .settings import IdentitySettings
 from .use_cases import AuthService
 
 __all__ = [
+    "AdminUser",
     "ApiTokenRecord",
     "AuthService",
     "AuthorizationScope",
@@ -31,6 +33,8 @@ __all__ = [
     "AuthorizedContext",
     "CredentialRecord",
     "ExternalProfile",
+    "IdentityAdministration",
+    "IdentityAdministrationRepository",
     "IdentitySettings",
     "LoginResult",
     "PasswordLoginRecord",
