@@ -108,3 +108,16 @@ exactly one revision-only audit event.
 Work did not execute the revised integration test or verification script. Independent
 Verification remains responsible for running the maintained gate twice against the same
 explicitly disposable database.
+
+## Final independent Verification
+
+Verification run `run-20260912T131345046578Z-e5de8b0c` passed the final Stage 3 Work run
+`run-20260912T131224295882Z-f483212c` with no findings. It passed `make workbench-check`
+(30 TypeScript and 15 Python tests), all web and Python builds, a clean migration from base
+through `0025`, and `make verify-theme-profiles` twice on the same disposable PostgreSQL 16
+plus pgvector database. The database evidence included forced user RLS, concurrent first
+saves, revision-only audit records, and audit failure without profile rollback. Chromium
+covered keyboard focus and editing, reduced motion, save/reload/conflict, same-user
+second-context restoration, distinct-user isolation, and typed organization/Workspace/account
+context transitions. The database was disposable and stopped afterward; this evidence does
+not establish legacy vanilla theme migration, deployment, or production rollout.

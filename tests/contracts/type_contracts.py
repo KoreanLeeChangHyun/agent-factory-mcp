@@ -22,6 +22,7 @@ ASSET: AssetDescriptor = {
     ],
     "inputs": [],
     "outputs": [],
+    "slots": [],
     "states": ["loading", "empty", "ready", "stale", "error", "permission-denied", "disabled"],
     "actions": ["select", "refresh", "submit", "navigate-internal", "toggle", "dismiss"],
     "accessibility": {

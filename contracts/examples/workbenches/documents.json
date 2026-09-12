@@ -12,15 +12,15 @@
     "asset": "tree@1",
     "label": "문서 탐색기",
     "components": [
-      {"id": "document-tree", "asset": "resource-tree@1", "binding": "documents", "actions": ["select-document"], "state": "ready"}
+      {"id": "document-tree", "asset": "resource-tree@1", "slot": "content", "binding": "documents", "actions": ["select-document"], "state": "ready"}
     ]
   },
   "panel": {
     "asset": "document@1",
     "label": "문서 패널",
     "components": [
-      {"id": "document-header", "asset": "resource-header@1", "props": {"title": "선택한 문서"}, "state": "ready"},
-      {"id": "document-content", "asset": "markdown@1", "binding": "document", "state": "ready"}
+      {"id": "document-header", "asset": "resource-header@1", "slot": "header", "props": {"title": "선택한 문서"}, "actions": ["refresh-document"], "state": "ready"},
+      {"id": "document-content", "asset": "markdown@1", "slot": "content", "binding": "document", "state": "ready"}
     ]
   },
   "bindings": [

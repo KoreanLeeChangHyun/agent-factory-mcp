@@ -1,4 +1,4 @@
-"""Enforce Stage-1 Python and TypeScript package dependency directions."""
+"""Enforce target Python and TypeScript package dependency directions."""
 
 from __future__ import annotations
 
@@ -36,6 +36,7 @@ TYPESCRIPT_INTERNAL = {
     "@agent-factory/contracts": "contracts",
     "@agent-factory/design-system": "design-system",
     "@agent-factory/workbench-runtime": "runtime",
+    "@agent-factory/workbench-editor": "editor",
     "@agent-factory/web": "app",
 }
 ALLOWED_TARGETS = {
@@ -44,7 +45,8 @@ ALLOWED_TARGETS = {
     "adapters": {"contracts", "core"},
     "design-system": {"contracts"},
     "runtime": {"contracts", "design-system"},
-    "app": {"contracts", "core", "adapters", "design-system", "runtime"},
+    "editor": {"contracts", "design-system", "runtime"},
+    "app": {"contracts", "core", "adapters", "design-system", "runtime", "editor"},
 }
 
 
@@ -64,6 +66,8 @@ def owner(path: Path) -> str | None:
         return "design-system"
     if parts[:2] == ("packages", "workbench-runtime"):
         return "runtime"
+    if parts[:2] == ("packages", "workbench-editor"):
+        return "editor"
     if parts and parts[0] == "apps":
         return "app"
     return None

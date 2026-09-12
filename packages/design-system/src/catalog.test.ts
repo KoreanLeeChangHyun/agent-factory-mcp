@@ -31,6 +31,10 @@ describe("asset catalog", () => {
     }
     expect(assetCatalog.find((asset) => asset.id === "tree@1")?.actions).toEqual(["select"]);
     expect(assetCatalog.find((asset) => asset.id === "toggle@1")?.outputs.map((item) => item.name)).toEqual(["value"]);
+    expect(assetCatalog.find((asset) => asset.id === "resource-header@1")).toMatchObject({
+      actions: ["refresh"],
+      outputs: [],
+    });
     expect(assetCatalog.find((asset) => asset.id === "chart-frame@1")?.actions).toEqual([]);
   });
   it("keeps the checked-in split descriptor equal to the registry contract", () => {

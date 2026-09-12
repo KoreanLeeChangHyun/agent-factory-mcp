@@ -16,30 +16,33 @@ AssetParameterType = Literal['string', 'number', 'integer', 'boolean', 'string-l
 AccessibilityRole = Literal['img', 'navigation', 'tree', 'list', 'region', 'form', 'table', 'status', 'alert', 'dialog']
 LiveMode = Literal['off', 'polite', 'assertive']
 Scalar = str | int | float | bool | None
+PropertyValue = Scalar | list[str] | list[dict[str, Scalar]]
 
 
 class ComponentProps(TypedDict):
-    label: NotRequired[Scalar]
-    title: NotRequired[Scalar]
-    description: NotRequired[Scalar]
-    content: NotRequired[Scalar]
-    placeholder: NotRequired[Scalar]
-    emptyText: NotRequired[Scalar]
-    status: NotRequired[Scalar]
-    kind: NotRequired[Scalar]
-    code: NotRequired[Scalar]
-    language: NotRequired[Scalar]
-    compact: NotRequired[Scalar]
-    disabled: NotRequired[Scalar]
-    required: NotRequired[Scalar]
-    selectedId: NotRequired[Scalar]
-    rowCount: NotRequired[Scalar]
-    columnCount: NotRequired[Scalar]
+    label: NotRequired[PropertyValue]
+    title: NotRequired[PropertyValue]
+    description: NotRequired[PropertyValue]
+    content: NotRequired[PropertyValue]
+    placeholder: NotRequired[PropertyValue]
+    emptyText: NotRequired[PropertyValue]
+    status: NotRequired[PropertyValue]
+    kind: NotRequired[PropertyValue]
+    code: NotRequired[PropertyValue]
+    language: NotRequired[PropertyValue]
+    compact: NotRequired[PropertyValue]
+    disabled: NotRequired[PropertyValue]
+    required: NotRequired[PropertyValue]
+    selectedId: NotRequired[PropertyValue]
+    rowCount: NotRequired[PropertyValue]
+    columnCount: NotRequired[PropertyValue]
 
 
 class Component(TypedDict):
     id: str
     asset: str
+    slot: str
+    parentId: NotRequired[str]
     props: NotRequired[ComponentProps]
     binding: NotRequired[str]
     actions: NotRequired[list[str]]
@@ -77,12 +80,14 @@ class WorkbenchDescriptor(TypedDict):
 class Sidebar(TypedDict):
     asset: SidebarAsset
     label: NotRequired[str]
+    actions: NotRequired[list[str]]
     components: list[Component]
 
 
 class Panel(TypedDict):
     asset: PanelAsset
     label: NotRequired[str]
+    actions: NotRequired[list[str]]
     components: list[Component]
 
 
@@ -171,6 +176,7 @@ class AssetDescriptor(TypedDict):
     properties: list[AssetParameter]
     inputs: list[AssetParameter]
     outputs: list[AssetParameter]
+    slots: list[str]
     states: list[AssetState]
     actions: list[ActionKind]
     accessibility: Accessibility

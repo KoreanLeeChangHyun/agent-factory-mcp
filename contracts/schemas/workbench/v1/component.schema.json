@@ -4,18 +4,37 @@
   "title": "Workbench component v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "asset"],
+  "required": ["id", "asset", "slot"],
   "properties": {
     "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
     "asset": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}@1$"},
+    "slot": {"enum": ["content", "header", "actions", "list", "detail", "primary", "secondary", "sidebar", "control"]},
+    "parentId": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
     "props": {
       "type": "object", "additionalProperties": false, "maxProperties": 16,
       "propertyNames": {"enum": ["label", "title", "description", "content", "placeholder", "emptyText", "status", "kind", "code", "language", "compact", "disabled", "required", "selectedId", "rowCount", "columnCount"]},
       "patternProperties": {
         "^[a-z][a-zA-Z0-9]{0,63}$": {
           "oneOf": [
-            {"type": "string", "maxLength": 2048, "pattern": "^(?!.*(?:[A-Za-z][A-Za-z0-9+.-]*:(?:/{0,2})?[^\\s]|//|[Ww][Ww][Ww]\\.))(?!.*\\$\\{)[^<]*$"},
-            {"type": "number"}, {"type": "boolean"}, {"type": "null"}
+            {"$ref": "#/$defs/safeString"},
+            {"type": "number"}, {"type": "boolean"}, {"type": "null"},
+            {"type": "array", "maxItems": 1000, "items": {"$ref": "#/$defs/safeString"}},
+            {
+              "type": "array",
+              "maxItems": 1000,
+              "items": {
+                "type": "object",
+                "additionalProperties": {
+                  "oneOf": [
+                    {"$ref": "#/$defs/safeString"},
+                    {"type": "number"},
+                    {"type": "boolean"},
+                    {"type": "null"}
+                  ]
+                },
+                "maxProperties": 16
+              }
+            }
           ]
         }
       }
@@ -23,5 +42,12 @@
     "binding": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
     "actions": {"type": "array", "maxItems": 8, "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"}, "uniqueItems": true},
     "state": {"enum": ["loading", "empty", "ready", "stale", "error", "permission-denied", "disabled"]}
+  },
+  "$defs": {
+    "safeString": {
+      "type": "string",
+      "maxLength": 2048,
+      "pattern": "^(?!.*(?:[A-Za-z][A-Za-z0-9+.-]*:(?:/{0,2})?[^\\s]|//|[Ww][Ww][Ww]\\.|\\$\\{|<|[{}]|[Bb][Ee][Aa][Rr][Ee][Rr] |[Bb][Aa][Ss][Ii][Cc] |[Aa][Pp][Ii][_-]?[Kk][Ee][Yy]|[Aa][Cc][Cc][Ee][Ss][Ss][_-]?[Tt][Oo][Kk][Ee][Nn]|[Pp][Aa][Ss][Ss][Ww][Oo][Rr][Dd])).*$"
+    }
   }
 }

@@ -3,6 +3,7 @@ packages:
   - packages/contracts-ts
   - packages/design-system
   - packages/workbench-runtime
+  - packages/workbench-editor
 
 onlyBuiltDependencies:
   - esbuild

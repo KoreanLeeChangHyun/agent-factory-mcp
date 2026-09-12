@@ -12,15 +12,16 @@ export type AssetParameterType = "string" | "number" | "integer" | "boolean" | "
 export type AccessibilityRole = "img" | "navigation" | "tree" | "list" | "region" | "form" | "table" | "status" | "alert" | "dialog";
 export type LiveMode = "off" | "polite" | "assertive";
 export type Scalar = string | number | boolean | null;
+export type PropertyValue = Scalar | string[] | Record<string, Scalar>[];
 
-export interface ComponentProps { label?: Scalar; title?: Scalar; description?: Scalar; content?: Scalar; placeholder?: Scalar; emptyText?: Scalar; status?: Scalar; kind?: Scalar; code?: Scalar; language?: Scalar; compact?: Scalar; disabled?: Scalar; required?: Scalar; selectedId?: Scalar; rowCount?: Scalar; columnCount?: Scalar; }
-export interface Component { id: string; asset: string; props?: ComponentProps; binding?: string; actions?: string[]; state?: ComponentState }
+export interface ComponentProps { label?: PropertyValue; title?: PropertyValue; description?: PropertyValue; content?: PropertyValue; placeholder?: PropertyValue; emptyText?: PropertyValue; status?: PropertyValue; kind?: PropertyValue; code?: PropertyValue; language?: PropertyValue; compact?: PropertyValue; disabled?: PropertyValue; required?: PropertyValue; selectedId?: PropertyValue; rowCount?: PropertyValue; columnCount?: PropertyValue; }
+export interface Component { id: string; asset: string; slot: "content" | "header" | "actions" | "list" | "detail" | "primary" | "secondary" | "sidebar" | "control"; parentId?: string; props?: ComponentProps; binding?: string; actions?: string[]; state?: ComponentState }
 export interface BindingInputMapping { input: string; statePath: string }
 export interface Binding { id: string; source: string; inputMappings: BindingInputMapping[]; cacheSeconds?: number }
 export interface Action { id: string; kind: ActionKind; target?: string; payloadBinding?: string }
 export interface WorkbenchDescriptor { id: string; version: 1; title: string; description?: string; icon: string; regions: Region[] }
-export interface Sidebar { asset: SidebarAsset; label?: string; components: Component[] }
-export interface Panel { asset: PanelAsset; label?: string; components: Component[] }
+export interface Sidebar { asset: SidebarAsset; label?: string; actions?: string[]; components: Component[] }
+export interface Panel { asset: PanelAsset; label?: string; actions?: string[]; components: Component[] }
 export interface WorkbenchDefinition { schemaVersion: "1.0"; descriptor: WorkbenchDescriptor; sidebar: Sidebar; panel: Panel; bindings: Binding[]; actions: Action[] }
 export interface ThemeOverrides { accent?: string; focus?: string; surface?: string; text?: string; }
 export interface ThemeProfile { schemaVersion: "1.0"; userId: string; revision: number; base: ThemeBase; density: Density; overrides: ThemeOverrides; reducedMotion: boolean }
@@ -31,4 +32,4 @@ export interface RecordItem { type: "object"; additionalProperties: false; requi
 export interface AssetParameter { name: string; type: AssetParameterType; required: boolean; maxLength?: number; maxItems?: number; items?: RecordItem; uniqueBy?: string; enum?: string[] }
 export interface Accessibility { role: AccessibilityRole; keyboard: string; live?: LiveMode }
 export interface Provenance { source: string; license: string }
-export interface AssetDescriptor { id: string; kind: AssetKind; allowedRegions: Region[]; properties: AssetParameter[]; inputs: AssetParameter[]; outputs: AssetParameter[]; states: AssetState[]; actions: ActionKind[]; accessibility: Accessibility; provenance: Provenance; example: Record<string, Scalar> }
+export interface AssetDescriptor { id: string; kind: AssetKind; allowedRegions: Region[]; properties: AssetParameter[]; inputs: AssetParameter[]; outputs: AssetParameter[]; slots: ("content" | "header" | "actions" | "list" | "detail" | "primary" | "secondary" | "sidebar" | "control")[]; states: AssetState[]; actions: ActionKind[]; accessibility: Accessibility; provenance: Provenance; example: Record<string, Scalar> }

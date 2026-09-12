@@ -85,13 +85,22 @@ def outputs() -> dict[Path, str]:
             schemas[f"{workbench}binding.schema.json"],
             {"id", "source", "inputMappings", "cacheSeconds"},
         ),
-        "component": (component, {"id", "asset", "props", "binding", "actions", "state"}),
+        "component": (
+            component,
+            {"id", "asset", "slot", "parentId", "props", "binding", "actions", "state"},
+        ),
         "descriptor": (
             schemas[f"{workbench}descriptor.schema.json"],
             {"id", "version", "title", "description", "icon", "regions"},
         ),
-        "sidebar": (schemas[f"{workbench}sidebar.schema.json"], {"asset", "label", "components"}),
-        "panel": (schemas[f"{workbench}panel.schema.json"], {"asset", "label", "components"}),
+        "sidebar": (
+            schemas[f"{workbench}sidebar.schema.json"],
+            {"asset", "label", "actions", "components"},
+        ),
+        "panel": (
+            schemas[f"{workbench}panel.schema.json"],
+            {"asset", "label", "actions", "components"},
+        ),
         "definition": (
             definition,
             {"schemaVersion", "descriptor", "sidebar", "panel", "bindings", "actions"},
@@ -132,6 +141,7 @@ def outputs() -> dict[Path, str]:
                 "properties",
                 "inputs",
                 "outputs",
+                "slots",
                 "states",
                 "actions",
                 "accessibility",
@@ -172,15 +182,18 @@ AssetParameterType = Literal[{", ".join(repr(v) for v in parameter_types)}]
 AccessibilityRole = Literal[{", ".join(repr(v) for v in accessibility_roles)}]
 LiveMode = Literal[{", ".join(repr(v) for v in live_modes)}]
 Scalar = str | int | float | bool | None
+PropertyValue = Scalar | list[str] | list[dict[str, Scalar]]
 
 
 class ComponentProps(TypedDict):
-{chr(10).join(f"    {name}: NotRequired[Scalar]" for name in component_props)}
+{chr(10).join(f"    {name}: NotRequired[PropertyValue]" for name in component_props)}
 
 
 class Component(TypedDict):
     id: str
     asset: str
+    slot: str
+    parentId: NotRequired[str]
     props: NotRequired[ComponentProps]
     binding: NotRequired[str]
     actions: NotRequired[list[str]]
@@ -218,12 +231,14 @@ class WorkbenchDescriptor(TypedDict):
 class Sidebar(TypedDict):
     asset: SidebarAsset
     label: NotRequired[str]
+    actions: NotRequired[list[str]]
     components: list[Component]
 
 
 class Panel(TypedDict):
     asset: PanelAsset
     label: NotRequired[str]
+    actions: NotRequired[list[str]]
     components: list[Component]
 
 
@@ -309,6 +324,7 @@ class AssetDescriptor(TypedDict):
     properties: list[AssetParameter]
     inputs: list[AssetParameter]
     outputs: list[AssetParameter]
+    slots: list[str]
     states: list[AssetState]
     actions: list[ActionKind]
     accessibility: Accessibility
@@ -373,15 +389,16 @@ export type AssetParameterType = {" | ".join(json.dumps(v) for v in parameter_ty
 export type AccessibilityRole = {" | ".join(json.dumps(v) for v in accessibility_roles)};
 export type LiveMode = {" | ".join(json.dumps(v) for v in live_modes)};
 export type Scalar = string | number | boolean | null;
+export type PropertyValue = Scalar | string[] | Record<string, Scalar>[];
 
-export interface ComponentProps {{ {" ".join(f"{name}?: Scalar;" for name in component_props)} }}
-export interface Component {{ id: string; asset: string; props?: ComponentProps; binding?: string; actions?: string[]; state?: ComponentState }}
+export interface ComponentProps {{ {" ".join(f"{name}?: PropertyValue;" for name in component_props)} }}
+export interface Component {{ id: string; asset: string; slot: "content" | "header" | "actions" | "list" | "detail" | "primary" | "secondary" | "sidebar" | "control"; parentId?: string; props?: ComponentProps; binding?: string; actions?: string[]; state?: ComponentState }}
 export interface BindingInputMapping {{ input: string; statePath: string }}
 export interface Binding {{ id: string; source: string; inputMappings: BindingInputMapping[]; cacheSeconds?: number }}
 export interface Action {{ id: string; kind: ActionKind; target?: string; payloadBinding?: string }}
 export interface WorkbenchDescriptor {{ id: string; version: 1; title: string; description?: string; icon: string; regions: Region[] }}
-export interface Sidebar {{ asset: SidebarAsset; label?: string; components: Component[] }}
-export interface Panel {{ asset: PanelAsset; label?: string; components: Component[] }}
+export interface Sidebar {{ asset: SidebarAsset; label?: string; actions?: string[]; components: Component[] }}
+export interface Panel {{ asset: PanelAsset; label?: string; actions?: string[]; components: Component[] }}
 export interface WorkbenchDefinition {{ schemaVersion: "1.0"; descriptor: WorkbenchDescriptor; sidebar: Sidebar; panel: Panel; bindings: Binding[]; actions: Action[] }}
 export interface ThemeOverrides {{ {" ".join(f"{name}?: string;" for name in theme_overrides)} }}
 export interface ThemeProfile {{ schemaVersion: "1.0"; userId: string; revision: number; base: ThemeBase; density: Density; overrides: ThemeOverrides; reducedMotion: boolean }}
@@ -392,7 +409,7 @@ export interface RecordItem {{ type: "object"; additionalProperties: false; requ
 export interface AssetParameter {{ name: string; type: AssetParameterType; required: boolean; maxLength?: number; maxItems?: number; items?: RecordItem; uniqueBy?: string; enum?: string[] }}
 export interface Accessibility {{ role: AccessibilityRole; keyboard: string; live?: LiveMode }}
 export interface Provenance {{ source: string; license: string }}
-export interface AssetDescriptor {{ id: string; kind: AssetKind; allowedRegions: Region[]; properties: AssetParameter[]; inputs: AssetParameter[]; outputs: AssetParameter[]; states: AssetState[]; actions: ActionKind[]; accessibility: Accessibility; provenance: Provenance; example: Record<string, Scalar> }}
+export interface AssetDescriptor {{ id: string; kind: AssetKind; allowedRegions: Region[]; properties: AssetParameter[]; inputs: AssetParameter[]; outputs: AssetParameter[]; slots: ("content" | "header" | "actions" | "list" | "detail" | "primary" | "secondary" | "sidebar" | "control")[]; states: AssetState[]; actions: ActionKind[]; accessibility: Accessibility; provenance: Provenance; example: Record<string, Scalar> }}
 """
     ts_bundle = f"""// Generated by scripts/generate_workbench_contracts.py; do not edit.
 export const schemas: Record<string, object> = JSON.parse({json.dumps(bundle)});

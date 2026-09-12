@@ -11,6 +11,7 @@
     "properties",
     "inputs",
     "outputs",
+    "slots",
     "states",
     "actions",
     "accessibility",
@@ -30,6 +31,12 @@
     "properties": { "$ref": "#/$defs/parameters" },
     "inputs": { "$ref": "#/$defs/parameters" },
     "outputs": { "$ref": "#/$defs/parameters" },
+    "slots": {
+      "type": "array",
+      "maxItems": 9,
+      "items": { "enum": ["content", "header", "actions", "list", "detail", "primary", "secondary", "sidebar", "control"] },
+      "uniqueItems": true
+    },
     "states": {
       "type": "array",
       "maxItems": 10,

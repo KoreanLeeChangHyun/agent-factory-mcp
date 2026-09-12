@@ -1,4 +1,4 @@
-import { createElement, type ComponentType } from "react";
+import { createElement, type ComponentType, type ReactNode } from "react";
 import type { ActionKind, AssetDescriptor, AssetKind, AssetParameter } from "@agent-factory/contracts";
 import {
   Button,
@@ -29,6 +29,7 @@ import {
   Toggle,
   type CommonState,
   type PanelSlot,
+  type NavItem,
   type PanelVariant,
   type SidebarVariant,
   type TaskIconName,
@@ -63,6 +64,39 @@ const panelSlotItems: NonNullable<AssetParameter["items"]> = {
     meta: { type: "string", maxLength: 240 },
   },
 };
+const navigationItems: NonNullable<AssetParameter["items"]> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "label"],
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 64 },
+    label: { type: "string", minLength: 1, maxLength: 80 },
+    meta: { type: "string", maxLength: 240 },
+    group: { type: "string", maxLength: 80 },
+    favorite: { type: "boolean" },
+    recent: { type: "boolean" },
+    parentId: { type: "string", maxLength: 64 },
+  },
+};
+const tableItems: NonNullable<AssetParameter["items"]> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "title"],
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 64 },
+    title: { type: "string", minLength: 1, maxLength: 120 },
+    status: { type: "string", maxLength: 80 },
+  },
+};
+const tabItems: NonNullable<AssetParameter["items"]> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "label"],
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 64 },
+    label: { type: "string", minLength: 1, maxLength: 80 },
+  },
+};
 
 function descriptor(
   id: string,
@@ -83,9 +117,31 @@ function descriptor(
       ? [feedbackState as AssetDescriptor["states"][number]]
       : kind === "sidebar"
         ? ["ready", "empty"]
-        : supportsDisabled
-          ? ["ready", "disabled"]
-          : ["ready"];
+        : kind === "display"
+          ? ["loading", "empty", "ready", "stale", "error", "permission-denied"]
+          : supportsDisabled
+            ? ["ready", "disabled"]
+            : ["ready"];
+  const layoutSlots: Record<string, AssetDescriptor["slots"]> = {
+    "flat-list": ["content"],
+    "group-list": ["content"],
+    tree: ["content"],
+    "search-list": ["content"],
+    "filter-list": ["content"],
+    "detail-list": ["content"],
+    "favorites-recent": ["content"],
+    detail: ["header", "content", "actions"],
+    "list-detail": ["list", "detail"],
+    collection: ["content"],
+    settings: ["content", "actions"],
+    dashboard: ["content"],
+    document: ["header", "content"],
+    split: ["primary", "secondary"],
+    timeline: ["sidebar", "content"],
+    kanban: ["content"],
+    field: ["control"],
+    tabs: ["content"],
+  };
   return {
     id: `${id}@1`,
     kind,
@@ -93,6 +149,7 @@ function descriptor(
     properties,
     inputs,
     outputs,
+    slots: layoutSlots[id] ?? [],
     states,
     actions,
     accessibility: {
@@ -202,11 +259,11 @@ export const assetCatalog: readonly AssetDescriptor[] = [
       id === "tree" ? "tree" : "navigation",
       [
         parameter("title", "string", false, { maxLength: 80 }),
-        parameter("items", "record-list", false, { maxItems: 100 }),
+        parameter("items", "record-list", false, { maxItems: 100, items: navigationItems, uniqueBy: "id" }),
       ],
       ["select"],
       { title: `${id} 예제` },
-      [parameter("records", "record-list", false, { maxItems: 100 })],
+      [parameter("records", "record-list", false, { maxItems: 100, items: navigationItems, uniqueBy: "id" })],
       [parameter("selectedId", "string", false, { maxLength: 64 })],
     ),
   ),
@@ -255,6 +312,9 @@ export const assetCatalog: readonly AssetDescriptor[] = [
                   ? { maxItems: 32 }
                   : { maxLength: 2048 },
             ),
+            ...(["select", "multiselect"].includes(id)
+              ? [parameter("options", "string-list", false, { maxItems: 32 })]
+              : []),
           ],
       id === "button" || id === "icon-button"
         ? []
@@ -290,9 +350,22 @@ export const assetCatalog: readonly AssetDescriptor[] = [
             parameter("status", "string", false, { maxLength: 80 }),
           ]
         : [],
-      id === "tabs" || id === "resource-tree" ? ["select"] : [],
+      id === "tabs" || id === "resource-tree" ? ["select"] : id === "resource-header" ? ["refresh"] : [],
       id === "resource-header" ? { title: "선택한 문서", status: "준비됨" } : {},
-      id === "resource-tree" ? [parameter("records", "record-list", false, { maxItems: 100 })] : [],
+      id === "tabs"
+        ? [parameter("items", "record-list", false, { maxItems: 12, items: tabItems, uniqueBy: "id" })]
+        : id === "resource-tree"
+          ? [parameter("records", "record-list", false, { maxItems: 100, items: navigationItems, uniqueBy: "id" })]
+          : id === "resource-table"
+            ? [parameter("records", "record-list", false, { maxItems: 100, items: tableItems, uniqueBy: "id" })]
+            : id === "resource-header"
+              ? [
+                  parameter("title", "string", false, { maxLength: 80 }),
+                  parameter("status", "string", false, { maxLength: 80 }),
+                ]
+              : ["metric", "code", "markdown", "json"].includes(id)
+                ? [parameter("value", "string", false, { maxLength: 2048 })]
+                : [],
       id === "tabs" || id === "resource-tree" ? [parameter("selectedId", "string", false, { maxLength: 64 })] : [],
     ),
   ),
@@ -314,11 +387,29 @@ export const assetCatalog: readonly AssetDescriptor[] = [
 
 type Implementation = { component: ComponentType<Record<string, unknown>>; allowedProps: ReadonlySet<string> };
 export type AssetActionEvent = { assetId: string; action: ActionKind; output: Record<string, unknown> };
-export type AssetRuntime = { inputs?: Record<string, unknown>; onAction?: (event: AssetActionEvent) => void };
+export type AssetRuntime = {
+  inputs?: Record<string, unknown>;
+  onAction?: (event: AssetActionEvent) => void;
+  slots?: { id: string; content: ReactNode }[];
+  viewState?: { selection: string | null; expanded: string[]; onExpandedChange?: (ids: string[]) => void };
+};
 const implementations = new Map<string, Implementation>();
 const register = (id: string, component: ComponentType<Record<string, unknown>>, allowedProps: string[] = []) =>
   implementations.set(`${id}@1`, { component, allowedProps: new Set(allowedProps) });
 const runtimeOf = (props: Record<string, unknown>) => (props.$runtime ?? {}) as AssetRuntime;
+const navigationTree = (value: unknown): NavItem[] => {
+  if (!Array.isArray(value)) return [];
+  const records = value as (NavItem & { parentId?: string })[];
+  const nodes = new Map(records.map((record) => [record.id, { ...record, children: [] as NavItem[] }]));
+  const roots: NavItem[] = [];
+  for (const record of records) {
+    const node = nodes.get(record.id)!;
+    const parent = record.parentId ? nodes.get(record.parentId) : undefined;
+    if (parent) parent.children!.push(node);
+    else roots.push(node);
+  }
+  return roots;
+};
 const validateValues = (id: string, values: Record<string, unknown>, parameters: AssetParameter[], subject: string) => {
   const allowed = new Set(parameters.map((parameter) => parameter.name));
   const unknown = Object.keys(values).filter((name) => !allowed.has(name));
@@ -419,6 +510,10 @@ for (const variant of sidebars)
             ? (props.items as never)
             : undefined,
         onSelect: (selectedId) => emit(variant, runtime, "select", { selectedId }),
+        selectedId: runtime.viewState?.selection,
+        expanded: runtime.viewState?.expanded,
+        onExpandedChange: runtime.viewState?.onExpandedChange,
+        children: runtime.slots?.find((slot) => slot.id === "content")?.content,
       });
     },
     ["title", "items"],
@@ -429,6 +524,7 @@ for (const variant of panels)
     return createElement(PanelLayout, {
       variant,
       slots: runtime.inputs?.slots as PanelSlot[] | undefined,
+      composedSlots: runtime.slots,
       onAction: (action, value) => emit(variant, runtime, action, value === undefined ? {} : { value }),
     });
   });
@@ -464,11 +560,12 @@ register(
     return createElement(
       Field,
       { label: String(props.label ?? "필드") },
-      createElement(TextInput, {
-        disabled: Boolean(props.disabled),
-        defaultValue: typeof runtime.inputs?.value === "string" ? runtime.inputs.value : undefined,
-        onChange: (event) => emit("field", runtime, "select", { value: event.currentTarget.value }),
-      }),
+      runtime.slots?.find((slot) => slot.id === "control")?.content ??
+        createElement(TextInput, {
+          disabled: Boolean(props.disabled),
+          defaultValue: typeof runtime.inputs?.value === "string" ? runtime.inputs.value : undefined,
+          onChange: (event) => emit("field", runtime, "select", { value: event.currentTarget.value }),
+        }),
     );
   },
   ["label", "disabled"],
@@ -527,10 +624,12 @@ register(
       {
         "aria-label": String(props.label ?? "선택"),
         disabled: Boolean(props.disabled),
-        defaultValue: typeof runtime.inputs?.value === "string" ? runtime.inputs.value : "option",
+        defaultValue: typeof runtime.inputs?.value === "string" ? runtime.inputs.value : undefined,
         onChange: (event) => emit("select", runtime, "select", { value: event.currentTarget.value }),
       },
-      createElement("option", { value: "option" }, "선택 항목"),
+      ...(Array.isArray(runtime.inputs?.options) ? runtime.inputs.options : []).map((option) =>
+        createElement("option", { value: String(option), key: String(option) }, String(option)),
+      ),
     );
   },
   ["label", "disabled"],
@@ -541,7 +640,7 @@ register(
     const runtime = runtimeOf(props);
     return createElement(MultiSelect, {
       label: String(props.label ?? "여러 항목 선택"),
-      options: ["A", "B"],
+      options: Array.isArray(runtime.inputs?.options) ? (runtime.inputs.options as string[]) : [],
       value: Array.isArray(runtime.inputs?.value) ? (runtime.inputs.value as string[]) : [],
       onChange: (value) => emit("multiselect", runtime, "select", { value }),
       disabled: Boolean(props.disabled),
@@ -577,35 +676,74 @@ register(
 );
 register("tabs", (props) => {
   const runtime = runtimeOf(props);
-  return createElement(Tabs, {
-    labels: ["개요", "세부 정보"],
-    onSelect: (selectedId) => emit("tabs", runtime, "select", { selectedId }),
-  });
+  return createElement(
+    "div",
+    { className: "af-tabs-composition" },
+    createElement(Tabs, {
+      labels: [],
+      items: Array.isArray(runtime.inputs?.items) ? (runtime.inputs.items as never) : [],
+      onSelect: (selectedId) => emit("tabs", runtime, "select", { selectedId }),
+    }),
+    runtime.slots?.find((slot) => slot.id === "content")?.content,
+  );
 });
 register("resource-tree", (props) => {
   const runtime = runtimeOf(props);
   return createElement(SidebarPattern, {
     variant: "tree",
     title: "리소스 트리",
-    items: Array.isArray(runtime.inputs?.records) ? (runtime.inputs.records as never) : undefined,
+    items: navigationTree(runtime.inputs?.records),
     onSelect: (selectedId) => emit("resource-tree", runtime, "select", { selectedId }),
+    selectedId: runtime.viewState?.selection,
+    expanded: runtime.viewState?.expanded,
+    onExpandedChange: runtime.viewState?.onExpandedChange,
   });
 });
-register("resource-table", () => createElement(DataTable));
+register("resource-table", (props) => {
+  const runtime = runtimeOf(props);
+  return createElement(DataTable, {
+    rows: Array.isArray(runtime.inputs?.records) ? (runtime.inputs.records as never) : [],
+  });
+});
 register(
   "resource-header",
-  (props) =>
-    createElement(ResourceHeader, {
-      title: typeof props.title === "string" ? props.title : undefined,
-      status: typeof props.status === "string" ? props.status : undefined,
-    }),
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(ResourceHeader, {
+      title:
+        typeof runtime.inputs?.title === "string"
+          ? runtime.inputs.title
+          : typeof props.title === "string"
+            ? props.title
+            : undefined,
+      status:
+        typeof runtime.inputs?.status === "string"
+          ? runtime.inputs.status
+          : typeof props.status === "string"
+            ? props.status
+            : undefined,
+      onRefresh: () => emit("resource-header", runtime, "refresh"),
+    });
+  },
   ["title", "status"],
 );
-register("metric", () => createElement(Metric));
+register("metric", (props) =>
+  createElement(Metric, {
+    value: typeof runtimeOf(props).inputs?.value === "string" ? (runtimeOf(props).inputs?.value as string) : undefined,
+  }),
+);
 register("chart-frame", () => createElement(ChartFrame));
-register("code", () => createElement(CodeBlock));
-register("markdown", () => createElement(Markdown));
-register("json", () => createElement(JsonView));
+register("code", (props) =>
+  createElement(CodeBlock, {
+    value: typeof runtimeOf(props).inputs?.value === "string" ? (runtimeOf(props).inputs?.value as string) : undefined,
+  }),
+);
+register("markdown", (props) =>
+  createElement(Markdown, {
+    value: typeof runtimeOf(props).inputs?.value === "string" ? (runtimeOf(props).inputs?.value as string) : undefined,
+  }),
+);
+register("json", (props) => createElement(JsonView, { value: runtimeOf(props).inputs?.value }));
 register(
   "dialog",
   (props) => {
@@ -660,6 +798,10 @@ export function instantiateAsset(id: string, props: Record<string, unknown> = {}
   if (unsupported.length) throw new Error(`Unsupported properties for ${id}: ${unsupported.join(", ")}`);
   validateValues(id, props, descriptor.properties, "property");
   validateValues(id, runtime.inputs ?? {}, descriptor.inputs, "input");
+  const declaredSlots = new Set<string>(descriptor.slots);
+  const unsupportedSlots = (runtime.slots ?? []).filter((slot) => !declaredSlots.has(slot.id));
+  if (unsupportedSlots.length)
+    throw new Error(`Unsupported slots for ${id}: ${unsupportedSlots.map((slot) => slot.id).join(", ")}`);
   return createElement(implementation.component, { ...props, $runtime: runtime });
 }
 

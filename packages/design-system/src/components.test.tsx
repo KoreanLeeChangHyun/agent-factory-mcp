@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Dialog, Markdown, PanelLayout, SidebarPattern, Tabs, Toggle } from "./components.js";
 import { instantiateAsset, type AssetActionEvent } from "./catalog.js";
 
@@ -62,14 +62,75 @@ describe("interactive components", () => {
     view.cleanup();
   });
 
+  it("gives tree rows and expansion controls distinct accessible names", () => {
+    const view = mount(
+      <SidebarPattern
+        variant="tree"
+        expanded={["parent"]}
+        items={[{ id: "parent", label: "부모", children: [{ id: "child", label: "시작 안내" }] }]}
+      />,
+    );
+    expect(view.host.querySelector('button[aria-label="시작 안내 항목"]')).not.toBeNull();
+    expect(view.host.querySelector('button[aria-label="부모 펼치기"]')).not.toBeNull();
+    view.cleanup();
+  });
+
   it("uses coherent mobile split orientation and keyboard adjustment", () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
-    const view = mount(<PanelLayout variant="split" />);
+    const onAction = vi.fn();
+    const view = mount(
+      <PanelLayout
+        variant="split"
+        onAction={onAction}
+        slots={[
+          { id: "first", title: "첫 영역" },
+          { id: "second", title: "둘째 영역" },
+        ]}
+      />,
+    );
     const separator = view.host.querySelector<HTMLElement>("[role='separator']")!;
     expect(separator.getAttribute("aria-orientation")).toBe("horizontal");
     key(separator, "ArrowDown");
     expect(separator.getAttribute("aria-valuenow")).toBe("50");
     expect(separator.parentElement?.style.getPropertyValue("--af-split")).toBe("50%");
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith("toggle", 50);
+    view.cleanup();
+  });
+
+  it("emits one clamped split action for each pointer move", () => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280 });
+    const onAction = vi.fn();
+    const view = mount(
+      <PanelLayout
+        variant="split"
+        onAction={onAction}
+        slots={[
+          { id: "first", title: "첫 영역" },
+          { id: "second", title: "둘째 영역" },
+        ]}
+      />,
+    );
+    const separator = view.host.querySelector<HTMLElement>("[role='separator']")!;
+    separator.setPointerCapture = vi.fn();
+    separator.parentElement!.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      width: 200,
+      height: 100,
+      right: 200,
+      bottom: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    });
+    act(() => {
+      separator.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, button: 0, clientX: 90 }));
+      window.dispatchEvent(new MouseEvent("pointermove", { clientX: 120 }));
+      window.dispatchEvent(new MouseEvent("pointerup"));
+    });
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith("toggle", 60);
     view.cleanup();
   });
 
@@ -82,7 +143,7 @@ describe("interactive components", () => {
     expect(view.host.querySelector("nav [data-slot='alpha']")?.textContent).toContain("First content");
     expect(view.host.querySelector("article [data-slot='beta']")?.textContent).toContain("Second content");
     act(() => view.root.render(<PanelLayout variant="document" slots={slots} />));
-    expect(view.host.querySelector("article[data-slot='alpha'] pre")?.textContent).toContain("First content");
+    expect(view.host.querySelector("article [data-slot='alpha'] pre")?.textContent).toContain("First content");
     act(() => view.root.render(<PanelLayout variant="settings" slots={slots} />));
     expect(view.host.querySelectorAll("form input")).toHaveLength(2);
     view.cleanup();

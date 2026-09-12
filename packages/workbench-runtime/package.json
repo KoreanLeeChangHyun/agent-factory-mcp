@@ -3,8 +3,28 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "exports": {".": "./src/index.ts"},
-  "scripts": {"lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run"},
-  "dependencies": {"@agent-factory/contracts": "workspace:*", "@agent-factory/design-system": "workspace:*"},
-  "devDependencies": {"typescript": "5.9.2", "vitest": "3.2.4", "eslint": "9.35.0", "@eslint/js": "9.35.0", "typescript-eslint": "8.42.0"}
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agent-factory/contracts": "workspace:*",
+    "@agent-factory/design-system": "workspace:*",
+    "react": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
+    "jsdom": "26.1.0",
+    "react-dom": "19.1.1",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4",
+    "eslint": "9.35.0",
+    "@eslint/js": "9.35.0",
+    "typescript-eslint": "8.42.0"
+  }
 }

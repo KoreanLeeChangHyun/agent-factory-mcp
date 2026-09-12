@@ -5,6 +5,7 @@
   "properties": [{ "name": "label", "type": "string", "required": true, "maxLength": 80 }],
   "inputs": [],
   "outputs": [],
+  "slots": [],
   "states": ["ready", "disabled"],
   "actions": [],
   "accessibility": {

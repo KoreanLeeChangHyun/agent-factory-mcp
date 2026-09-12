@@ -43,7 +43,38 @@ export function CatalogPreview() {
             ],
           },
         }
-      : undefined;
+      : selected?.allowedRegions.includes("sidebar")
+        ? {
+            inputs: {
+              records: [
+                { id: "fixture-one", label: "합성 탐색 항목", meta: "미리보기" },
+                { id: "fixture-two", label: "두 번째 항목", group: "예제" },
+              ],
+            },
+          }
+        : selected?.id === "resource-table@1"
+          ? { inputs: { records: [{ id: "fixture-row", title: "합성 리소스", status: "미리보기" }] } }
+          : selected?.id === "resource-header@1"
+            ? { inputs: { title: "합성 리소스", status: "미리보기" } }
+            : selected?.id === "tabs@1"
+              ? {
+                  inputs: {
+                    items: [
+                      { id: "fixture-overview", label: "합성 개요" },
+                      { id: "fixture-detail", label: "합성 세부" },
+                    ],
+                  },
+                }
+              : selected?.id === "select@1" || selected?.id === "multiselect@1"
+                ? {
+                    inputs: {
+                      value: selected.id === "multiselect@1" ? ["합성 A"] : "합성 A",
+                      options: ["합성 A", "합성 B"],
+                    },
+                  }
+                : ["metric@1", "code@1", "markdown@1", "json@1"].includes(selected?.id ?? "")
+                  ? { inputs: { value: "합성 미리보기 값" } }
+                  : undefined;
   return (
     <main className="catalog-page" data-af-theme={theme}>
       <header className="catalog-toolbar">

@@ -3,9 +3,12 @@ import { summarizeWorkbench } from "@agent-factory/workbench-runtime";
 import "@agent-factory/design-system/tokens.css";
 import "./app.css";
 import { CatalogPreview } from "./CatalogPreview.js";
+import { RuntimePreview, WorkbenchAuthoring } from "./WorkbenchAuthoring.js";
 
 export function App({ path = window.location.pathname }: { path?: string }) {
   if (path === "/catalog" || path === "/catalog/") return <CatalogPreview />;
+  if (path === "/authoring" || path === "/authoring/") return <WorkbenchAuthoring />;
+  if (path === "/workbench" || path === "/workbench/") return <RuntimePreview />;
   const summary = summarizeWorkbench(documentsFixture);
   return (
     <main className="health-shell">

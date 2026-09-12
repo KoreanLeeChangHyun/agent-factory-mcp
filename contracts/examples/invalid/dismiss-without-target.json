@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "1.0",
+  "descriptor": {"id": "dismiss-invalid", "version": 1, "title": "Dismiss invalid", "icon": "documents@1", "regions": ["task-list", "sidebar", "panel"]},
+  "sidebar": {"asset": "tree@1", "components": [{"id": "tree", "asset": "resource-tree@1", "slot": "content"}]},
+  "panel": {"asset": "document@1", "components": [{"id": "dialog", "asset": "dialog@1", "slot": "content", "actions": ["close"], "state": "ready"}]},
+  "bindings": [],
+  "actions": [{"id": "close", "kind": "dismiss"}]
+}

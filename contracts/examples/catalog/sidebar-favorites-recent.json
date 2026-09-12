@@ -4,10 +4,53 @@
   "allowedRegions": ["sidebar"],
   "properties": [
     { "name": "title", "type": "string", "required": false, "maxLength": 80 },
-    { "name": "items", "type": "record-list", "required": false, "maxItems": 100 }
+    {
+      "name": "items",
+      "type": "record-list",
+      "required": false,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "meta": { "type": "string", "maxLength": 240 },
+          "group": { "type": "string", "maxLength": 80 },
+          "favorite": { "type": "boolean" },
+          "recent": { "type": "boolean" }
+          ,"parentId": { "type": "string", "maxLength": 64 }
+        }
+      },
+      "uniqueBy": "id"
+    }
   ],
-  "inputs": [{ "name": "records", "type": "record-list", "required": false, "maxItems": 100 }],
+  "inputs": [
+    {
+      "name": "records",
+      "type": "record-list",
+      "required": false,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "meta": { "type": "string", "maxLength": 240 },
+          "group": { "type": "string", "maxLength": 80 },
+          "favorite": { "type": "boolean" },
+          "recent": { "type": "boolean" }
+          ,"parentId": { "type": "string", "maxLength": 64 }
+        }
+      },
+      "uniqueBy": "id"
+    }
+  ],
   "outputs": [{ "name": "selectedId", "type": "string", "required": false, "maxLength": 64 }],
+  "slots": ["content"],
   "states": ["ready", "empty"],
   "actions": ["select"],
   "accessibility": {

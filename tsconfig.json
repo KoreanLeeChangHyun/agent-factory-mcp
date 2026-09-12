@@ -12,9 +12,10 @@
   },
   "files": [],
   "references": [
-    {"path": "packages/contracts-ts"},
-    {"path": "packages/design-system"},
-    {"path": "packages/workbench-runtime"},
-    {"path": "apps/web"}
+    { "path": "packages/contracts-ts" },
+    { "path": "packages/design-system" },
+    { "path": "packages/workbench-runtime" },
+    { "path": "packages/workbench-editor" },
+    { "path": "apps/web" }
   ]
 }

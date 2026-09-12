@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0",
   "descriptor": {"id": "bad-url", "version": 1, "title": "Bad", "icon": "documents@1", "regions": ["task-list", "sidebar", "panel"]},
-  "sidebar": {"asset": "tree@1", "components": [{"id": "tree", "asset": "resource-tree@1"}]},
-  "panel": {"asset": "document@1", "components": [{"id": "body", "asset": "markdown@1", "props": {"content": "https://attacker.invalid/data"}}]},
+  "sidebar": {"asset": "tree@1", "components": [{"id": "tree", "asset": "resource-tree@1", "slot": "content"}]},
+  "panel": {"asset": "document@1", "components": [{"id": "body", "asset": "markdown@1", "slot": "content", "props": {"content": "https://attacker.invalid/data"}}]},
   "bindings": [], "actions": []
 }

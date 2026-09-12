@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0",
+  "descriptor": {"id": "nested-unsafe", "version": 1, "title": "Nested unsafe", "icon": "documents@1", "regions": ["task-list", "sidebar", "panel"]},
+  "sidebar": {"asset": "tree@1", "components": [{"id": "tree", "asset": "resource-tree@1", "slot": "content"}]},
+  "panel": {
+    "asset": "document@1",
+    "components": [
+      {
+        "id": "body",
+        "asset": "markdown@1",
+        "slot": "content",
+        "props": {
+          "content": [
+            {"value": "https://attacker.invalid"},
+            {"value": "ftp://attacker.invalid"},
+            {"value": "ws://attacker.invalid"},
+            {"value": "//attacker.invalid"},
+            {"value": "www.attacker.invalid"},
+            {"value": "${globalThis.fetch()}"},
+            {"value": "<script>alert(1)</script>"},
+            {"value": "body{display:none}"},
+            {"value": "<svg onload=alert(1)>"},
+            {"value": "Bearer secret"},
+            {"value": "access_token=secret"},
+            {"value": "Authorization: Bearer secret"}
+          ]
+        },
+        "state": "ready"
+      }
+    ]
+  },
+  "bindings": [],
+  "actions": []
+}

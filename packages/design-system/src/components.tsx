@@ -253,37 +253,45 @@ export const Toggle = ({ label, ...props }: React.InputHTMLAttributes<HTMLInputE
   </label>
 );
 
-export function Tabs({ labels, onSelect }: { labels: string[]; onSelect?: (label: string) => void }) {
+export function Tabs({
+  labels,
+  items = labels.map((label) => ({ id: label, label })),
+  onSelect,
+}: {
+  labels: string[];
+  items?: { id: string; label: string }[];
+  onSelect?: (id: string) => void;
+}) {
   const [active, setActive] = useState(0);
   return (
     <div className="af-tabs" role="tablist">
-      {labels.map((label, index) => (
+      {items.map((item, index) => (
         <button
           className="af-tab"
           role="tab"
           aria-selected={active === index}
           tabIndex={active === index ? 0 : -1}
-          key={label}
+          key={item.id}
           onClick={() => {
             setActive(index);
-            onSelect?.(label);
+            onSelect?.(item.id);
           }}
           onKeyDown={(event) => {
             const next =
               event.key === "ArrowRight"
-                ? (index + 1) % labels.length
+                ? (index + 1) % items.length
                 : event.key === "ArrowLeft"
-                  ? (index - 1 + labels.length) % labels.length
+                  ? (index - 1 + items.length) % items.length
                   : -1;
             if (next >= 0) {
               event.preventDefault();
               setActive(next);
-              onSelect?.(labels[next]!);
+              onSelect?.(items[next]!.id);
               event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role='tab']")[next]?.focus();
             }
           }}
         >
-          {label}
+          {item.label}
         </button>
       ))}
     </div>
@@ -299,19 +307,6 @@ export type NavItem = {
   recent?: boolean;
   children?: NavItem[];
 };
-const sampleItems: NavItem[] = [
-  { id: "guide", label: "시작 안내서", meta: "방금 수정", group: "즐겨찾기", favorite: true },
-  {
-    id: "architecture",
-    label: "아키텍처 결정 기록",
-    meta: "어제",
-    group: "문서",
-    recent: true,
-    children: [{ id: "adr-010", label: "ADR-010 테마와 에셋" }],
-  },
-  { id: "api", label: "API 참조", meta: "12개 항목", group: "문서" },
-];
-
 const resourceIconUrls = {
   group: new URL("./assets/icons/group-open.svg", import.meta.url).href,
   item: new URL("./assets/icons/workspace.svg", import.meta.url).href,
@@ -332,12 +327,16 @@ function NavRows({
   onSelect,
   tree = false,
   nested = false,
+  expanded = [],
+  onExpandedChange,
 }: {
   items: NavItem[];
   selected: string;
   onSelect: (id: string) => void;
   tree?: boolean;
   nested?: boolean;
+  expanded?: string[];
+  onExpandedChange?: (ids: string[]) => void;
 }) {
   return (
     <ul
@@ -367,6 +366,7 @@ function NavRows({
         <li key={item.id} role={tree ? "treeitem" : undefined} aria-selected={tree ? selected === item.id : undefined}>
           <button
             className="af-nav-row"
+            aria-label={`${item.label} 항목`}
             aria-current={!tree && selected === item.id ? "page" : undefined}
             onClick={() => onSelect(item.id)}
           >
@@ -383,8 +383,30 @@ function NavRows({
             {item.meta && <span className="af-meta">{item.meta}</span>}
           </button>
           {tree && item.children && (
+            <button
+              type="button"
+              aria-label={`${item.label} 펼치기`}
+              aria-expanded={expanded.includes(item.id)}
+              onClick={() =>
+                onExpandedChange?.(
+                  expanded.includes(item.id) ? expanded.filter((id) => id !== item.id) : [...expanded, item.id],
+                )
+              }
+            >
+              {expanded.includes(item.id) ? "−" : "+"}
+            </button>
+          )}
+          {tree && item.children && expanded.includes(item.id) && (
             <div style={{ paddingInlineStart: "var(--af-space-4)" }}>
-              <NavRows items={item.children} selected={selected} onSelect={onSelect} tree nested />
+              <NavRows
+                items={item.children}
+                selected={selected}
+                onSelect={onSelect}
+                tree
+                nested
+                expanded={expanded}
+                onExpandedChange={onExpandedChange}
+              />
             </div>
           )}
         </li>
@@ -395,18 +417,31 @@ function NavRows({
 
 export function SidebarPattern({
   variant = "flat-list",
-  title = "문서",
-  items = sampleItems,
+  title = "",
+  items = [],
   onSelect,
+  onSettings,
+  onCreate,
+  selectedId,
+  expanded = [],
+  onExpandedChange,
+  children,
 }: {
   variant?: SidebarVariant;
   title?: string;
   items?: NavItem[];
   onSelect?: (id: string) => void;
+  onSettings?: () => void;
+  onCreate?: () => void;
+  selectedId?: string | null;
+  expanded?: string[];
+  onExpandedChange?: (ids: string[]) => void;
+  children?: ReactNode;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
-  const [selected, setSelected] = useState(items[0]?.id ?? "");
+  const [localSelected, setSelected] = useState(items[0]?.id ?? "");
+  const selected = selectedId ?? localSelected;
   const visible = useMemo(
     () =>
       items.filter(
@@ -425,9 +460,9 @@ export function SidebarPattern({
     <nav className="af-sidebar-host" aria-label={`${title} 사이드바`}>
       <header className="af-sidebar-header">
         <div className="af-row">
-          <strong>{title}</strong>
+          {title && <strong>{title}</strong>}
           <span className="af-spacer" />
-          <IconButton icon="settings" label="사이드바 설정" />
+          {onSettings && <IconButton icon="settings" label="사이드바 설정" onClick={onSettings} />}
         </div>
         {["search-list", "filter-list"].includes(variant) && (
           <TextInput
@@ -447,7 +482,9 @@ export function SidebarPattern({
         )}
       </header>
       <div className="af-sidebar-body">
-        {variant === "group-list" ? (
+        {children ? (
+          children
+        ) : variant === "group-list" ? (
           groups.map((group) => (
             <details className="af-section" open key={group}>
               <summary>{group}</summary>
@@ -472,13 +509,22 @@ export function SidebarPattern({
             ))}
           </>
         ) : (
-          <NavRows items={visible} selected={selected} onSelect={select} tree={variant === "tree"} />
+          <NavRows
+            items={visible}
+            selected={selected}
+            onSelect={select}
+            tree={variant === "tree"}
+            expanded={expanded}
+            onExpandedChange={onExpandedChange}
+          />
         )}{" "}
         {!visible.length && <StateView state="empty" />}
       </div>
-      <footer className="af-sidebar-footer">
-        <Button>새 항목</Button>
-      </footer>
+      {onCreate && (
+        <footer className="af-sidebar-footer">
+          <Button onClick={onCreate}>새 항목</Button>
+        </footer>
+      )}
     </nav>
   );
 }
@@ -498,47 +544,61 @@ export type PanelSlot = {
   title: string;
   content?: string;
   meta?: string;
+  node?: ReactNode;
 };
 
-const defaultPanelSlots: PanelSlot[] = [
-  { id: "primary", title: "기본 슬롯", content: "호출자가 제공하는 콘텐츠" },
-  { id: "secondary", title: "보조 슬롯", content: "호출자가 제공하는 보조 콘텐츠" },
-  { id: "tertiary", title: "추가 슬롯", content: "호출자가 제공하는 추가 콘텐츠" },
-];
 export function PanelLayout({
   variant = "detail",
   onAction,
-  slots = defaultPanelSlots,
+  slots = [],
+  composedSlots = [],
 }: {
   variant?: PanelVariant;
   onAction?: (action: "submit" | "toggle", value?: unknown) => void;
   slots?: PanelSlot[];
+  composedSlots?: { id: string; content: ReactNode }[];
 }) {
   const [split, setSplit] = useState(45);
+  const splitValue = useRef(45);
   const [vertical, setVertical] = useState(() => typeof window !== "undefined" && window.innerWidth <= 520);
   const container = useRef<HTMLDivElement>(null);
   const style = { "--af-split": `${split}%`, "--af-split-ratio": split / 100 } as CSSProperties;
+  const resizeSplit = (value: number) => {
+    const next = Math.max(25, Math.min(75, value));
+    splitValue.current = next;
+    setSplit(next);
+    onAction?.("toggle", next);
+  };
   useEffect(() => {
     const update = () => setVertical(window.innerWidth <= 520);
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
-  const visibleSlots = slots.length ? slots : defaultPanelSlots.slice(0, 1);
+  const visibleSlots: PanelSlot[] = composedSlots.length
+    ? composedSlots.map((slot) => ({ id: slot.id, title: "", node: slot.content }))
+    : slots;
+  const slotBody = (slot: PanelSlot) => slot.node ?? (slot.content ? <p>{slot.content}</p> : null);
   const card = (slot: PanelSlot) => (
     <section className="af-card" key={slot.id} data-slot={slot.id}>
-      <strong>{slot.title}</strong>
-      {slot.content && <p>{slot.content}</p>}
+      {slot.title && <strong>{slot.title}</strong>}
+      {slotBody(slot)}
       {slot.meta && <p className="af-meta">{slot.meta}</p>}
     </section>
   );
+  if (!visibleSlots.length)
+    return (
+      <div className={`af-panel-layout af-layout-${variant}`}>
+        <StateView state="empty" />
+      </div>
+    );
   const primary = visibleSlots[0]!;
   const secondary = visibleSlots[1] ?? primary;
   const contents: Record<Exclude<PanelVariant, "split">, ReactNode> = {
     detail: (
       <>
         <header className="af-card">
-          <h2>{primary.title}</h2>
-          {primary.content && <p>{primary.content}</p>}
+          {primary.title && <h2>{primary.title}</h2>}
+          {slotBody(primary)}
           <Button variant="primary" onClick={() => onAction?.("submit")}>
             적용
           </Button>
@@ -562,7 +622,7 @@ export function PanelLayout({
       >
         {visibleSlots.map((slot) => (
           <Field key={slot.id} label={slot.title} hint={slot.meta}>
-            <TextInput defaultValue={slot.content} />
+            {slot.node ?? <TextInput defaultValue={slot.content} />}
           </Field>
         ))}
         <Button type="submit" variant="primary">
@@ -572,16 +632,19 @@ export function PanelLayout({
     ),
     dashboard: (
       <>
-        {visibleSlots.map((slot) => (
-          <Metric key={slot.id} label={slot.title} value={slot.content ?? "—"} />
-        ))}
+        {visibleSlots.map((slot) =>
+          slot.node ? card(slot) : <Metric key={slot.id} label={slot.title} value={slot.content ?? "—"} />,
+        )}
       </>
     ),
     document: (
-      <article className="af-card" data-slot={primary.id}>
-        <h2>{primary.title}</h2>
-        {primary.meta && <p className="af-meta">{primary.meta}</p>}
-        <CodeBlock value={primary.content ?? ""} />
+      <article className="af-card">
+        <section data-slot={primary.id}>
+          {primary.title && <h2>{primary.title}</h2>}
+          {primary.meta && <p className="af-meta">{primary.meta}</p>}
+          {primary.node ?? <CodeBlock value={primary.content ?? ""} />}
+        </section>
+        {visibleSlots.slice(1).map(card)}
       </article>
     ),
     timeline: (
@@ -594,8 +657,8 @@ export function PanelLayout({
       <>
         {visibleSlots.map((slot) => (
           <section className="af-card" key={slot.id} data-slot={slot.id}>
-            <h3>{slot.title}</h3>
-            {slot.content && <p>{slot.content}</p>}
+            {slot.title && <h3>{slot.title}</h3>}
+            {slotBody(slot)}
           </section>
         ))}
       </>
@@ -616,19 +679,9 @@ export function PanelLayout({
         onKeyDown={(event) => {
           const decrease = vertical ? event.key === "ArrowUp" : event.key === "ArrowLeft";
           const increase = vertical ? event.key === "ArrowDown" : event.key === "ArrowRight";
-          if (decrease || increase) event.preventDefault();
-          if (decrease)
-            setSplit((value) => {
-              const next = Math.max(25, value - 5);
-              onAction?.("toggle", next);
-              return next;
-            });
-          if (increase)
-            setSplit((value) => {
-              const next = Math.min(75, value + 5);
-              onAction?.("toggle", next);
-              return next;
-            });
+          if (!decrease && !increase) return;
+          event.preventDefault();
+          resizeSplit(splitValue.current + (decrease ? -5 : 5));
         }}
         onPointerDown={(event) => {
           const move = (pointer: PointerEvent) => {
@@ -637,9 +690,7 @@ export function PanelLayout({
               const ratio = vertical
                 ? (pointer.clientY - rect.top) / rect.height
                 : (pointer.clientX - rect.left) / rect.width;
-              const next = Math.max(25, Math.min(75, ratio * 100));
-              setSplit(next);
-              onAction?.("toggle", next);
+              resizeSplit(ratio * 100);
             }
           };
           const stop = () => {
@@ -656,10 +707,10 @@ export function PanelLayout({
   );
 }
 
-export function DataTable() {
+export function DataTable({ rows = [] }: { rows?: { id: string; title: string; status?: string }[] }) {
   return (
     <table className="af-table">
-      <caption className="af-meta">합성 리소스</caption>
+      <caption className="af-meta">리소스</caption>
       <thead>
         <tr>
           <th>이름</th>
@@ -667,19 +718,25 @@ export function DataTable() {
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>예제 A</td>
-          <td>준비됨</td>
-        </tr>
-        <tr>
-          <td>예제 B</td>
-          <td>검토 중</td>
-        </tr>
+        {rows.map((row) => (
+          <tr key={row.id}>
+            <td>{row.title}</td>
+            <td>{row.status ?? "—"}</td>
+          </tr>
+        ))}
       </tbody>
     </table>
   );
 }
-export function ResourceHeader({ title = "선택한 리소스", status = "준비됨" }: { title?: string; status?: string }) {
+export function ResourceHeader({
+  title = "",
+  status = "",
+  onRefresh,
+}: {
+  title?: string;
+  status?: string;
+  onRefresh?: () => void;
+}) {
   return (
     <header className="af-card af-row">
       <div>
@@ -687,11 +744,11 @@ export function ResourceHeader({ title = "선택한 리소스", status = "준비
         <span className="af-meta">{status}</span>
       </div>
       <span className="af-spacer" />
-      <Button>새로고침</Button>
+      {onRefresh && <Button onClick={onRefresh}>새로고침</Button>}
     </header>
   );
 }
-export function Metric({ label = "처리 항목", value = "128" }: { label?: string; value?: string }) {
+export function Metric({ label = "", value = "—" }: { label?: string; value?: string }) {
   return (
     <div className="af-metric">
       <span className="af-meta">{label}</span>
@@ -706,17 +763,17 @@ export function ChartFrame() {
     </div>
   );
 }
-export function CodeBlock({ value = "const example = true;" }: { value?: string }) {
+export function CodeBlock({ value = "" }: { value?: string }) {
   return (
     <pre className="af-code">
       <code>{value}</code>
     </pre>
   );
 }
-export function JsonView({ value = { synthetic: true } }: { value?: unknown }) {
+export function JsonView({ value = null }: { value?: unknown }) {
   return <pre className="af-json">{JSON.stringify(value, null, 2)}</pre>;
 }
-export function Markdown({ value = "안전한 [링크](https://example.com) 예제" }: { value?: string }) {
+export function Markdown({ value = "" }: { value?: string }) {
   const match = value.match(/^(.*?)\[([^\]]+)]\((https?:\/\/[^\s)]+)\)(.*)$/);
   if (!match) return <p>{value.replace(/<[^>]*>/g, "")}</p>;
   return (
