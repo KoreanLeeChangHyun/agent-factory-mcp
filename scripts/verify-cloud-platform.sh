@@ -42,11 +42,15 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO cloud_ver
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO cloud_verifier;
 SQL
 export CLOUD_TEST_DATABASE_URL="postgresql+asyncpg://cloud_verifier:disposable-verifier@127.0.0.1:${cloud_port}/cloud_platform_test"
+export WORKBENCH_TEST_DATABASE_URL="$CLOUD_TEST_DATABASE_URL"
 export AGENT_FACTORY_DATABASE_URL="$CLOUD_TEST_DATABASE_URL"
-"$cloud_python" -m pytest -q tests/test_cloud_platform_integration.py tests/test_cloud_platform_packaging.py
+export NODE_PATH="${WORKBENCH_PLAYWRIGHT_NODE_PATH:-assets/ui-kit/node_modules}"
+"$cloud_python" -m pytest -q tests/test_cloud_platform_integration.py \
+  tests/test_cloud_platform_packaging.py tests/test_workbench_persistence_integration.py
 # Shared registration/auth/transition regressions affected by platform integration.
 "$cloud_python" -m pytest -q tests/test_authentication.py tests/test_authorization.py \
-  tests/test_mcp_server.py tests/test_scheduling.py
+  tests/test_mcp_server.py tests/test_workbench_mcp.py apps/api/tests/test_workbenches.py \
+  tests/test_scheduling.py
 # Existing focused domain regressions; no unrelated full suite.
 "$cloud_python" -m pytest -q tests/test_cloud_documents.py tests/test_cloud_document_delivery.py \
   tests/test_cloud_document_delivery_http.py tests/test_cloud_integrations_providers.py \

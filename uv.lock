@@ -40,6 +40,7 @@ version = "0.1.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "agent-factory-adapters" },
+    { name = "agent-factory-contracts" },
     { name = "agent-factory-core" },
     { name = "fastapi" },
     { name = "pydantic" },
@@ -49,6 +50,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "agent-factory-adapters", editable = "packages/platform-adapters" },
+    { name = "agent-factory-contracts", editable = "packages/contracts-py" },
     { name = "agent-factory-core", editable = "packages/platform-core" },
     { name = "fastapi" },
     { name = "pydantic", specifier = ">=2,<3" },
@@ -82,6 +84,7 @@ name = "agent-factory-mcp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "agent-factory-api" },
     { name = "aiosmtplib" },
     { name = "alembic" },
     { name = "asyncpg" },
@@ -120,6 +123,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "agent-factory-api", editable = "apps/api" },
     { name = "aiosmtplib" },
     { name = "alembic" },
     { name = "asyncpg" },

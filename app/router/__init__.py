@@ -22,6 +22,7 @@ from app.router.scheduling import router as scheduling_router
 from app.router.search import router as search_router
 from app.router.workspace import router as workspace_router
 from app.router.workspace_management import router as workspace_management_router
+from app.router.workbenches import router as workbenches_router
 
 from app.router.organizations import router as organizations_router
 
@@ -47,5 +48,6 @@ api_router.include_router(readiness_router)
 api_router.include_router(scheduling_router)
 api_router.include_router(workspace_router)
 api_router.include_router(workspace_management_router)
+api_router.include_router(workbenches_router)
 
 __all__ = ["api_router"]

@@ -457,6 +457,15 @@ dd {
   color: var(--af-danger);
   white-space: pre-wrap;
 }
+.af-publication-status {
+  display: grid;
+  gap: var(--af-space-1);
+  overflow-wrap: anywhere;
+  color: var(--af-muted);
+}
+.af-publication-status strong {
+  color: var(--af-text);
+}
 @media (max-width: 760px) {
   .af-workbench-runtime {
     grid-template-columns: 52px minmax(0, 1fr);

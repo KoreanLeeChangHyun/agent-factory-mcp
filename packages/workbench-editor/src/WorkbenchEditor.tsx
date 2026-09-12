@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   limits,
   type AssetParameter,
@@ -72,6 +72,9 @@ export function WorkbenchEditor({
   scope,
   state = {},
   onDraftChange,
+  toolbarActions,
+  publicationNote,
+  publishedPreview,
 }: {
   initialDefinition: WorkbenchDefinition;
   client: BindingClient;
@@ -79,6 +82,9 @@ export function WorkbenchEditor({
   scope: RuntimeScope;
   state?: RuntimeRecord;
   onDraftChange?: (definition: WorkbenchDefinition) => void;
+  toolbarActions?: ReactNode;
+  publicationNote?: ReactNode;
+  publishedPreview?: ReactNode;
 }) {
   const [history, setHistory] = useState<History>({
     past: [],
@@ -170,6 +176,7 @@ export function WorkbenchEditor({
         <Button disabled={!history.future.length} onClick={redo}>
           다시 실행
         </Button>
+        {toolbarActions}
       </header>
       <div className="af-authoring-grid">
         <aside className="af-authoring-palette" aria-label="에셋 팔레트">
@@ -527,6 +534,7 @@ export function WorkbenchEditor({
           <h2>초안 미리보기</h2>
           <WorkbenchRenderer definition={draft} client={client} operations={operations} scope={scope} state={state} />
         </section>
+        {publishedPreview}
         <section className="af-authoring-import" aria-label="직렬화 및 가져오기">
           <h2>정의 JSON</h2>
           <textarea
@@ -537,7 +545,7 @@ export function WorkbenchEditor({
           />
           <Button onClick={importDefinition}>가져오기 및 검증</Button>
           {importError && <pre role="alert">{importError}</pre>}
-          <p>게시 기능은 서버의 불변 release 흐름이 연결된 뒤 제공됩니다.</p>
+          {publicationNote}
         </section>
       </div>
     </main>

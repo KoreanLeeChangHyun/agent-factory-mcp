@@ -38,12 +38,16 @@ pgvector database. Its PostgreSQL evidence included forced RLS, concurrent first
 revision-only audit, and audit-failure non-rollback; Chromium included keyboard behavior,
 same-user second-context restoration, and context isolation.
 
-The present Stage 4 source has not been independently verified. The authored handoff covers
-stale replies, cache isolation, malformed output, unsafe definitions, undeclared actions,
-view-state recovery, renderer diagnostics, serialized round-trip, and keyboard authoring.
-Verification must run the established affected gates and browser matrix, including dark,
-light, high-contrast, 180/268/520px sidebars, 390px viewport, focus, remount, and the
-icon-to-sidebar-to-binding-to-panel theme path.
+Stage 4 was independently passed on 2026-09-12 by Verification run
+`run-20260912T144640723466Z-e8821fb6` for Work run
+`run-20260912T144425365083Z-03a501a3` and request SHA-256
+`13db41e25829398e2f98c6676aaf425eca408eb0a05748d7608cc386737ca235`.
+Verification passed `make workbench-check` (51 TypeScript and 15 Python tests), the unmodified
+`make verify-workbench-runtime` before and after the production build (21 runtime and three editor
+tests plus the Chromium full fixture flow), and `make workbench-build` for the web application and
+six Python packages. Chromium covered actual refresh dispatch, exact asset-specific accessible
+insertion, theme/keyboard/state restoration/remount behavior, and the 390px viewport. Verification
+changed no Stage 4 project file.
 
 Legacy vanilla theme migration, full standard-feature ports, server publication, deployed
 rollout and observation, and remaining global baseline gates remain outstanding. The

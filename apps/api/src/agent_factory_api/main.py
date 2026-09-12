@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import os
 
-from agent_factory_adapters import FixtureWorkbenchRepository
-from agent_factory_core import GetReferenceWorkbench
+from agent_factory_contracts import validate
+from agent_factory_contracts.generated.schema_bundle import DOCUMENTS_FIXTURE
 from fastapi import FastAPI, Response, status
 
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Agent Factory Workbench API", version="0.1.0")
-    query = GetReferenceWorkbench(FixtureWorkbenchRepository())
 
     @app.get("/livez")
     def liveness() -> dict[str, str]:
@@ -26,7 +25,8 @@ def create_app() -> FastAPI:
 
     @app.get("/workbench/reference")
     def reference_workbench() -> dict[str, object]:
-        return dict(query.execute())
+        validate(DOCUMENTS_FIXTURE)
+        return dict(DOCUMENTS_FIXTURE)
 
     return app
 

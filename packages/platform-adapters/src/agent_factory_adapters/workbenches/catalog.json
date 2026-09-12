@@ -1,0 +1,3624 @@
+[
+  {
+    "id": "documents@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "문서"
+    }
+  },
+  {
+    "id": "workspace@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "작업공간"
+    }
+  },
+  {
+    "id": "knowledge@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "지식"
+    }
+  },
+  {
+    "id": "connections@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "연동"
+    }
+  },
+  {
+    "id": "jobs@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "작업"
+    }
+  },
+  {
+    "id": "audit@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "감사"
+    }
+  },
+  {
+    "id": "calendar@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "일정"
+    }
+  },
+  {
+    "id": "agents@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "에이전트"
+    }
+  },
+  {
+    "id": "logs@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "로그"
+    }
+  },
+  {
+    "id": "tests@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "테스트"
+    }
+  },
+  {
+    "id": "database@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "데이터베이스"
+    }
+  },
+  {
+    "id": "account@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "계정"
+    }
+  },
+  {
+    "id": "admin@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "관리자"
+    }
+  },
+  {
+    "id": "search@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "검색"
+    }
+  },
+  {
+    "id": "preferences@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "설정"
+    }
+  },
+  {
+    "id": "favorites@1",
+    "kind": "icon",
+    "allowedRegions": [
+      "task-list"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": true,
+        "maxLength": 80
+      },
+      {
+        "name": "selected",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "notification",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "img",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "즐겨찾기"
+    }
+  },
+  {
+    "id": "flat-list@1",
+    "kind": "sidebar",
+    "allowedRegions": [
+      "sidebar"
+    ],
+    "properties": [
+      {
+        "name": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "items",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "records",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready",
+      "empty"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "navigation",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "title": "flat-list 예제"
+    }
+  },
+  {
+    "id": "group-list@1",
+    "kind": "sidebar",
+    "allowedRegions": [
+      "sidebar"
+    ],
+    "properties": [
+      {
+        "name": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "items",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "records",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready",
+      "empty"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "navigation",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "title": "group-list 예제"
+    }
+  },
+  {
+    "id": "tree@1",
+    "kind": "sidebar",
+    "allowedRegions": [
+      "sidebar"
+    ],
+    "properties": [
+      {
+        "name": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "items",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "records",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready",
+      "empty"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "tree",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "title": "tree 예제"
+    }
+  },
+  {
+    "id": "search-list@1",
+    "kind": "sidebar",
+    "allowedRegions": [
+      "sidebar"
+    ],
+    "properties": [
+      {
+        "name": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "items",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "records",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready",
+      "empty"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "navigation",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "title": "search-list 예제"
+    }
+  },
+  {
+    "id": "filter-list@1",
+    "kind": "sidebar",
+    "allowedRegions": [
+      "sidebar"
+    ],
+    "properties": [
+      {
+        "name": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "items",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "records",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready",
+      "empty"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "navigation",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "title": "filter-list 예제"
+    }
+  },
+  {
+    "id": "detail-list@1",
+    "kind": "sidebar",
+    "allowedRegions": [
+      "sidebar"
+    ],
+    "properties": [
+      {
+        "name": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "items",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "records",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready",
+      "empty"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "navigation",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "title": "detail-list 예제"
+    }
+  },
+  {
+    "id": "favorites-recent@1",
+    "kind": "sidebar",
+    "allowedRegions": [
+      "sidebar"
+    ],
+    "properties": [
+      {
+        "name": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "items",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "inputs": [
+      {
+        "name": "records",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready",
+      "empty"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "navigation",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "title": "favorites-recent 예제"
+    }
+  },
+  {
+    "id": "detail@1",
+    "kind": "panel",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "slots",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [],
+    "slots": [
+      "header",
+      "content",
+      "actions"
+    ],
+    "states": [
+      "ready"
+    ],
+    "actions": [
+      "submit"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "list-detail@1",
+    "kind": "panel",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "slots",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [],
+    "slots": [
+      "list",
+      "detail"
+    ],
+    "states": [
+      "ready"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "collection@1",
+    "kind": "panel",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "slots",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "settings@1",
+    "kind": "panel",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "slots",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [],
+    "slots": [
+      "content",
+      "actions"
+    ],
+    "states": [
+      "ready"
+    ],
+    "actions": [
+      "submit"
+    ],
+    "accessibility": {
+      "role": "form",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "dashboard@1",
+    "kind": "panel",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "slots",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "document@1",
+    "kind": "panel",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "slots",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [],
+    "slots": [
+      "header",
+      "content"
+    ],
+    "states": [
+      "ready"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "split@1",
+    "kind": "panel",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "slots",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "slots": [
+      "primary",
+      "secondary"
+    ],
+    "states": [
+      "ready"
+    ],
+    "actions": [
+      "toggle"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "timeline@1",
+    "kind": "panel",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "slots",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [],
+    "slots": [
+      "sidebar",
+      "content"
+    ],
+    "states": [
+      "ready"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "kanban@1",
+    "kind": "panel",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "slots",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "content": {
+              "type": "string",
+              "maxLength": 4096
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "ready"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "button@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "submit"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "button 예제"
+    }
+  },
+  {
+    "id": "icon-button@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "submit"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "icon-button 예제"
+    }
+  },
+  {
+    "id": "field@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "slots": [
+      "control"
+    ],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "form",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "field 예제"
+    }
+  },
+  {
+    "id": "text-input@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "text-input 예제"
+    }
+  },
+  {
+    "id": "number-input@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "number-input 예제"
+    }
+  },
+  {
+    "id": "date-input@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "date-input 예제"
+    }
+  },
+  {
+    "id": "select@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      },
+      {
+        "name": "options",
+        "type": "string-list",
+        "required": false,
+        "maxItems": 32
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "select 예제"
+    }
+  },
+  {
+    "id": "multiselect@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "string-list",
+        "required": false,
+        "maxItems": 32
+      },
+      {
+        "name": "options",
+        "type": "string-list",
+        "required": false,
+        "maxItems": 32
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "string-list",
+        "required": false,
+        "maxItems": 32
+      }
+    ],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "multiselect 예제"
+    }
+  },
+  {
+    "id": "checkbox@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "toggle"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "checkbox 예제"
+    }
+  },
+  {
+    "id": "toggle@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "label",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "disabled",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "name": "value",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "slots": [],
+    "states": [
+      "ready",
+      "disabled"
+    ],
+    "actions": [
+      "toggle"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "label": "toggle 예제"
+    }
+  },
+  {
+    "id": "tabs@1",
+    "kind": "display",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "items",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 12,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [
+      "content"
+    ],
+    "states": [
+      "loading",
+      "empty",
+      "ready",
+      "stale",
+      "error",
+      "permission-denied"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "resource-tree@1",
+    "kind": "display",
+    "allowedRegions": [
+      "sidebar"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "records",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "group": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "favorite": {
+              "type": "boolean"
+            },
+            "recent": {
+              "type": "boolean"
+            },
+            "parentId": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [],
+    "states": [
+      "loading",
+      "empty",
+      "ready",
+      "stale",
+      "error",
+      "permission-denied"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "tree",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "resource-table@1",
+    "kind": "display",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "records",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 100,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "status": {
+              "type": "string",
+              "maxLength": 80
+            }
+          }
+        },
+        "uniqueBy": "id"
+      }
+    ],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "loading",
+      "empty",
+      "ready",
+      "stale",
+      "error",
+      "permission-denied"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "table",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "resource-header@1",
+    "kind": "display",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      }
+    ],
+    "inputs": [
+      {
+        "name": "title",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      },
+      {
+        "name": "status",
+        "type": "string",
+        "required": false,
+        "maxLength": 80
+      }
+    ],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "loading",
+      "empty",
+      "ready",
+      "stale",
+      "error",
+      "permission-denied"
+    ],
+    "actions": [
+      "refresh"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "title": "선택한 문서",
+      "status": "준비됨"
+    }
+  },
+  {
+    "id": "metric@1",
+    "kind": "display",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "loading",
+      "empty",
+      "ready",
+      "stale",
+      "error",
+      "permission-denied"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "chart-frame@1",
+    "kind": "display",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "loading",
+      "empty",
+      "ready",
+      "stale",
+      "error",
+      "permission-denied"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "code@1",
+    "kind": "display",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "loading",
+      "empty",
+      "ready",
+      "stale",
+      "error",
+      "permission-denied"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "markdown@1",
+    "kind": "display",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "loading",
+      "empty",
+      "ready",
+      "stale",
+      "error",
+      "permission-denied"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "json@1",
+    "kind": "display",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [
+      {
+        "name": "value",
+        "type": "string",
+        "required": false,
+        "maxLength": 2048
+      }
+    ],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "loading",
+      "empty",
+      "ready",
+      "stale",
+      "error",
+      "permission-denied"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "dialog@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "open",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready"
+    ],
+    "actions": [
+      "dismiss"
+    ],
+    "accessibility": {
+      "role": "dialog",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "open": true
+    }
+  },
+  {
+    "id": "menu@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "open",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "selectedId",
+        "type": "string",
+        "required": false,
+        "maxLength": 64
+      }
+    ],
+    "slots": [],
+    "states": [
+      "ready"
+    ],
+    "actions": [
+      "select"
+    ],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "open": true
+    }
+  },
+  {
+    "id": "popover@1",
+    "kind": "control",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "open",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "region",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "open": true
+    }
+  },
+  {
+    "id": "toast@1",
+    "kind": "feedback",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [
+      {
+        "name": "open",
+        "type": "boolean",
+        "required": false
+      }
+    ],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "ready"
+    ],
+    "actions": [
+      "dismiss"
+    ],
+    "accessibility": {
+      "role": "status",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {
+      "open": true
+    }
+  },
+  {
+    "id": "loading-state@1",
+    "kind": "feedback",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "loading"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "status",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "empty-state@1",
+    "kind": "feedback",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "empty"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "status",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "error-state@1",
+    "kind": "feedback",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "error"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "alert",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "permission-denied-state@1",
+    "kind": "feedback",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "permission-denied"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "status",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "busy-state@1",
+    "kind": "feedback",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "busy"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "status",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "stale-state@1",
+    "kind": "feedback",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "stale"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "status",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "success-state@1",
+    "kind": "feedback",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "success"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "status",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  },
+  {
+    "id": "progress-state@1",
+    "kind": "feedback",
+    "allowedRegions": [
+      "panel"
+    ],
+    "properties": [],
+    "inputs": [],
+    "outputs": [],
+    "slots": [],
+    "states": [
+      "progress"
+    ],
+    "actions": [],
+    "accessibility": {
+      "role": "status",
+      "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+    },
+    "provenance": {
+      "source": "Agent Factory design-system React source",
+      "license": "Project-owned"
+    },
+    "example": {}
+  }
+]

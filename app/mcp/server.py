@@ -1,10 +1,15 @@
 """Authenticated Agent Factory MCP resources and tools."""
 
+import json
+from functools import wraps
+from typing import Annotated
 from uuid import UUID
 
 from mcp.server import MCPServer
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.auth.settings import AuthSettings
+from mcp_types import CallToolResult, TextContent
+from pydantic import ConfigDict, Field
 
 from app.common.errors import PermissionDeniedError
 from app.core.config import settings
@@ -26,6 +31,17 @@ from app.modules.integration.schemas import ConnectionResponse
 from app.modules.organization.permissions import token_permissions
 from app.modules.schedule.repository import ScheduleRepository
 from app.modules.workspace.repository import WorkspaceRepositoryStore
+from agent_factory_api.composition.workbenches import build_workbench_service
+from agent_factory_api.http.routes.workbenches import present_definition, present_release
+from agent_factory_core import (
+    WorkbenchActor,
+    WorkbenchConflictError,
+    WorkbenchError,
+    WorkbenchIdempotencyError,
+    WorkbenchNotFoundError,
+    WorkbenchPermissionError,
+    WorkbenchValidationError,
+)
 
 ACTIVITIES = {
     "schedule": "Schedules and durable background jobs",
@@ -35,6 +51,88 @@ ACTIVITIES = {
     "logs": "Durable execution and operational history",
     "tests": "Workspace verification status and results",
 }
+
+WorkbenchIdentifier = Annotated[
+    str,
+    Field(
+        pattern=(
+            r"^(?:[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-"
+            r"[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+        )
+    ),
+]
+WorkbenchKey = Annotated[str, Field(pattern=r"^[a-z][a-z0-9-]{0,63}$")]
+WorkbenchTitle = Annotated[str, Field(min_length=1, max_length=200)]
+WorkbenchRevision = Annotated[int, Field(ge=1, le=2_147_483_646)]
+WorkbenchRequestKey = Annotated[str, Field(min_length=1, max_length=160)]
+
+
+def _workbench_error_result(error: Exception) -> CallToolResult:
+    """Translate Workbench failures into stable MCP error results."""
+
+    if isinstance(error, WorkbenchValidationError):
+        payload: dict[str, object] = {
+            "code": error.code,
+            "diagnostics": list(error.diagnostics),
+        }
+    elif isinstance(error, WorkbenchConflictError):
+        payload = {"code": error.code, "currentRevision": error.current_revision}
+    elif isinstance(error, WorkbenchIdempotencyError):
+        payload = {"code": error.code, "requestKey": error.request_key}
+    elif isinstance(error, PermissionDeniedError):
+        payload = {"code": error.code}
+    elif isinstance(error, (WorkbenchPermissionError, WorkbenchNotFoundError, WorkbenchError)):
+        payload = {"code": error.code}
+    else:
+        payload = {"code": "invalid_workbench_input"}
+    return CallToolResult(
+        content=[TextContent(text=json.dumps(payload, ensure_ascii=False))],
+        structured_content=None,
+        is_error=True,
+    )
+
+
+def _map_workbench_errors(function):
+    """Preserve the tool's closed SDK schema while mapping adapter/domain failures."""
+
+    @wraps(function)
+    async def mapped(*args, **kwargs):
+        try:
+            return await function(*args, **kwargs)
+        except (ValueError, TypeError, PermissionDeniedError, WorkbenchError) as error:
+            return _workbench_error_result(error)
+
+    return mapped
+
+
+def _close_workbench_input_schemas(server: MCPServer) -> None:
+    """Make Workbench argument models reject fields not declared by their tools."""
+
+    manager = getattr(server, "_tool_manager")
+    for name in (
+        "workbench_archive",
+        "workbench_create",
+        "workbench_draft_read",
+        "workbench_draft_save",
+        "workbench_list",
+        "workbench_publish",
+        "workbench_release_list",
+        "workbench_release_read",
+        "workbench_restore",
+    ):
+        tool = manager.get_tool(name)
+        if tool is None:  # pragma: no cover - registration is local and unconditional
+            raise RuntimeError(f"Workbench tool was not registered: {name}")
+        argument_model = tool.fn_metadata.arg_model
+        model_config = dict(argument_model.model_config)
+        model_config["extra"] = "forbid"
+        strict_model = type(
+            f"Strict{argument_model.__name__}",
+            (argument_model,),
+            {"model_config": ConfigDict(**model_config)},
+        )
+        tool.fn_metadata.arg_model = strict_model
+        tool.parameters = strict_model.model_json_schema(by_alias=True)
 
 
 def _identity(required_scope: str) -> Principal:
@@ -218,6 +316,242 @@ def create_mcp_server() -> MCPServer:
         return {"status": "unavailable", "execution": "not_implemented", "activity": "tests"}
 
     @server.tool(
+        name="workbench_list",
+        description="List customer Workbench definitions without draft content",
+    )
+    @_map_workbench_errors
+    async def workbench_list(
+        organization_id: WorkbenchIdentifier | None = None,
+        workspace_id: WorkbenchIdentifier | None = None,
+        include_archived: bool = False,
+    ) -> dict[str, object]:
+        session, context = await _authorized_session(
+            organization_id, workspace_id, "workbench:read", "workbench.read"
+        )
+        async with session:
+            actor = WorkbenchActor(
+                context.principal.user_id,
+                context.scope.organization_id,
+                context.scope.workspace_id,
+                context.permissions,
+            )  # type: ignore[arg-type]
+            service = build_workbench_service(session, source="mcp")
+            rows = await service.list_definitions.execute(actor, include_archived=include_archived)
+            return {"items": [present_definition(row) for row in rows]}
+
+    @server.tool(
+        name="workbench_draft_read",
+        description="Read a validated unpublished Workbench draft with preview authority",
+    )
+    @_map_workbench_errors
+    async def workbench_draft_read(
+        definition_id: WorkbenchIdentifier,
+        organization_id: WorkbenchIdentifier | None = None,
+        workspace_id: WorkbenchIdentifier | None = None,
+    ) -> dict[str, object]:
+        session, context = await _authorized_session(
+            organization_id, workspace_id, "workbench:preview", "workbench.preview"
+        )
+        async with session:
+            actor = WorkbenchActor(
+                context.principal.user_id,
+                context.scope.organization_id,
+                context.scope.workspace_id,
+                context.permissions,
+            )  # type: ignore[arg-type]
+            row = await build_workbench_service(session, source="mcp").get_definition.execute(
+                actor, UUID(definition_id), preview=True
+            )
+            return present_definition(row, include_draft=True)
+
+    @server.tool(name="workbench_create", description="Create a validated customer Workbench draft")
+    @_map_workbench_errors
+    async def workbench_create(
+        key: WorkbenchKey,
+        title: WorkbenchTitle,
+        definition: dict[str, object],
+        organization_id: WorkbenchIdentifier | None = None,
+        workspace_id: WorkbenchIdentifier | None = None,
+    ) -> dict[str, object]:
+        session, context = await _authorized_session(
+            organization_id, workspace_id, "workbench:edit", "workbench.create"
+        )
+        async with session:
+            actor = WorkbenchActor(
+                context.principal.user_id,
+                context.scope.organization_id,
+                context.scope.workspace_id,
+                context.permissions,
+            )  # type: ignore[arg-type]
+            row = await build_workbench_service(session, source="mcp").create.execute(
+                actor, key=key, title=title, definition=definition
+            )
+            return present_definition(row, include_draft=True)
+
+    @server.tool(
+        name="workbench_draft_save",
+        description="Save a Workbench draft using optimistic revision control",
+    )
+    @_map_workbench_errors
+    async def workbench_draft_save(
+        definition_id: WorkbenchIdentifier,
+        title: WorkbenchTitle,
+        definition: dict[str, object],
+        expected_revision: WorkbenchRevision,
+        organization_id: WorkbenchIdentifier | None = None,
+        workspace_id: WorkbenchIdentifier | None = None,
+    ) -> dict[str, object]:
+        session, context = await _authorized_session(
+            organization_id, workspace_id, "workbench:edit", "workbench.update"
+        )
+        async with session:
+            actor = WorkbenchActor(
+                context.principal.user_id,
+                context.scope.organization_id,
+                context.scope.workspace_id,
+                context.permissions,
+            )  # type: ignore[arg-type]
+            row = await build_workbench_service(session, source="mcp").update.execute(
+                actor,
+                UUID(definition_id),
+                title=title,
+                definition=definition,
+                expected_revision=expected_revision,
+            )
+            return present_definition(row, include_draft=True)
+
+    @server.tool(
+        name="workbench_publish",
+        description="Publish an immutable validated Workbench release idempotently",
+    )
+    @_map_workbench_errors
+    async def workbench_publish(
+        definition_id: WorkbenchIdentifier,
+        expected_revision: WorkbenchRevision,
+        request_key: WorkbenchRequestKey,
+        organization_id: WorkbenchIdentifier | None = None,
+        workspace_id: WorkbenchIdentifier | None = None,
+    ) -> dict[str, object]:
+        session, context = await _authorized_session(
+            organization_id, workspace_id, "workbench:publish", "workbench.publish"
+        )
+        async with session:
+            actor = WorkbenchActor(
+                context.principal.user_id,
+                context.scope.organization_id,
+                context.scope.workspace_id,
+                context.permissions,
+            )  # type: ignore[arg-type]
+            release = await build_workbench_service(session, source="mcp").publish.execute(
+                actor,
+                UUID(definition_id),
+                expected_revision=expected_revision,
+                request_key=request_key,
+            )
+            return present_release(release)
+
+    @server.tool(
+        name="workbench_archive",
+        description="Archive a retained Workbench definition using optimistic revision control",
+    )
+    @_map_workbench_errors
+    async def workbench_archive(
+        definition_id: WorkbenchIdentifier,
+        expected_revision: WorkbenchRevision,
+        organization_id: WorkbenchIdentifier | None = None,
+        workspace_id: WorkbenchIdentifier | None = None,
+    ) -> dict[str, object]:
+        session, context = await _authorized_session(
+            organization_id, workspace_id, "workbench:edit", "workbench.archive"
+        )
+        async with session:
+            actor = WorkbenchActor(
+                context.principal.user_id,
+                context.scope.organization_id,
+                context.scope.workspace_id,
+                context.permissions,
+            )  # type: ignore[arg-type]
+            row = await build_workbench_service(session, source="mcp").archive.execute(
+                actor, UUID(definition_id), archived=True, expected_revision=expected_revision
+            )
+            return present_definition(row)
+
+    @server.tool(
+        name="workbench_restore",
+        description="Restore an archived Workbench definition using optimistic revision control",
+    )
+    @_map_workbench_errors
+    async def workbench_restore(
+        definition_id: WorkbenchIdentifier,
+        expected_revision: WorkbenchRevision,
+        organization_id: WorkbenchIdentifier | None = None,
+        workspace_id: WorkbenchIdentifier | None = None,
+    ) -> dict[str, object]:
+        session, context = await _authorized_session(
+            organization_id, workspace_id, "workbench:edit", "workbench.restore"
+        )
+        async with session:
+            actor = WorkbenchActor(
+                context.principal.user_id,
+                context.scope.organization_id,
+                context.scope.workspace_id,
+                context.permissions,
+            )  # type: ignore[arg-type]
+            row = await build_workbench_service(session, source="mcp").archive.execute(
+                actor, UUID(definition_id), archived=False, expected_revision=expected_revision
+            )
+            return present_definition(row)
+
+    @server.tool(
+        name="workbench_release_list",
+        description="List immutable releases for a Workbench definition",
+    )
+    @_map_workbench_errors
+    async def workbench_release_list(
+        definition_id: WorkbenchIdentifier,
+        organization_id: WorkbenchIdentifier | None = None,
+        workspace_id: WorkbenchIdentifier | None = None,
+    ) -> dict[str, object]:
+        session, context = await _authorized_session(
+            organization_id, workspace_id, "workbench:read", "workbench.read"
+        )
+        async with session:
+            actor = WorkbenchActor(
+                context.principal.user_id,
+                context.scope.organization_id,
+                context.scope.workspace_id,
+                context.permissions,
+            )  # type: ignore[arg-type]
+            releases = await build_workbench_service(session, source="mcp").list_releases.execute(
+                actor, UUID(definition_id)
+            )
+            return {"items": [present_release(row) for row in releases]}
+
+    @server.tool(
+        name="workbench_release_read", description="Read one immutable published Workbench release"
+    )
+    @_map_workbench_errors
+    async def workbench_release_read(
+        release_id: WorkbenchIdentifier,
+        organization_id: WorkbenchIdentifier | None = None,
+        workspace_id: WorkbenchIdentifier | None = None,
+    ) -> dict[str, object]:
+        session, context = await _authorized_session(
+            organization_id, workspace_id, "workbench:read", "workbench.read"
+        )
+        async with session:
+            actor = WorkbenchActor(
+                context.principal.user_id,
+                context.scope.organization_id,
+                context.scope.workspace_id,
+                context.permissions,
+            )  # type: ignore[arg-type]
+            release = await build_workbench_service(session, source="mcp").get_release.execute(
+                actor, UUID(release_id)
+            )
+            return present_release(release)
+
+    @server.tool(
         name="agent_run_submit",
         description="Create an idempotent Agent run and return its durable asynchronous Job",
     )
@@ -255,6 +589,7 @@ def create_mcp_server() -> MCPServer:
     install_integrations(server, _authorized_session)
     install_planning(server, _authorized_session)
     install_reporting(server, _authorized_session)
+    _close_workbench_input_schemas(server)
     return server
 
 

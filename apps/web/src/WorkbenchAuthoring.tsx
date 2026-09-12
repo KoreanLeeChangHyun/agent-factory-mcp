@@ -13,6 +13,7 @@ import {
   type RuntimeValue,
 } from "@agent-factory/workbench-runtime";
 import { useWorkbenchContext } from "./app/WorkbenchContext.js";
+import { workbenchClient, type DefinitionRecord, type ReleaseRecord } from "./workbench-client.js";
 
 const previewRecords: NonNullable<AssetParameter["items"]> = {
   type: "object",
@@ -71,6 +72,17 @@ function usePreviewScope(): RuntimeScope | null {
     [themeScope],
   );
 }
+type AuthoringLoadState =
+  | { phase: "loading" | "error"; scopeKey: string; message: string }
+  | {
+      phase: "ready";
+      scopeKey: string;
+      record: DefinitionRecord;
+      draft: WorkbenchDefinition;
+      release: ReleaseRecord | null;
+      permissions: string[];
+      message: string;
+    };
 export function RuntimePreview() {
   const scope = usePreviewScope();
   const [state, setState] = useState<RuntimeRecord>(() => ({
@@ -88,7 +100,7 @@ export function RuntimePreview() {
   );
   useEffect(() => {
     if (!scope) return;
-    const restored = readViewState(sessionStorage, scope, new Set(["overview", "guide"]));
+    const restored = readViewState(localStorage, scope, new Set(["overview", "guide"]));
     setSidebarWidth(restored.sidebarWidth);
     setSidebarOpen(restored.sidebarOpen);
     setExpanded(restored.expanded);
@@ -107,7 +119,7 @@ export function RuntimePreview() {
       }
       target[segments.at(-1)!] = value;
       if (path === "selection.documentId" && typeof value === "string")
-        writeViewState(sessionStorage, scope, {
+        writeViewState(localStorage, scope, {
           ...defaultViewState(scope.workbenchId),
           sidebarOpen,
           sidebarWidth,
@@ -118,7 +130,7 @@ export function RuntimePreview() {
     });
   const persist = (changes: Partial<ReturnType<typeof defaultViewState>>) => {
     const selectedId = (state.selection as RuntimeRecord | undefined)?.documentId;
-    writeViewState(sessionStorage, scope, {
+    writeViewState(localStorage, scope, {
       ...defaultViewState(scope.workbenchId),
       sidebarOpen,
       sidebarWidth,
@@ -170,14 +182,217 @@ export function RuntimePreview() {
 }
 export function WorkbenchAuthoring() {
   const scope = usePreviewScope();
+  const scopeKey = scope ? `${scope.userId}:${scope.organizationId}:${scope.workspaceId}` : "unauthenticated";
+  const [authoring, setAuthoring] = useState<AuthoringLoadState>(() => ({
+    phase: "loading",
+    scopeKey,
+    message: "Workbench 초안을 불러오는 중입니다.",
+  }));
+  const [busy, setBusy] = useState<"save" | "publish" | null>(null);
+  const publishKey = useRef<string | null>(null);
+  const loadGeneration = useRef(0);
+  const operationController = useRef<AbortController | null>(null);
+  const selection = useMemo(() => new URLSearchParams(window.location.search).get("definition"), []);
+  useEffect(() => {
+    const generation = ++loadGeneration.current;
+    const controller = new AbortController();
+    operationController.current?.abort();
+    setAuthoring({ phase: "loading", scopeKey, message: "Workbench 초안을 불러오는 중입니다." });
+    setBusy(null);
+    publishKey.current = null;
+    const cancel = () => {
+      controller.abort();
+      if (generation === loadGeneration.current) operationController.current?.abort();
+    };
+    if (!scope || scope.workspaceId === "unselected") return cancel;
+    void (async () => {
+      try {
+        const index = await workbenchClient.list(scope.organizationId, scope.workspaceId, controller.signal);
+        const selected = index.items.find((item) => item.id === selection) ?? index.items[0];
+        if (!selected) throw new Error("작성 가능한 Workbench가 없습니다.");
+        const loaded = await workbenchClient.draft(
+          scope.organizationId,
+          scope.workspaceId,
+          selected.id,
+          controller.signal,
+        );
+        let loadedRelease: ReleaseRecord | null = null;
+        if (loaded.latestReleaseId) {
+          loadedRelease = await workbenchClient.release(
+            scope.organizationId,
+            scope.workspaceId,
+            loaded.latestReleaseId,
+            controller.signal,
+          );
+        }
+        if (controller.signal.aborted || generation !== loadGeneration.current) return;
+        setAuthoring({
+          phase: "ready",
+          scopeKey,
+          record: loaded,
+          draft: loaded.definition,
+          release: loadedRelease,
+          permissions: index.permissions,
+          message: "서버 초안을 불러왔습니다.",
+        });
+      } catch (error) {
+        if (!controller.signal.aborted && generation === loadGeneration.current)
+          setAuthoring({
+            phase: "error",
+            scopeKey,
+            message: error instanceof Error ? error.message : "Workbench를 불러오지 못했습니다.",
+          });
+      }
+    })();
+    return cancel;
+  }, [scope, scopeKey, selection]);
   if (!scope) return <main role="status">인증된 Workbench 컨텍스트를 기다리는 중입니다.</main>;
+  if (scope.workspaceId === "unselected")
+    return (
+      <WorkbenchEditor
+        initialDefinition={documentsFixture as WorkbenchDefinition}
+        client={previewClient}
+        operations={previewOperations}
+        scope={scope}
+        state={{ workspace: { id: scope.workspaceId }, selection: { documentId: "overview" } }}
+        publicationNote={<p>서버 작업공간을 선택하면 저장 및 게시 동작을 사용할 수 있습니다.</p>}
+      />
+    );
+  if (authoring.phase !== "ready" || authoring.scopeKey !== scopeKey)
+    return (
+      <main role="status">
+        {authoring.scopeKey === scopeKey ? authoring.message : "Workbench 초안을 불러오는 중입니다."}
+      </main>
+    );
+  const { record, draft, release, permissions, message } = authoring;
+  const updateAuthoring = (
+    changes: Partial<Omit<Extract<AuthoringLoadState, { phase: "ready" }>, "phase" | "scopeKey">>,
+  ) =>
+    setAuthoring((current) =>
+      current.phase === "ready" && current.scopeKey === scopeKey ? { ...current, ...changes } : current,
+    );
+  const changed = JSON.stringify(draft) !== JSON.stringify(record.definition);
+  const canSave = permissions.includes("workbench.update");
+  const canPublish = permissions.includes("workbench.publish");
+  const save = async () => {
+    if (busy || !canSave) return;
+    const generation = loadGeneration.current;
+    const controller = new AbortController();
+    operationController.current?.abort();
+    operationController.current = controller;
+    setBusy("save");
+    updateAuthoring({ message: "초안을 저장하는 중입니다." });
+    try {
+      const saved = await workbenchClient.save(
+        scope.organizationId,
+        scope.workspaceId,
+        record,
+        draft,
+        controller.signal,
+      );
+      if (controller.signal.aborted || generation !== loadGeneration.current) return;
+      updateAuthoring({
+        record: saved,
+        draft: saved.definition,
+        message: `초안 revision ${saved.revision}을 저장했습니다.`,
+      });
+      publishKey.current = null;
+    } catch (error) {
+      if (!controller.signal.aborted && generation === loadGeneration.current)
+        updateAuthoring({
+          message: `${error instanceof Error ? error.message : "저장하지 못했습니다."} 편집 내용은 유지됩니다.`,
+        });
+    } finally {
+      if (generation === loadGeneration.current) setBusy(null);
+    }
+  };
+  const publish = async () => {
+    if (busy || changed || !canPublish) return;
+    const generation = loadGeneration.current;
+    const controller = new AbortController();
+    operationController.current?.abort();
+    operationController.current = controller;
+    setBusy("publish");
+    updateAuthoring({ message: "불변 release를 게시하는 중입니다." });
+    try {
+      publishKey.current ??= crypto.randomUUID();
+      const published = await workbenchClient.publish(
+        scope.organizationId,
+        scope.workspaceId,
+        record,
+        publishKey.current,
+        controller.signal,
+      );
+      if (controller.signal.aborted || generation !== loadGeneration.current) return;
+      updateAuthoring({
+        release: published,
+        record: { ...record, latestReleaseId: published.id },
+        message: `release ${published.releaseNumber}을 게시했습니다.`,
+      });
+      publishKey.current = null;
+    } catch (error) {
+      if (!controller.signal.aborted && generation === loadGeneration.current)
+        updateAuthoring({
+          message: `${error instanceof Error ? error.message : "게시하지 못했습니다."} 초안은 유지됩니다.`,
+        });
+    } finally {
+      if (generation === loadGeneration.current) setBusy(null);
+    }
+  };
   return (
     <WorkbenchEditor
-      initialDefinition={documentsFixture as WorkbenchDefinition}
+      key={`${record.id}:${record.revision}`}
+      initialDefinition={record.definition}
       client={previewClient}
       operations={previewOperations}
-      scope={scope}
+      scope={{ ...scope, workbenchId: record.key, releaseId: `draft-${record.revision}` }}
       state={{ workspace: { id: scope.workspaceId }, selection: { documentId: "overview" } }}
+      onDraftChange={(nextDraft) => updateAuthoring({ draft: nextDraft })}
+      toolbarActions={
+        <>
+          <button
+            type="button"
+            disabled={!canSave || !changed || busy !== null}
+            aria-busy={busy === "save"}
+            onClick={() => void save()}
+          >
+            초안 저장
+          </button>
+          <button
+            type="button"
+            disabled={!canPublish || changed || busy !== null}
+            aria-busy={busy === "publish"}
+            onClick={() => void publish()}
+          >
+            게시
+          </button>
+        </>
+      }
+      publicationNote={
+        <div className="af-publication-status" role="status">
+          <strong>{changed ? "저장되지 않은 변경" : `초안 revision ${record.revision}`}</strong>
+          <span>{message}</span>
+          {release && (
+            <span>
+              게시 release {release.releaseNumber} · {release.definitionDigest}
+            </span>
+          )}
+        </div>
+      }
+      publishedPreview={
+        release ? (
+          <section className="af-authoring-preview" aria-label="게시된 release 미리보기">
+            <h2>게시된 release {release.releaseNumber}</h2>
+            <WorkbenchRenderer
+              definition={release.definition}
+              client={previewClient}
+              operations={previewOperations}
+              scope={{ ...scope, workbenchId: record.key, releaseId: release.id }}
+              state={{ workspace: { id: scope.workspaceId }, selection: { documentId: "overview" } }}
+            />
+          </section>
+        ) : undefined
+      }
     />
   );
 }

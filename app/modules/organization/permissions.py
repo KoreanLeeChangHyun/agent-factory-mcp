@@ -43,6 +43,7 @@ RESOURCE_ACTIONS = {
     "audit": ("로그", "workspace", "read export"),
     "test": ("테스트", "workspace", "read execute"),
     "planning": ("계획", "workspace", "read create update delete import"),
+    "workbench": ("Workbench", "workspace", "read preview create update publish archive restore"),
 }
 ACTION_LABELS = {
     "read": "조회",
@@ -67,6 +68,10 @@ ACTION_LABELS = {
     "retry": "재시도",
     "use": "사용",
     "revoke": "폐기",
+    "preview": "미리보기",
+    "publish": "게시",
+    "archive": "보관",
+    "restore": "복원",
 }
 PERMISSION_NOTES = {
     "organization.transfer": "소유자만 활성 구성원에게 이전할 수 있습니다.",
@@ -137,6 +142,10 @@ DEFAULT_WORKSPACE_MEMBER = frozenset(
         "planning.update",
         "planning.import",
         "test.read",
+        "workbench.read",
+        "workbench.preview",
+        "workbench.create",
+        "workbench.update",
     }
 )
 DEFAULT_WORKSPACE_VIEWER = frozenset(
@@ -149,6 +158,7 @@ DEFAULT_WORKSPACE_VIEWER = frozenset(
         "job.read",
         "planning.read",
         "test.read",
+        "workbench.read",
     }
 )
 
@@ -170,6 +180,12 @@ def validate_permissions(scope: str, permissions: list[str]) -> frozenset[str]:
 
 
 TOKEN_ALIASES = {
+    "workbench:read": frozenset({"workbench.read"}),
+    "workbench:preview": frozenset({"workbench.preview"}),
+    "workbench:edit": frozenset(
+        {"workbench.create", "workbench.update", "workbench.archive", "workbench.restore"}
+    ),
+    "workbench:publish": frozenset({"workbench.publish"}),
     "document:write": frozenset(
         k for k in WORKSPACE_PERMISSIONS if k.startswith("document.") and k != "document.read"
     ),

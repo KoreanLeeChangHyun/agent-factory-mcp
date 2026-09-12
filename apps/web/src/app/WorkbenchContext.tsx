@@ -62,6 +62,18 @@ export function WorkbenchContextProvider({
     };
   }, [refreshIdentity]);
 
+  useEffect(() => {
+    const selectFromLocation = () => {
+      const query = new URLSearchParams(window.location.search);
+      setSelection({
+        organizationId: query.get("organization") ?? "unselected",
+        workspaceId: query.get("workspace") ?? "unselected",
+      });
+    };
+    window.addEventListener("popstate", selectFromLocation);
+    return () => window.removeEventListener("popstate", selectFromLocation);
+  }, []);
+
   const value = useMemo<WorkbenchContextValue>(
     () => ({
       themeScope: userId ? { userId, ...selection } : null,

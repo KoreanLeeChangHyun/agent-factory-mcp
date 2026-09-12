@@ -5,6 +5,10 @@ ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
 
 WORKDIR /build
 COPY pyproject.toml README.md ./
+COPY packages/contracts-py ./packages/contracts-py
+COPY packages/platform-core ./packages/platform-core
+COPY packages/platform-adapters ./packages/platform-adapters
+COPY apps/api ./apps/api
 COPY app ./app
 COPY static ./static
 COPY template ./template
@@ -16,7 +20,9 @@ COPY assets/ui-kit/src ./assets/ui-kit/src
 COPY assets/ui-kit/styles ./assets/ui-kit/styles
 COPY assets/ui-kit/generated ./assets/ui-kit/generated
 COPY assets/ui-kit/vendor ./assets/ui-kit/vendor
-RUN python -m pip wheel --wheel-dir /wheels .
+RUN python -m pip wheel --wheel-dir /wheels \
+    ./packages/contracts-py ./packages/platform-core ./packages/platform-adapters ./apps/api \
+    && python -m pip wheel --find-links /wheels --wheel-dir /wheels .
 
 FROM python:3.12-slim-bookworm AS runtime
 

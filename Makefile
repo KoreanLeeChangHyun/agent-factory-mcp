@@ -50,6 +50,7 @@ workbench-test:
 
 workbench-codegen-check:
 	python3 scripts/generate_workbench_contracts.py --check
+	node scripts/generate_workbench_server_catalog.mjs --check
 
 workbench-contracts:
 	uv run python scripts/check_workbench_contract_parity.py

@@ -9,6 +9,7 @@ description = "Agent Factory Workspace and MCP server"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "agent-factory-api",
     "alembic",
     "aiosmtplib",
     "asyncpg",
@@ -89,3 +90,6 @@ members = [
     "packages/platform-core",
     "packages/platform-adapters",
 ]
+
+[tool.uv.sources]
+agent-factory-api = { workspace = true }

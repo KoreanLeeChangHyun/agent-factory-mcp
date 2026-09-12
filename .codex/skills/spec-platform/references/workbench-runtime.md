@@ -62,5 +62,40 @@ Its preview renders the exact in-memory draft using the same validator and runti
 Serialization and import validate before replacing the current draft. Parse, validation,
 or transport failure retains the draft and identifies offending fields. Theme editing uses
 the server-authoritative `ThemeProfile` flow and previews the same resolved theme. Publishing
-is intentionally absent until the Workbench domain supplies authorized, revision-checked,
-immutable releases; a local preview cannot represent a publication.
+uses the durable Workbench domain below; a local preview does not represent a publication.
+
+## Definitions, releases, and publication
+
+Customer `WorkbenchDefinition` records are Workspace-owned mutable aggregates. A definition has a
+stable UUID and key, `draft` or `archived` state, an optimistic positive revision, actor provenance,
+and an optional pointer to its latest release. Create and update accept only a complete validated v1
+definition; the descriptor ID must match the stable key. Updates, archive, and restore compare the
+caller's expected revision. Archive is reversible retained state, not deletion: ordinary lists and
+draft reads hide archived definitions, while an explicitly authorized retained-data view may include
+them. Releases remain readable while their definition is archived. Physical retention and tenant
+deletion follow the platform security retention workflow.
+
+Publish revalidates the persisted draft and locks its definition revision in one PostgreSQL
+transaction. It appends one immutable `WorkbenchRelease` containing the exact canonical JSON
+snapshot, definition revision, monotonic release number, schema and asset versions, canonical schema
+and definition SHA-256 digests, publisher, and publication time; it then advances the definition's
+latest-release pointer and appends the success audit event. Validation, authorization, stale revision,
+archive state, digest mismatch, or transaction failure creates no partial release. Release rows reject
+update and delete at the database boundary. Publishing uses a Workspace-scoped request key and
+canonical command digest: an identical retry returns the original release, while reuse for another
+command fails as an idempotency conflict.
+
+Permissions are independent actions: `workbench.read` reads release projections and definition
+metadata, `workbench.preview` reads unpublished draft content, `workbench.create` and
+`workbench.update` edit drafts, `workbench.publish` publishes, and `workbench.archive` /
+`workbench.restore` change retained visibility. Every HTTP and MCP call derives organization,
+Workspace, user, effective RBAC, and token-scope intersection from authenticated server context.
+Payload data, browser visibility, definition JSON, and release IDs never establish scope. PostgreSQL
+RLS is forced on every Workbench table as defense in depth.
+
+HTTP and MCP are adapters over the same commands and queries. Inputs are closed and bounded;
+transports map the same validation, permission, not-found, stale-revision, archive, and idempotency
+errors to their protocols. Draft responses are no-store. Standard code-owned definitions use the same
+client registry and read projection but do not expose customer edit, archive, restore, or publish
+operations. Secret and connection references remain opaque IDs and are reauthorized by the binding
+operation; definitions never contain credentials, headers, raw URLs, or executable content.

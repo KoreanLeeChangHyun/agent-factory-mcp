@@ -39,10 +39,10 @@
 | 패널 레이아웃         | 완료      | 9개 React 조합과 responsive split/remount behavior가 Stage 2 독립 gate 통과                                      | 작성기와 표준 Workbench에서 같은 registry 사용              |
 | 사용자 테마           | 부분 완료 | Stage 3 독립 Verification에서 DB/RLS/concurrency/audit와 Chromium context/theme gate 통과                        | legacy 소비자 전환                                          |
 | Workbench 계약        | 완료      | 닫힌 schema, 제한, 예제, 생성 Python/TypeScript 패키지가 Stage 1 parity/codegen gate 통과                        | Stage 2 확장 enum 재검증 및 이후 호환성 유지                |
-| Workbench runtime     | 부분 완료 | registry/renderer/binding/action/view-state 구현 및 focused test 작성; 독립 검증 대기                            | Stage 4 package/browser gate 통과                           |
-| 사용자 작성기         | 부분 완료 | palette/property/binding/import/undo/preview 구현; 게시 UX는 서버 도메인 의존                                    | Stage 4 editor gate 후 RF-508 게시 흐름 연결                |
-| Workbench 도메인      | 미착수    | `WorkbenchDefinition`, `WorkbenchRelease` 모델·migration 없음                                                    | draft/publish/archive, immutable release, RBAC/RLS 통과     |
-| React Workbench shell | 부분 완료 | `/workbench` preview에서 작업 목록｜사이드바｜패널과 scoped 복원 구현; 실제 표준 route 전환 전                   | Stage 4 browser gate 후 server-backed vertical slice 연결   |
+| Workbench runtime     | 완료      | Stage 4 registry/renderer/binding/action/view-state 독립 package/browser gate 통과                               | 후속 server-backed 소비자에서 같은 gate 유지                |
+| 사용자 작성기         | 부분 완료 | Stage 4 editor gate 통과; Stage 5 실제 초안 저장·게시·release 표시 작성                                          | 인증 DB-backed RF-508 browser gate 통과                     |
+| Workbench 도메인      | 부분 완료 | core aggregate/use case, PostgreSQL adapter, 0026 migration, HTTP/MCP 작성                                       | transaction/RBAC/RLS/API parity 독립 검증 통과              |
+| React Workbench shell | 부분 완료 | `/workbench` Stage 4 gate 통과, `/authoring` server-backed 작성 흐름 추가; 실제 표준 route 전환 전               | Stage 5 DB-backed 작성 gate와 표준 작업 전환                |
 | 표준 작업 포팅        | 미착수    | 표준 화면은 현행 template/static JS에 결합                                                                       | 작업별 compatibility adapter와 feature flag로 순차 전환     |
 | MCP App host          | 후순위    | Document preview sandbox는 있으나 MCP AppBridge host는 없음                                                      | 실제 사례 후 CSP·capability·message·teardown 보안 gate 통과 |
 | 전환·제거             | 후순위    | 신규 경로가 없어 시작할 수 없음                                                                                  | 관측·rollback 조건 충족 후 legacy 경로 제거                 |
@@ -107,27 +107,27 @@
 
 ### 5. Workbench runtime과 작성기
 
-| ID     | 작업                                        | 상태      | 선행                   | 완료 조건                                                              |
-| ------ | ------------------------------------------- | --------- | ---------------------- | ---------------------------------------------------------------------- |
-| RF-500 | Component/Layout/Icon registry              | 부분 완료 | RF-101, RF-302~306     | 단일 registry와 visible diagnostics 구현; 독립 검증 대기               |
-| RF-501 | sidebar/panel renderer                      | 부분 완료 | RF-100, RF-500         | closed-tree React renderer 구현; package/browser 검증 대기             |
-| RF-502 | Binding client와 입출력 검증                | 부분 완료 | RF-100, RF-103         | injected port/cancel/generation/cache/validation 구현; 검증 대기       |
-| RF-503 | 제한된 Action registry                      | 부분 완료 | RF-100, RF-500         | allowlist/context/double-submit 구현; renderer interaction 검증 대기   |
-| RF-504 | view state와 복원                           | 부분 완료 | RF-100, RF-501         | release-scoped validation/stale-ID cleanup 구현; browser 검증 대기     |
-| RF-505 | runtime 보안 제한                           | 부분 완료 | RF-100~104             | schema와 registry rejection 연결; security fixture 검증 대기           |
-| RF-506 | AssetCatalog·ComponentPalette·LayoutPalette | 부분 완료 | RF-306, RF-500         | searchable palette와 allowed-region keyboard insertion 구현; 검증 대기 |
-| RF-507 | Property·Binding·Theme editor               | 부분 완료 | RF-404, RF-502, RF-506 | schema-driven editor/import/exact preview 구현; 검증 대기              |
-| RF-508 | draft→preview→validate→publish UX           | 미착수    | RF-600~604             | 권한과 revision을 지키며 전체 작성 흐름 E2E 통과                       |
+| ID     | 작업                                        | 상태      | 선행                   | 완료 조건                                               |
+| ------ | ------------------------------------------- | --------- | ---------------------- | ------------------------------------------------------- |
+| RF-500 | Component/Layout/Icon registry              | 완료      | RF-101, RF-302~306     | Stage 4 독립 Verification 통과                          |
+| RF-501 | sidebar/panel renderer                      | 완료      | RF-100, RF-500         | Stage 4 package/browser gate 통과                       |
+| RF-502 | Binding client와 입출력 검증                | 완료      | RF-100, RF-103         | cancel/cache/closed I/O gate 통과                       |
+| RF-503 | 제한된 Action registry                      | 완료      | RF-100, RF-500         | 실제 refresh와 중복 실행 gate 통과                      |
+| RF-504 | view state와 복원                           | 완료      | RF-100, RF-501         | theme/keyboard/state/remount/390px gate 통과            |
+| RF-505 | runtime 보안 제한                           | 완료      | RF-100~104             | schema와 runtime rejection gate 통과                    |
+| RF-506 | AssetCatalog·ComponentPalette·LayoutPalette | 완료      | RF-306, RF-500         | asset별 접근 가능한 삽입 이름 포함 gate 통과            |
+| RF-507 | Property·Binding·Theme editor               | 완료      | RF-404, RF-502, RF-506 | exact preview/import/undo editor gate 통과              |
+| RF-508 | draft→preview→validate→publish UX           | 부분 완료 | RF-600~604             | 실제 API 저장·게시 UI 작성; DB-backed browser 검증 대기 |
 
 ### 6. 서버 도메인과 adapter
 
 | ID     | 작업                                           | 상태      | 선행           | 완료 조건                                                                |
 | ------ | ---------------------------------------------- | --------- | -------------- | ------------------------------------------------------------------------ |
-| RF-600 | `WorkbenchDefinition` aggregate                | 미착수    | RF-100, RF-201 | draft/update/archive 상태 전이, Workspace 소유와 optimistic revision     |
-| RF-601 | immutable `WorkbenchRelease`                   | 미착수    | RF-600         | 게시가 새 snapshot과 digest를 만들고 기존 release 수정 금지              |
-| RF-602 | Workbench repository port와 PostgreSQL adapter | 미착수    | RF-600~601     | core가 SQLAlchemy를 import하지 않고 RLS 격리 통합 테스트 통과            |
-| RF-603 | Workbench command/query use case               | 미착수    | RF-602         | 권한·transaction·오류 의미를 HTTP/MCP 밖에서 소유                        |
-| RF-604 | 얇은 HTTP·MCP adapter                          | 미착수    | RF-603         | 같은 publish/read use case를 호출하고 transport별 표현만 담당            |
+| RF-600 | `WorkbenchDefinition` aggregate                | 부분 완료 | RF-100, RF-201 | core 상태·revision·archive/restore 작성; 독립 전이 검증 대기             |
+| RF-601 | immutable `WorkbenchRelease`                   | 부분 완료 | RF-600         | transaction snapshot/digest/DB mutation 거부 작성; DB 검증 대기          |
+| RF-602 | Workbench repository port와 PostgreSQL adapter | 부분 완료 | RF-600~601     | port/RLS adapter와 append-only 0026 작성; PostgreSQL 통합 검증 대기      |
+| RF-603 | Workbench command/query use case               | 부분 완료 | RF-602         | action별 권한·CAS·idempotency use case 작성; 독립 검증 대기              |
+| RF-604 | 얇은 HTTP·MCP adapter                          | 부분 완료 | RF-603         | 공통 use case adapter와 legacy mount 작성; API/MCP parity 검증 대기      |
 | RF-605 | 기존 도메인의 `platform-core` 포팅             | 부분 완료 | RF-201, RF-004 | 도메인별 vertical slice와 port로 이동, framework/DB/provider import 차단 |
 | RF-606 | 기존 외부 구현의 `platform-adapters` 포팅      | 부분 완료 | RF-201, RF-004 | PostgreSQL·Redis·storage·MCP·HTTP·embedding·secret adapter 경계 완성     |
 | RF-607 | API/worker composition 분리                    | 부분 완료 | RF-605~606     | 별도 entrypoint가 같은 core use case를 조립하고 모델을 복사하지 않음     |
@@ -217,11 +217,11 @@ MCP Apps host(RF-900~903)는 대표 native Workbench가 완성되고 실제 외�
 
 ## 현 시점의 다음 작업
 
-1. RF-500~507: [Stage 4 구현 기록](2026-09-12-workbench-stage4-evidence.md)의 runtime/editor,
-   security, responsive, keyboard와 browser composition gate를 독립 Verification에서 실행한다.
+1. RF-600~604와 RF-508: [Stage 5 구현 기록](2026-09-13-workbench-stage5-evidence.md)의
+   PostgreSQL/RLS/API/MCP/browser gate를 독립 Verification에서 실행한다.
 2. RF-003: 전체 legacy [기준선 matrix](2026-09-12-workbench-baseline.md)의 fixture/API,
    browser와 disposable infrastructure 범위를 별도 실행하고 전역 제한을 해소한다.
-3. Stage 4 통과 뒤 RF-600~604 서버 Workbench 도메인과 불변 release를 구현한 후 RF-508 게시 UX를 연결한다.
+3. RF-605~607 기존 전체 도메인/adapter 포팅과 RF-800~805 표준 기능 포팅은 후속 slice로 유지한다.
 
 단순 디렉터리 생성만으로 상태를 완료로 바꾸지 않는다. 각 행의 완료 조건과 해당 검증이
 함께 충족된 경우에만 완료로 갱신한다.

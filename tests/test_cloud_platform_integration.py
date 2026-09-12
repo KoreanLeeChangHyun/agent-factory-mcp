@@ -70,27 +70,44 @@ async def platform(monkeypatch, tmp_path):
     from app.modules.mcp_connection.models import MCPConnection
     from app.modules.organization.models import Organization, OrganizationMembership
     from app.modules.organization.system_roles import (
+        ORGANIZATION_MEMBER_ROLE_ID,
         ORGANIZATION_OWNER_ROLE_ID,
+        VIEWER_ROLE_ID,
         WORKSPACE_OWNER_ROLE_ID,
     )
     from app.modules.workspace.models import Workspace, WorkspaceMembership
 
     admin = create_async_engine(admin_url)
     sessions = async_sessionmaker(admin, expire_on_commit=False)
-    user, org, workspace, other = uuid4(), uuid4(), uuid4(), uuid4()
+    user, reader_user, org, workspace, other = uuid4(), uuid4(), uuid4(), uuid4(), uuid4()
     now = datetime.now(UTC)
     tokens = {
         name: "afm_" + uuid4().hex
         for name in ("writer", "reader", "expired", "revoked", "template_reader", "scope_only")
     }
     browser_cookie = uuid4().hex
+    reader_cookie = uuid4().hex
     async with sessions() as session:
         session.add(User(id=user, email=f"{user}@example.com", display_name="클라우드 테스트"))
+        session.add(
+            User(
+                id=reader_user,
+                email=f"{reader_user}@example.com",
+                display_name="Workbench reader",
+            )
+        )
         session.add(Organization(id=org, name="Cloud Test", slug=str(org), is_personal=True))
         await session.flush()
         session.add(
             OrganizationMembership(
                 organization_id=org, user_id=user, role_id=ORGANIZATION_OWNER_ROLE_ID
+            )
+        )
+        session.add(
+            OrganizationMembership(
+                organization_id=org,
+                user_id=reader_user,
+                role_id=ORGANIZATION_MEMBER_ROLE_ID,
             )
         )
         session.add_all(
@@ -106,6 +123,13 @@ async def platform(monkeypatch, tmp_path):
                 for w in (workspace, other)
             ]
         )
+        session.add(
+            WorkspaceMembership(
+                workspace_id=workspace,
+                user_id=reader_user,
+                role_id=VIEWER_ROLE_ID,
+            )
+        )
         for name, raw in tokens.items():
             record = ApiToken(
                 user_id=user,
@@ -116,9 +140,26 @@ async def platform(monkeypatch, tmp_path):
                     if name == "scope_only"
                     else ["workspace:read", "document:read"]
                     if name == "template_reader"
-                    else ["workspace:read", "document:read", "integration:read", "agent:read"]
+                    else [
+                        "workspace:read",
+                        "document:read",
+                        "integration:read",
+                        "agent:read",
+                        "workbench:read",
+                    ]
                     + (
-                        ["document:write", "integration:manage", "agent:report", "schedule:write"]
+                        [
+                            "document:write",
+                            "integration:manage",
+                            "agent:report",
+                            "schedule:write",
+                            "workbench:preview",
+                            "workbench:create",
+                            "workbench:update",
+                            "workbench:publish",
+                            "workbench:archive",
+                            "workbench:restore",
+                        ]
                         if name != "reader"
                         else []
                     )
@@ -142,6 +183,15 @@ async def platform(monkeypatch, tmp_path):
                 user_id=user,
                 token_digest=token_digest(
                     browser_cookie, settings.auth_token_secret.get_secret_value()
+                ),
+                expires_at=now + timedelta(days=1),
+            )
+        )
+        session.add(
+            AuthSession(
+                user_id=reader_user,
+                token_digest=token_digest(
+                    reader_cookie, settings.auth_token_secret.get_secret_value()
                 ),
                 expires_at=now + timedelta(days=1),
             )
@@ -225,6 +275,7 @@ async def platform(monkeypatch, tmp_path):
                 requests=provider_requests,
                 provider_hook=provider_hook,
                 cookie=browser_cookie,
+                reader_cookie=reader_cookie,
                 settings=settings,
             )
     finally:
@@ -365,6 +416,274 @@ async def test_http_mcp_auth_scope_rls_and_import_races(platform):
         ).one() == (False, False)
         await apply_tenant_context(session, TenantContext(p.user, p.org, p.other))
         assert not list(await session.scalars(select(DocumentImport)))
+
+
+async def test_workbench_http_mcp_postgres_parity(platform):
+    p = platform
+    from copy import deepcopy
+
+    from agent_factory_contracts.generated.schema_bundle import DOCUMENTS_FIXTURE
+
+    p.client.cookies.set(p.settings.session_cookie_name, p.cookie)
+    p.client.cookies.set("agent_factory_csrf", "workbench-parity-csrf")
+    headers = {
+        "X-Organization-ID": str(p.org),
+        "X-CSRF-Token": "workbench-parity-csrf",
+    }
+    path = f"/api/workspaces/{p.workspace}/workbenches"
+
+    def definition(key, title):
+        value = deepcopy(DOCUMENTS_FIXTURE)
+        value["descriptor"]["id"] = key
+        value["descriptor"]["title"] = title
+        return value
+
+    http_created_response = await p.client.post(
+        path,
+        headers=headers,
+        json={
+            "key": "parity-http",
+            "title": "HTTP parity",
+            "definition": definition("parity-http", "HTTP initial"),
+        },
+    )
+    assert http_created_response.status_code == 201, http_created_response.text
+    http_created = http_created_response.json()
+    mcp_created = await call(
+        p,
+        "workbench_create",
+        {
+            "key": "parity-mcp",
+            "title": "MCP parity",
+            "definition": definition("parity-mcp", "MCP initial"),
+        },
+    )
+    assert set(http_created) == set(mcp_created)
+
+    http_list = (await p.client.get(path, headers=headers)).json()
+    mcp_list = await call(p, "workbench_list", {})
+    assert {item["key"] for item in http_list["items"]} == {
+        item["key"] for item in mcp_list["items"]
+    }
+    assert all("definition" not in item for item in http_list["items"] + mcp_list["items"])
+
+    http_draft = (await p.client.get(f"{path}/{http_created['id']}/draft", headers=headers)).json()
+    mcp_draft = await call(p, "workbench_draft_read", {"definition_id": mcp_created["id"]})
+    assert set(http_draft) == set(mcp_draft)
+
+    http_saved_response = await p.client.put(
+        f"{path}/{http_created['id']}/draft",
+        headers=headers,
+        json={
+            "title": "HTTP parity",
+            "expectedRevision": 1,
+            "definition": definition("parity-http", "HTTP saved"),
+        },
+    )
+    assert http_saved_response.status_code == 200, http_saved_response.text
+    http_saved = http_saved_response.json()
+    mcp_saved = await call(
+        p,
+        "workbench_draft_save",
+        {
+            "definition_id": mcp_created["id"],
+            "title": "MCP parity",
+            "expected_revision": 1,
+            "definition": definition("parity-mcp", "MCP saved"),
+        },
+    )
+    assert http_saved["revision"] == mcp_saved["revision"] == 2
+
+    http_published_response = await p.client.post(
+        f"{path}/{http_created['id']}/publish",
+        headers=headers,
+        json={"expectedRevision": 2, "requestKey": "http-parity-publish"},
+    )
+    assert http_published_response.status_code == 201, http_published_response.text
+    http_published = http_published_response.json()
+    mcp_published = await call(
+        p,
+        "workbench_publish",
+        {
+            "definition_id": mcp_created["id"],
+            "expected_revision": 2,
+            "request_key": "mcp-parity-publish",
+        },
+    )
+    assert set(http_published) == set(mcp_published)
+    assert (
+        await call(
+            p,
+            "workbench_publish",
+            {
+                "definition_id": mcp_created["id"],
+                "expected_revision": 2,
+                "request_key": "mcp-parity-publish",
+            },
+        )
+    )["id"] == mcp_published["id"]
+    assert (
+        await p.client.post(
+            f"{path}/{http_created['id']}/publish",
+            headers=headers,
+            json={"expectedRevision": 2, "requestKey": "http-parity-publish"},
+        )
+    ).json()["id"] == http_published["id"]
+    http_idempotency = await p.client.post(
+        f"{path}/{http_created['id']}/publish",
+        headers=headers,
+        json={"expectedRevision": 3, "requestKey": "http-parity-publish"},
+    )
+    assert http_idempotency.status_code == 409
+    assert http_idempotency.json()["detail"]["code"] == "workbench_idempotency_conflict"
+    assert (
+        await call(
+            p,
+            "workbench_publish",
+            {
+                "definition_id": mcp_created["id"],
+                "expected_revision": 3,
+                "request_key": "mcp-parity-publish",
+            },
+            error=True,
+        )
+    )["code"] == "workbench_idempotency_conflict"
+
+    http_releases = (
+        await p.client.get(f"{path}/{http_created['id']}/releases", headers=headers)
+    ).json()
+    mcp_releases = await call(p, "workbench_release_list", {"definition_id": mcp_created["id"]})
+    assert len(http_releases["items"]) == len(mcp_releases["items"]) == 1
+    http_release = (
+        await p.client.get(f"{path}/releases/{http_published['id']}", headers=headers)
+    ).json()
+    mcp_release = await call(p, "workbench_release_read", {"release_id": mcp_published["id"]})
+    assert set(http_release) == set(mcp_release)
+
+    http_archived = (
+        await p.client.post(
+            f"{path}/{http_created['id']}/archive",
+            headers=headers,
+            json={"expectedRevision": 2},
+        )
+    ).json()
+    mcp_archived = await call(
+        p,
+        "workbench_archive",
+        {"definition_id": mcp_created["id"], "expected_revision": 2},
+    )
+    assert http_archived["state"] == mcp_archived["state"] == "archived"
+    http_archived_publish = await p.client.post(
+        f"{path}/{http_created['id']}/publish",
+        headers=headers,
+        json={"expectedRevision": 3, "requestKey": "http-archived"},
+    )
+    assert http_archived_publish.status_code == 409
+    assert http_archived_publish.json()["detail"]["code"] == "workbench_archived"
+    assert (
+        await call(
+            p,
+            "workbench_publish",
+            {
+                "definition_id": mcp_created["id"],
+                "expected_revision": 3,
+                "request_key": "mcp-archived",
+            },
+            error=True,
+        )
+    )["code"] == "workbench_archived"
+    http_restored = (
+        await p.client.post(
+            f"{path}/{http_created['id']}/restore",
+            headers=headers,
+            json={"expectedRevision": 3},
+        )
+    ).json()
+    mcp_restored = await call(
+        p,
+        "workbench_restore",
+        {"definition_id": mcp_created["id"], "expected_revision": 3},
+    )
+    assert http_restored["state"] == mcp_restored["state"] == "draft"
+
+    invalid_http = await p.client.post(
+        path,
+        headers=headers,
+        json={
+            "key": "invalid-http",
+            "title": "Invalid",
+            "definition": definition("different-key", "Invalid"),
+        },
+    )
+    assert invalid_http.status_code == 422
+    assert invalid_http.json()["detail"]["code"] == "invalid_workbench_definition"
+    assert (
+        await call(
+            p,
+            "workbench_create",
+            {
+                "key": "invalid-mcp",
+                "title": "Invalid",
+                "definition": definition("different-key", "Invalid"),
+            },
+            error=True,
+        )
+    )["code"] == "invalid_workbench_definition"
+
+    missing = str(uuid4())
+    assert (await p.client.get(f"{path}/releases/{missing}", headers=headers)).status_code == 404
+    assert (await call(p, "workbench_release_read", {"release_id": missing}, error=True))[
+        "code"
+    ] == "workbench_not_found"
+    assert (
+        await p.client.put(
+            f"{path}/{http_created['id']}/draft",
+            headers=headers,
+            json={
+                "title": "stale",
+                "expectedRevision": 1,
+                "definition": definition("parity-http", "stale"),
+            },
+        )
+    ).status_code == 409
+    assert (
+        await call(
+            p,
+            "workbench_draft_save",
+            {
+                "definition_id": mcp_created["id"],
+                "title": "stale",
+                "expected_revision": 1,
+                "definition": definition("parity-mcp", "stale"),
+            },
+            error=True,
+        )
+    )["code"] == "workbench_revision_conflict"
+    await call(
+        p,
+        "workbench_draft_read",
+        {"definition_id": mcp_created["id"]},
+        token="reader",
+        error=True,
+    )
+    assert (await call(p, "workbench_list", {}, token="reader"))["items"]
+    p.client.cookies.set(p.settings.session_cookie_name, p.reader_cookie)
+    assert (await p.client.get(path, headers=headers)).status_code == 200
+    assert (
+        await p.client.get(f"{path}/{http_created['id']}/draft", headers=headers)
+    ).status_code == 403
+    assert (
+        await p.client.post(
+            path,
+            headers=headers,
+            json={
+                "key": "reader-denied",
+                "title": "Reader denied",
+                "definition": definition("reader-denied", "Reader denied"),
+            },
+        )
+    ).status_code == 403
+    p.client.cookies.set(p.settings.session_cookie_name, p.cookie)
 
 
 @pytest.mark.parametrize("skill", ["document", "agent", "template", "synthetic-large"])
@@ -986,6 +1305,93 @@ async def test_current_editor_with_real_http_and_document(platform):
     )
     output, _ = await asyncio.wait_for(process.communicate(), 90)
     assert process.returncode == 0, output.decode()
+
+
+async def test_authenticated_workbench_authoring_with_real_postgres_and_http(platform):
+    p = platform
+    from copy import deepcopy
+
+    from agent_factory_api.composition.workbenches import build_workbench_service
+    from agent_factory_contracts.generated.schema_bundle import DOCUMENTS_FIXTURE
+    from agent_factory_core import WorkbenchActor
+    from app.db.session import get_session_factory
+
+    actor = WorkbenchActor(
+        p.user,
+        p.org,
+        p.workspace,
+        frozenset(
+            {
+                "workbench.read",
+                "workbench.preview",
+                "workbench.create",
+                "workbench.update",
+                "workbench.publish",
+            }
+        ),
+    )
+    async with get_session_factory()() as session:
+        await build_workbench_service(session).create.execute(
+            actor,
+            key="documents",
+            title="Documents",
+            definition=deepcopy(DOCUMENTS_FIXTURE),
+        )
+    frontend_socket = socket.socket()
+    frontend_socket.bind(("127.0.0.1", 0))
+    frontend_port = frontend_socket.getsockname()[1]
+    frontend_socket.close()
+    frontend_url = f"http://127.0.0.1:{frontend_port}"
+    env = {
+        **os.environ,
+        "NODE_PATH": os.environ.get(
+            "WORKBENCH_PLAYWRIGHT_NODE_PATH",
+            str(Path(__file__).resolve().parents[1] / "assets/ui-kit/node_modules"),
+        ),
+        "WORKBENCH_API_TARGET": p.url,
+        "WORKBENCH_BROWSER_URL": frontend_url,
+        "WORKBENCH_BROWSER_COOKIE": p.cookie,
+        "WORKBENCH_BROWSER_COOKIE_NAME": p.settings.session_cookie_name,
+        "WORKBENCH_BROWSER_ORGANIZATION": str(p.org),
+        "WORKBENCH_BROWSER_WORKSPACE": str(p.workspace),
+    }
+    frontend = await asyncio.create_subprocess_exec(
+        "pnpm",
+        "--filter",
+        "@agent-factory/web",
+        "exec",
+        "vite",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(frontend_port),
+        env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    try:
+        async with httpx.AsyncClient(trust_env=False) as probe:
+            for _ in range(100):
+                try:
+                    if (await probe.get(f"{frontend_url}/authoring")).status_code == 200:
+                        break
+                except httpx.TransportError:
+                    pass
+                await asyncio.sleep(0.05)
+            else:
+                raise AssertionError("Workbench Vite server did not start")
+        process = await asyncio.create_subprocess_exec(
+            "node",
+            "tests/browser/workbench-authoring-db.cjs",
+            env=env,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        output, _ = await asyncio.wait_for(process.communicate(), 90)
+        assert process.returncode == 0, output.decode()
+    finally:
+        frontend.terminate()
+        await frontend.wait()
 
 
 async def test_claimed_collection_rejects_payload_identity_injection(platform):
