@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "panel.schema.json",
+  "title": "Workbench panel v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["asset", "components"],
+  "properties": {
+    "asset": {"enum": ["detail@1", "list-detail@1", "collection@1", "settings@1", "dashboard@1", "document@1", "split@1", "timeline@1", "kanban@1"]},
+    "label": {"type": "string", "minLength": 1, "maxLength": 80},
+    "components": {"type": "array", "minItems": 1, "maxItems": 80, "items": {"$ref": "component.schema.json"}}
+  }
+}

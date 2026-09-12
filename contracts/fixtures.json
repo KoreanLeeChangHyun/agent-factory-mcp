@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0",
+  "cases": [
+    {"path": "examples/workbenches/documents.json", "schema": "schemas/workbench/v1/definition.schema.json", "valid": true},
+    {"path": "examples/theme-profile.json", "schema": "schemas/appearance/v1/theme-profile.schema.json", "valid": true},
+    {"path": "examples/catalog/documents-icon.json", "schema": "schemas/catalog/v1/asset-descriptor.schema.json", "valid": true},
+    {"path": "examples/invalid/raw-css.json", "schema": "schemas/workbench/v1/definition.schema.json", "valid": false},
+    {"path": "examples/invalid/arbitrary-url.json", "schema": "schemas/workbench/v1/definition.schema.json", "valid": false},
+    {"path": "examples/invalid/expression.json", "schema": "schemas/workbench/v1/definition.schema.json", "valid": false},
+    {"path": "examples/invalid/credential.json", "schema": "schemas/workbench/v1/definition.schema.json", "valid": false},
+    {"path": "examples/invalid/websocket-url.json", "schema": "schemas/workbench/v1/definition.schema.json", "valid": false},
+    {"path": "examples/invalid/ftp-url.json", "schema": "schemas/workbench/v1/definition.schema.json", "valid": false},
+    {"path": "examples/invalid/access-token.json", "schema": "schemas/workbench/v1/definition.schema.json", "valid": false},
+    {"path": "examples/invalid/request-headers.json", "schema": "schemas/workbench/v1/definition.schema.json", "valid": false},
+    {"path": "examples/invalid/theme-raw-css.json", "schema": "schemas/appearance/v1/theme-profile.schema.json", "valid": false}
+  ]
+}

@@ -63,22 +63,22 @@
 
 | ID | 작업 | 상태 | 선행 | 완료 조건 |
 | --- | --- | --- | --- | --- |
-| RF-100 | Workbench JSON Schema v1 | 미착수 | RF-002 | definition/release/descriptor/sidebar/panel/component/binding/action/view-state schema와 제한 fixture 통과 |
-| RF-101 | 공통 에셋 descriptor schema | 미착수 | RF-002 | 버전 ID, 허용 영역, props, binding, state, action, 접근성 metadata 검증 |
-| RF-102 | 사용자 `ThemeProfile` schema | 미착수 | RF-002 | 기본 테마·허용 token·밀도·revision 계약 및 임의 CSS 거부 fixture 통과 |
-| RF-103 | Python·TypeScript 생성 패키지 | 미착수 | RF-100~102 | 같은 fixture에 두 validator가 같은 판정, 생성 후 clean diff |
-| RF-104 | schema 호환성 정책과 CI | 미착수 | RF-100~103 | minor/major 호환성 fixture와 size/depth/time limit gate 통과 |
-| RF-105 | 목표 의존 방향 검사 | 부분 완료 | RF-002 | 현행 router 경계 검사는 존재; 새 apps/packages의 금지 import까지 자동 검사 |
+| RF-100 | Workbench JSON Schema v1 | 부분 완료 | RF-002 | schema·Documents/invalid fixture 구현; 독립 parity/제한 검증 필요 |
+| RF-101 | 공통 에셋 descriptor schema | 부분 완료 | RF-002 | 닫힌 descriptor와 broad catalog 구현; 독립 catalog test 필요 |
+| RF-102 | 사용자 `ThemeProfile` schema | 부분 완료 | RF-002 | allowlist schema·거부 fixture 구현; 독립 parity 검증 필요 |
+| RF-103 | Python·TypeScript 생성 패키지 | 부분 완료 | RF-100~102 | 타입·validator·byte check 생성기 구현; frozen install 후 독립 검증 필요 |
+| RF-104 | schema 호환성 정책과 CI | 부분 완료 | RF-100~103 | 실제 구조 변경 탐지와 제한 gate 구현; dedicated CI 실행 필요 |
+| RF-105 | 목표 의존 방향 검사 | 부분 완료 | RF-002 | Python/TS·relative/dynamic 검사와 위반 fixture 구현; 독립 실행 필요 |
 
 ### 2. 최소 모노레포 골격
 
 | ID | 작업 | 상태 | 선행 | 완료 조건 |
 | --- | --- | --- | --- | --- |
-| RF-200 | pnpm workspace와 루트 TypeScript 구성 | 미착수 | RF-002 | lockfile 고정, workspace-only 내부 의존성, format/lint/type/test 명령 동작 |
-| RF-201 | uv Python workspace와 공통 lock | 미착수 | RF-002 | api/worker/core/adapters/contracts 패키지가 하나의 lock과 gate 사용 |
-| RF-202 | `apps/web`, `apps/api`, `apps/worker` 최소 실행점 | 미착수 | RF-200~201 | web health 화면, API liveness/readiness, worker 시작 검증 |
-| RF-203 | `packages/*`와 `contracts/*` 최소 실제 slice | 미착수 | RF-100~103 | 빈 디렉터리가 아닌 fixture 검증과 호출 경로 존재 |
-| RF-204 | 공통 `make check` 확장 | 부분 완료 | RF-200~203 | 현재 Python gate에 TS, schema, codegen-diff, dependency 검사를 포함 |
+| RF-200 | pnpm workspace와 루트 TypeScript 구성 | 부분 완료 | RF-002 | manifest·`pnpm-lock.yaml` 구현; frozen install과 gate 독립 검증 필요 |
+| RF-201 | uv Python workspace와 공통 lock | 부분 완료 | RF-002 | workspace manifest·`uv.lock` 구현; frozen install과 gate 독립 검증 필요 |
+| RF-202 | `apps/web`, `apps/api`, `apps/worker` 최소 실행점 | 부분 완료 | RF-200~201 | health 화면·정직한 readiness·worker smoke 구현; 독립 실행 필요 |
+| RF-203 | `packages/*`와 `contracts/*` 최소 실제 slice | 부분 완료 | RF-100~103 | validated Documents fixture 호출 경로 구현; 독립 build/test 필요 |
+| RF-204 | 공통 `make check` 확장 | 부분 완료 | RF-200~203 | legacy gate와 신규 TS/schema/codegen/dependency gate 결합; 독립 실행 필요 |
 
 ### 3. Design System과 공통 에셋 카탈로그
 

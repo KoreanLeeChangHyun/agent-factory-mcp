@@ -1,0 +1,8 @@
+{
+  "schemaVersion": "1.0",
+  "maxBytes": 262144,
+  "maxDepth": 12,
+  "maxNodes": 5000,
+  "maxStringLength": 4096,
+  "maxValidationMilliseconds": 100
+}

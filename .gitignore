@@ -11,6 +11,11 @@ htmlcov/
 .env
 .env.production
 /.cache/
+node_modules/
+**/node_modules/
+**/dist/
+**/dist-types/
+*.tsbuildinfo
 
 /.backup/
 /uploads/

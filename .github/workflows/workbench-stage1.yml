@@ -1,0 +1,52 @@
+name: Workbench stage 1
+
+on:
+  pull_request:
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "contracts/**"
+      - "scripts/*workbench*"
+      - "tests/contracts/**"
+      - "tests/architecture/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/workbench-stage1.yml"
+  push:
+    branches: [main]
+
+jobs:
+  contracts-and-workspaces:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: pnpm install --frozen-lockfile
+      - run: uv sync --frozen --all-packages --extra dev
+      - run: python3 scripts/generate_workbench_contracts.py --check
+      - run: uv run python scripts/check_workbench_contract_parity.py
+      - run: python3 scripts/check_workbench_schema_compatibility.py
+      - run: python3 scripts/check_workbench_dependencies.py
+      - run: pnpm format
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: uv run ruff format --check --exclude "**/generated/**" apps/api apps/worker packages/contracts-py packages/platform-core packages/platform-adapters tests/contracts tests/architecture scripts/*workbench*.py
+      - run: uv run ruff check --exclude "**/generated/**" apps/api apps/worker packages/contracts-py packages/platform-core packages/platform-adapters tests/contracts tests/architecture scripts/*workbench*.py
+      - run: uv run mypy packages/contracts-py/src packages/platform-core/src packages/platform-adapters/src apps/api/src apps/worker/src tests/contracts/type_contracts.py
+      - run: uv run pytest -q tests/contracts tests/architecture apps/api/tests apps/worker/tests
+      - run: uv run agent-factory-worker --smoke
+      - run: pnpm build
+      - run: uv build --all-packages

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1.0",
+  "descriptor": {
+    "id": "documents",
+    "version": 1,
+    "title": "문서",
+    "description": "문서 트리에서 항목을 선택하고 검토합니다.",
+    "icon": "documents@1",
+    "regions": ["task-list", "sidebar", "panel"]
+  },
+  "sidebar": {
+    "asset": "tree@1",
+    "label": "문서 탐색기",
+    "components": [
+      {"id": "document-tree", "asset": "resource-tree@1", "binding": "documents", "actions": ["select-document"], "state": "ready"}
+    ]
+  },
+  "panel": {
+    "asset": "document@1",
+    "label": "문서 패널",
+    "components": [
+      {"id": "document-header", "asset": "resource-header@1", "props": {"title": "선택한 문서"}, "state": "ready"},
+      {"id": "document-content", "asset": "markdown@1", "binding": "document", "state": "ready"}
+    ]
+  },
+  "bindings": [
+    {"id": "documents", "source": "documents-list@1", "inputMappings": [{"input": "workspaceId", "statePath": "workspace.id"}], "cacheSeconds": 30},
+    {"id": "document", "source": "document-read@1", "inputMappings": [{"input": "documentId", "statePath": "selection.documentId"}], "cacheSeconds": 0}
+  ],
+  "actions": [
+    {"id": "select-document", "kind": "select", "target": "selection.documentId"},
+    {"id": "refresh-document", "kind": "refresh", "target": "document"}
+  ]
+}

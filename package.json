@@ -1,0 +1,28 @@
+{
+  "name": "agent-factory-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.15.1",
+  "scripts": {
+    "format": "prettier --check \"{apps/web/src,packages/*/src,scripts}/**/*.{ts,tsx,css}\"",
+    "lint": "eslint apps packages scripts --ext .ts,.tsx",
+    "typecheck": "tsc -b",
+    "test": "pnpm -r test",
+    "build": "pnpm --filter @agent-factory/web build",
+    "codegen": "python3 scripts/generate_workbench_contracts.py",
+    "codegen:check": "python3 scripts/generate_workbench_contracts.py --check",
+    "contracts:parity": "uv run python scripts/check_workbench_contract_parity.py",
+    "contracts:compatibility": "python3 scripts/check_workbench_schema_compatibility.py",
+    "dependencies:check": "python3 scripts/check_workbench_dependencies.py",
+    "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm codegen:check && pnpm contracts:parity && pnpm contracts:compatibility && pnpm dependencies:check"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.35.0",
+    "@types/node": "24.3.0",
+    "eslint": "9.35.0",
+    "prettier": "3.6.2",
+    "tsx": "4.20.5",
+    "typescript": "5.9.2",
+    "typescript-eslint": "8.42.0"
+  }
+}

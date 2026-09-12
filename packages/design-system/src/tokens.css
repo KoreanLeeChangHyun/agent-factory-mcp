@@ -1,0 +1,33 @@
+:root {
+  --af-bg: #11151b;
+  --af-surface: #181d25;
+  --af-surface-raised: #202631;
+  --af-border: #343c49;
+  --af-text: #e6eaf0;
+  --af-muted: #9da8b6;
+  --af-accent: #4c9aff;
+  --af-focus: #79b8ff;
+  --af-space-1: 4px;
+  --af-space-2: 8px;
+  --af-space-3: 12px;
+  --af-space-4: 16px;
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--af-bg);
+  color: var(--af-text);
+}
+button,
+a {
+  outline-offset: 2px;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--af-focus);
+}

@@ -1,0 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-factory-contracts"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["jsonschema>=4.23,<5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_factory_contracts"]

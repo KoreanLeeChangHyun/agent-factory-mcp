@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "definition.schema.json",
+  "title": "Workbench definition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "descriptor", "sidebar", "panel", "bindings", "actions"],
+  "properties": {
+    "schemaVersion": {"const": "1.0"},
+    "descriptor": {"$ref": "descriptor.schema.json"},
+    "sidebar": {"$ref": "sidebar.schema.json"},
+    "panel": {"$ref": "panel.schema.json"},
+    "bindings": {"type": "array", "maxItems": 32, "items": {"$ref": "binding.schema.json"}},
+    "actions": {"type": "array", "maxItems": 32, "items": {"$ref": "action.schema.json"}}
+  }
+}

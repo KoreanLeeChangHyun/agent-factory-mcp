@@ -1,0 +1,110 @@
+# Workbench refactor stage 1 implementation evidence
+
+## Scope and authority
+
+This dated note records the RF-100–105 and RF-200–204 implementation slice. It is
+Processed implementation evidence, not a replacement for the maintained ADRs or
+platform specifications. The legacy `app/`, `template/`, and `static/` feature paths
+remain unchanged.
+
+## Implemented contracts
+
+- `contracts/schemas/workbench/v1/` owns closed definition, release, descriptor,
+  sidebar, panel, component, binding, action, and view-state schemas.
+- `contracts/schemas/catalog/v1/asset-descriptor.schema.json` uses a fixed parameter
+  vocabulary rather than accepting embedded JSON Schema. Catalog parameters are
+  bounded scalar/list declarations; external references and arbitrary schema keywords
+  are not representable.
+- `contracts/schemas/appearance/v1/theme-profile.schema.json` permits only the
+  `dark`, `light`, and `high-contrast` foundations, compact/comfortable density, and
+  approved semantic color tokens. It has no CSS, SVG, import, URL, header, or
+  credential field.
+- Workbench v1 is deliberately a fixed, versioned vocabulary. New action kinds,
+  binding sources, layout families, or executable capabilities require a schema and
+  renderer version change; unknown properties remain rejected. Future extensibility
+  is not modeled as free-form extension objects.
+
+The bounded runtime policy is 262,144 encoded bytes, depth 12, 5,000 JSON nodes,
+4,096 characters per string, and 100 milliseconds measured validation time. Component
+counts are additionally limited to 40 in the 사이드바 and 80 in the 패널. Schema
+generation rejects traversal, network, and cross-directory references; only local
+fragments and sibling schema filenames are accepted.
+
+## Generated packages and gates
+
+`scripts/generate_workbench_contracts.py` deterministically emits useful TypedDict and
+TypeScript interfaces plus canonical schema/fixture bundles. `--check` compares the
+expected bytes with every generated file without depending on Git tracking. Python
+and TypeScript validators apply the same limit source and schema bundle. The parity
+gate runs both validators over the same valid and invalid manifest.
+
+The compatibility gate examines required properties, removed closed-object
+properties, narrowed types/enums, and tightened numeric/string/collection bounds. Its
+fixtures prove both an additive compatible change and multiple real breaking changes;
+it does not infer compatibility from a version label.
+
+The dependency guard parses Python imports and TypeScript static, export, `require`,
+and dynamic imports. It checks forbidden core SDK/framework imports and relative
+cross-package bypasses. Root tests include explicit violations and allowed core →
+contracts and adapters → core examples.
+
+## Verification-finding revision
+
+The revision after failed Verification reconciles camel-case state/input identifiers
+with the bounded path vocabulary used by the Documents fixture. Component properties
+now use an explicit fixed allowlist instead of a negative property-name list, and text
+values reject URL schemes, protocol-relative URLs, executable expressions, and raw
+markup. Dedicated fixtures cover WebSocket, FTP, access-token, and request-header
+bypasses.
+
+Compatibility analysis now covers constants, patterns, object closure, constrained
+additional properties, uniqueness, formats, type/enum restrictions, bounds, local
+references, combinators, items, and pattern properties used by the Stage 1 vocabulary.
+Generated types now include every asset parameter field and precise component/catalog
+state, asset kind, parameter type, sidebar/panel asset, accessibility, provenance, and
+theme-override structures. Python and TypeScript type fixtures exercise all parameter
+variants and nested structures.
+
+The dependency guard now parses `pyproject.toml` project, optional, and build-system
+requirements plus `package.json` runtime, optional, peer, and development dependencies.
+Manifest fixtures cover forbidden and allowed Python and TypeScript dependency edges.
+
+The subsequent TypeScript revision uses AJV's declared named `Ajv2020` constructor,
+which avoids default-import interop ambiguity under NodeNext. The parity entrypoint
+uses the command-owned repository-root working directory rather than non-portable
+`import.meta.dirname`, allowing the pinned `tsx` runner to select either module
+transform without changing fixture resolution.
+
+## Minimal composition
+
+- `packages/platform-core` contains a framework-independent Workbench query and port.
+- `packages/platform-adapters` provides the stage-1 reference-fixture port adapter.
+- `apps/api` composes FastAPI liveness, readiness, and reference fixture routes.
+  Readiness returns 503 when `DATABASE_URL` is absent and explicitly reports that no
+  database check ran; configuration alone is not represented as a live DB check.
+- `apps/worker` exposes only an explicit offline `--smoke` fixture validation mode.
+- `apps/web` is a minimal Vite/React health surface using the shared generated fixture,
+  runtime, semantic tokens, and canonical 작업 목록 | 사이드바 | 패널 regions.
+- The design-system catalog includes eight task icons, seven sidebar/navigation
+  entries, nine panel layouts, controls, displays, feedback assets, full state/action
+  metadata, accessibility metadata, provenance, examples, and unique versioned IDs.
+
+## Locks and independent verification
+
+The revision Work generated real root `pnpm-lock.yaml` and `uv.lock` files from the
+declared workspace manifests. No tests, validators, lint checks, type checks, builds,
+servers, health probes, worker smoke, or frozen-install verification were performed by
+Work. Independent Verification should perform clean frozen installs and the requested
+gates without changing either lockfile:
+
+```sh
+pnpm install --frozen-lockfile
+uv sync --frozen --all-packages --extra dev
+make workbench-check
+uv run agent-factory-worker --smoke
+make workbench-build
+make check
+```
+
+The dedicated workflow already uses frozen installs. RF-100–105 and RF-200–204 remain
+`부분 완료` until independent Verification supplies successful evidence.

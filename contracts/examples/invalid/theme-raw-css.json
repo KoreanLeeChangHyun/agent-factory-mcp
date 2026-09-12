@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "1.0",
+  "userId": "0123456789abcdef0123456789abcdef",
+  "revision": 1,
+  "base": "dark",
+  "density": "compact",
+  "overrides": {"rawCss": "*{display:none}"},
+  "reducedMotion": false
+}

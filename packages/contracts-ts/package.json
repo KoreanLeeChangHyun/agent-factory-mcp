@@ -1,0 +1,10 @@
+{
+  "name": "@agent-factory/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {".": "./src/index.ts"},
+  "scripts": {"lint": "eslint src", "typecheck": "tsc --noEmit", "test": "vitest run"},
+  "dependencies": {"ajv": "8.17.1"},
+  "devDependencies": {"typescript": "5.9.2", "vitest": "3.2.4", "eslint": "9.35.0", "@eslint/js": "9.35.0", "typescript-eslint": "8.42.0"}
+}

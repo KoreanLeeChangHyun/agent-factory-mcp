@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "binding.schema.json",
+  "title": "Workbench binding v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "source", "inputMappings"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "source": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}@1$"},
+    "inputMappings": {
+      "type": "array", "maxItems": 16,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["input", "statePath"],
+        "properties": {
+          "input": {"type": "string", "pattern": "^[a-z][A-Za-z0-9]{0,63}$"},
+          "statePath": {"type": "string", "pattern": "^[a-z][A-Za-z0-9]*(\\.[a-z][A-Za-z0-9]*){0,5}$"}
+        }
+      }
+    },
+    "cacheSeconds": {"type": "integer", "minimum": 0, "maximum": 300}
+  }
+}

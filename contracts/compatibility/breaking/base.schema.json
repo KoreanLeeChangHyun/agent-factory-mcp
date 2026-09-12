@@ -1,0 +1,1 @@
+{"type":"object","additionalProperties":true,"required":["id"],"properties":{"id":{"type":"string","maxLength":32},"mode":{"enum":["a","b"]},"schemaVersion":{"const":"1.0"},"label":{"type":"string"}}}

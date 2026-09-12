@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "component.schema.json",
+  "title": "Workbench component v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "asset"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "asset": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}@1$"},
+    "props": {
+      "type": "object", "additionalProperties": false, "maxProperties": 16,
+      "propertyNames": {"enum": ["label", "title", "description", "content", "placeholder", "emptyText", "status", "kind", "code", "language", "compact", "disabled", "required", "selectedId", "rowCount", "columnCount"]},
+      "patternProperties": {
+        "^[a-z][a-zA-Z0-9]{0,63}$": {
+          "oneOf": [
+            {"type": "string", "maxLength": 2048, "pattern": "^(?!.*(?:[A-Za-z][A-Za-z0-9+.-]*:(?:/{0,2})?[^\\s]|//|[Ww][Ww][Ww]\\.))(?!.*\\$\\{)[^<]*$"},
+            {"type": "number"}, {"type": "boolean"}, {"type": "null"}
+          ]
+        }
+      }
+    },
+    "binding": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "actions": {"type": "array", "maxItems": 8, "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"}, "uniqueItems": true},
+    "state": {"enum": ["loading", "empty", "ready", "stale", "error", "permission-denied", "disabled"]}
+  }
+}

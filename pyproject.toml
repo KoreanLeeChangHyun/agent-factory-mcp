@@ -21,6 +21,7 @@ dependencies = [
     "holidays>=0.81,<1",
     "httpx",
     "itsdangerous",
+    "jsonschema>=4.23,<5",
     "mcp>=2,<3",
     "opentelemetry-sdk",
     "pgvector",
@@ -48,7 +49,14 @@ dev = [
 include = ["app*"]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
+pythonpath = [
+    ".",
+    "packages/contracts-py/src",
+    "packages/platform-core/src",
+    "packages/platform-adapters/src",
+    "apps/api/src",
+    "apps/worker/src",
+]
 testpaths = ["tests"]
 markers = [
     "integration: requires explicitly configured infrastructure",
@@ -72,3 +80,12 @@ exclude = ["app/db/migrations"]
 
 [tool.setuptools.cmdclass]
 build_py = "app.build_assets.BuildPy"
+
+[tool.uv.workspace]
+members = [
+    "apps/api",
+    "apps/worker",
+    "packages/contracts-py",
+    "packages/platform-core",
+    "packages/platform-adapters",
+]

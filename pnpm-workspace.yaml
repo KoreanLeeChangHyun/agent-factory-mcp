@@ -1,0 +1,8 @@
+packages:
+  - apps/web
+  - packages/contracts-ts
+  - packages/design-system
+  - packages/workbench-runtime
+
+onlyBuiltDependencies:
+  - esbuild

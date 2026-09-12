@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "action.schema.json",
+  "title": "Workbench action v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "kind"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "kind": {"enum": ["select", "refresh", "submit", "navigate-internal", "toggle", "dismiss"]},
+    "target": {"type": "string", "pattern": "^[a-z][A-Za-z0-9]*(\\.[a-z][A-Za-z0-9]*){0,5}$"},
+    "payloadBinding": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"}
+  }
+}

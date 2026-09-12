@@ -1,0 +1,1 @@
+{"extends":"../../tsconfig.json","compilerOptions":{"rootDir":"src","outDir":"dist-types","noEmit":false,"composite":true,"declaration":true},"include":["src"],"references":[{"path":"../../packages/contracts-ts"},{"path":"../../packages/design-system"},{"path":"../../packages/workbench-runtime"}]}

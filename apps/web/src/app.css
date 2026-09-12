@@ -1,0 +1,86 @@
+.health-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 60px minmax(180px, 268px) minmax(0, 1fr);
+  gap: 5px;
+  padding: 5px;
+}
+.task-list,
+.sidebar,
+.panel {
+  min-width: 0;
+  border: 1px solid var(--af-border);
+  border-radius: 7px;
+  background: var(--af-surface);
+}
+.task-list {
+  padding: var(--af-space-2) var(--af-space-1);
+}
+.task-list button {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--af-accent);
+  border-radius: 3px;
+  background: var(--af-surface-raised);
+  color: var(--af-text);
+}
+.sidebar,
+.panel {
+  padding: var(--af-space-3);
+  overflow: auto;
+  scrollbar-width: thin;
+}
+h1,
+h2 {
+  margin: 0 0 var(--af-space-2);
+  font-size: 18px;
+  line-height: 24px;
+}
+p,
+dt,
+dd {
+  font-size: 12px;
+  line-height: 20px;
+}
+p {
+  color: var(--af-muted);
+}
+.panel header {
+  display: flex;
+  align-items: center;
+  gap: var(--af-space-2);
+}
+.status {
+  padding: 2px 6px;
+  border: 1px solid var(--af-accent);
+  border-radius: 3px;
+  color: var(--af-accent);
+  font-size: 11px;
+}
+dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--af-space-4);
+}
+dl div {
+  border-top: 1px solid var(--af-border);
+  padding-top: var(--af-space-2);
+}
+dt {
+  color: var(--af-muted);
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .health-shell {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+  .panel {
+    grid-column: 1 / -1;
+  }
+  dl {
+    grid-template-columns: 1fr;
+  }
+}
