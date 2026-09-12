@@ -1,5 +1,5 @@
 import { validate, type WorkbenchDefinition } from "@agent-factory/contracts";
-import { catalogHas } from "@agent-factory/design-system";
+import { catalogHas, instantiateAsset } from "@agent-factory/design-system";
 
 const structuralAssets = new Set([
   "flat-list@1",
@@ -8,6 +8,7 @@ const structuralAssets = new Set([
   "search-list@1",
   "filter-list@1",
   "detail-list@1",
+  "favorites-recent@1",
   "detail@1",
   "list-detail@1",
   "collection@1",
@@ -49,4 +50,9 @@ export function summarizeWorkbench(value: unknown): WorkbenchSummary {
     panel: definition.panel.label ?? definition.panel.asset,
     componentCount: definition.sidebar.components.length + definition.panel.components.length,
   };
+}
+
+export function renderRegisteredAsset(id: string, properties: Record<string, unknown> = {}) {
+  if (!catalogHas(id)) throw new Error(`asset is not declared in the catalog: ${id}`);
+  return instantiateAsset(id, properties);
 }

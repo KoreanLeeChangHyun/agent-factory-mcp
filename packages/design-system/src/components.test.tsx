@@ -1,0 +1,188 @@
+// @vitest-environment jsdom
+import { act, useState, type ReactNode } from "react";
+import { createRoot } from "react-dom/client";
+import { describe, expect, it } from "vitest";
+import { Dialog, Markdown, PanelLayout, SidebarPattern, Tabs, Toggle } from "./components.js";
+import { instantiateAsset, type AssetActionEvent } from "./catalog.js";
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+function NestedDialogs() {
+  const [outer, setOuter] = useState(true);
+  const [inner, setInner] = useState(false);
+  return (
+    <Dialog open={outer} title="바깥" onClose={() => setOuter(false)}>
+      <button onClick={() => setInner(true)}>안쪽 열기</button>
+      <Dialog open={inner} title="안쪽" onClose={() => setInner(false)}>
+        <button>안쪽 동작</button>
+      </Dialog>
+    </Dialog>
+  );
+}
+
+function mount(node: ReactNode) {
+  const host = document.createElement("div");
+  document.body.append(host);
+  const root = createRoot(host);
+  act(() => root.render(node));
+  return {
+    host,
+    root,
+    cleanup: () =>
+      act(() => {
+        root.unmount();
+        host.remove();
+      }),
+  };
+}
+
+function key(target: Element, value: string) {
+  act(() => target.dispatchEvent(new KeyboardEvent("keydown", { key: value, bubbles: true })));
+}
+
+describe("interactive components", () => {
+  it("moves tab focus and selection with arrow keys", () => {
+    const view = mount(<Tabs labels={["개요", "세부"]} />);
+    const tabs = view.host.querySelectorAll<HTMLElement>("[role='tab']");
+    tabs[0]?.focus();
+    key(tabs[0]!, "ArrowRight");
+    expect(tabs[1]?.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(tabs[1]);
+    view.cleanup();
+  });
+
+  it("filters a search sidebar and reports its empty state", () => {
+    const view = mount(<SidebarPattern variant="search-list" />);
+    const input = view.host.querySelector<HTMLInputElement>("input[aria-label='목록 검색']")!;
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, "존재하지 않음");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    expect(view.host.textContent).toContain("항목 없음");
+    view.cleanup();
+  });
+
+  it("uses coherent mobile split orientation and keyboard adjustment", () => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    const view = mount(<PanelLayout variant="split" />);
+    const separator = view.host.querySelector<HTMLElement>("[role='separator']")!;
+    expect(separator.getAttribute("aria-orientation")).toBe("horizontal");
+    key(separator, "ArrowDown");
+    expect(separator.getAttribute("aria-valuenow")).toBe("50");
+    expect(separator.parentElement?.style.getPropertyValue("--af-split")).toBe("50%");
+    view.cleanup();
+  });
+
+  it("composes distinct panels from caller-provided slots", () => {
+    const slots = [
+      { id: "alpha", title: "Alpha", content: "First content" },
+      { id: "beta", title: "Beta", content: "Second content", meta: "Secondary" },
+    ];
+    const view = mount(<PanelLayout variant="list-detail" slots={slots} />);
+    expect(view.host.querySelector("nav [data-slot='alpha']")?.textContent).toContain("First content");
+    expect(view.host.querySelector("article [data-slot='beta']")?.textContent).toContain("Second content");
+    act(() => view.root.render(<PanelLayout variant="document" slots={slots} />));
+    expect(view.host.querySelector("article[data-slot='alpha'] pre")?.textContent).toContain("First content");
+    act(() => view.root.render(<PanelLayout variant="settings" slots={slots} />));
+    expect(view.host.querySelectorAll("form input")).toHaveLength(2);
+    view.cleanup();
+  });
+
+  it("contains dialog focus, restores it on close, and removes on unmount", () => {
+    const origin = document.createElement("button");
+    document.body.append(origin);
+    origin.focus();
+    const onClose = () => undefined;
+    const view = mount(
+      <Dialog open title="확인" onClose={onClose}>
+        <button>내부</button>
+      </Dialog>,
+    );
+    expect(document.activeElement?.getAttribute("aria-label")).toBe("대화상자 닫기");
+    act(() => view.root.render(<Dialog open={false} title="확인" onClose={onClose} />));
+    expect(document.activeElement).toBe(origin);
+    view.cleanup();
+    expect(document.querySelector("[role='dialog']")).toBeNull();
+    origin.remove();
+  });
+
+  it("gives nested dialogs unique labels and topmost Escape ownership", () => {
+    const origin = document.createElement("button");
+    document.body.append(origin);
+    origin.focus();
+    const view = mount(<NestedDialogs />);
+    try {
+      const opener = Array.from(view.host.querySelectorAll("button")).find(
+        (button) => button.textContent === "안쪽 열기",
+      )!;
+      opener.focus();
+      act(() => opener.click());
+      const dialogs = view.host.querySelectorAll<HTMLElement>("[role='dialog']");
+      expect(dialogs).toHaveLength(2);
+      expect(dialogs[0]?.getAttribute("aria-labelledby")).not.toBe(dialogs[1]?.getAttribute("aria-labelledby"));
+      key(document.activeElement!, "Escape");
+      expect(view.host.querySelectorAll("[role='dialog']")).toHaveLength(1);
+      expect(document.activeElement).toBe(opener);
+      key(document.activeElement!, "Escape");
+      expect(view.host.querySelector("[role='dialog']")).toBeNull();
+      expect(document.activeElement).toBe(origin);
+    } finally {
+      view.cleanup();
+      origin.remove();
+    }
+  });
+
+  it("restores focus when an open dialog is destroyed", () => {
+    const origin = document.createElement("button");
+    document.body.append(origin);
+    origin.focus();
+    const view = mount(<Dialog open title="제거" onClose={() => undefined} />);
+    view.cleanup();
+    expect(document.activeElement).toBe(origin);
+    expect(document.querySelector("[role='dialog']")).toBeNull();
+    origin.remove();
+  });
+
+  it("renders unsafe Markdown as inert text", () => {
+    const view = mount(<Markdown value={"<img src=x onerror=alert(1)> [나쁨](javascript:alert(1))"} />);
+    expect(view.host.querySelector("img")).toBeNull();
+    expect(view.host.querySelector("a")).toBeNull();
+    expect(view.host.textContent).toContain("[나쁨]");
+    view.cleanup();
+  });
+
+  it("preserves native disabled switch semantics", () => {
+    const view = mount(<Toggle label="사용" disabled />);
+    expect(view.host.querySelector<HTMLInputElement>("[role='switch']")?.disabled).toBe(true);
+    view.cleanup();
+  });
+
+  it("dispatches only documented actions with typed outputs", () => {
+    const events: AssetActionEvent[] = [];
+    const view = mount(
+      instantiateAsset(
+        "toggle@1",
+        { label: "사용" },
+        { inputs: { value: false }, onAction: (event) => events.push(event) },
+      ),
+    );
+    const toggle = view.host.querySelector<HTMLInputElement>("[role='switch']")!;
+    act(() => toggle.click());
+    expect(events).toEqual([{ assetId: "toggle@1", action: "toggle", output: { value: true } }]);
+    view.cleanup();
+  });
+
+  it("emits an omitted value for an empty optional number and accepts re-entry", () => {
+    const events: AssetActionEvent[] = [];
+    const view = mount(instantiateAsset("number-input@1", {}, { onAction: (event) => events.push(event) }));
+    const input = view.host.querySelector<HTMLInputElement>("input[type='number']")!;
+    for (const value of ["3", "", "4"]) {
+      act(() => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, value);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    }
+    expect(events.map((event) => event.output)).toEqual([{ value: 3 }, {}, { value: 4 }]);
+    view.cleanup();
+  });
+});

@@ -1,0 +1,35 @@
+{
+  "id": "split@1",
+  "kind": "panel",
+  "allowedRegions": ["panel"],
+  "properties": [],
+  "inputs": [
+    {
+      "name": "slots",
+      "type": "record-list",
+      "required": false,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+          "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "content": { "type": "string", "maxLength": 4096 },
+          "meta": { "type": "string", "maxLength": 240 }
+        }
+      },
+      "uniqueBy": "id"
+    }
+  ],
+  "outputs": [{ "name": "value", "type": "number", "required": false }],
+  "states": ["ready"],
+  "actions": ["toggle"],
+  "accessibility": {
+    "role": "region",
+    "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+  },
+  "provenance": { "source": "Agent Factory design-system React source", "license": "Project-owned" },
+  "example": {}
+}

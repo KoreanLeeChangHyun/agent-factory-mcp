@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0",
+  "policy": "Editable React task icons are project-owned semantic-token SVG. Reviewed multicolor resource icons remain exact-byte imports and are not recolored.",
+  "imports": [
+    {
+      "target": "src/assets/icons/group.svg",
+      "source": "static/images/workspace-explorer/group.svg",
+      "sha256": "965f97af454a9b11f643a822355cedbafe7c06aad2a999585daabf93b820c43b"
+    },
+    {
+      "target": "src/assets/icons/group-open.svg",
+      "source": "static/images/workspace-explorer/group-open.svg",
+      "sha256": "b9d4b76c71cdebc4a172dfb89e8a2b2a56f54889eba766f3417107200b421dab"
+    },
+    {
+      "target": "src/assets/icons/workspace.svg",
+      "source": "static/images/workspace-explorer/workspace.svg",
+      "sha256": "d6823f93064d0e9cdbc16976740b79edb51034517fc45298ff5bca28e02e4d6a"
+    },
+    {
+      "target": "src/assets/icons/task.svg",
+      "source": "static/images/planning-explorer/task.svg",
+      "sha256": "bcd4331b4f412622f279d3b713f7554873998c6d6164a1c1ddc397716177a764"
+    },
+    {
+      "target": "src/assets/icons/task-open.svg",
+      "source": "static/images/planning-explorer/task-open.svg",
+      "sha256": "d4acebc1955d31c21478ec67920442431b337287cda64306d6adc297e3fb9e0f"
+    },
+    {
+      "target": "src/assets/icons/subtask.svg",
+      "source": "static/images/planning-explorer/subtask.svg",
+      "sha256": "4f2ed566058fba7fa4a98c1eabe6853790f62bf30cc38a1528b7808b63ef871c"
+    }
+  ],
+  "preservedVendorInputs": [
+    {
+      "name": "Material Icon Theme",
+      "version": "5.38.1",
+      "purpose": "file-tree resource icons",
+      "provenance": "static/ui/material-icons.provenance.json",
+      "license": "static/ui/material-icon-theme-LICENSE"
+    },
+    {
+      "name": "Tabler Icons",
+      "version": "3.46.0",
+      "purpose": "legacy UI comparison input",
+      "provenance": "assets/ui-kit/generated/icons.provenance.json",
+      "license": "static/ui/tabler-LICENSE"
+    }
+  ]
+}

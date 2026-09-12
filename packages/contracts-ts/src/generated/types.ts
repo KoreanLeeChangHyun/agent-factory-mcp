@@ -4,10 +4,10 @@ export type ThemeBase = "dark" | "light" | "high-contrast";
 export type Density = "compact" | "comfortable";
 export type Region = "task-list" | "sidebar" | "panel";
 export type ComponentState = "loading" | "empty" | "ready" | "stale" | "error" | "permission-denied" | "disabled";
-export type SidebarAsset = "flat-list@1" | "group-list@1" | "tree@1" | "search-list@1" | "filter-list@1" | "detail-list@1";
+export type SidebarAsset = "flat-list@1" | "group-list@1" | "tree@1" | "search-list@1" | "filter-list@1" | "detail-list@1" | "favorites-recent@1";
 export type PanelAsset = "detail@1" | "list-detail@1" | "collection@1" | "settings@1" | "dashboard@1" | "document@1" | "split@1" | "timeline@1" | "kanban@1";
 export type AssetKind = "icon" | "sidebar" | "panel" | "control" | "display" | "feedback";
-export type AssetState = "loading" | "empty" | "ready" | "stale" | "error" | "permission-denied" | "disabled";
+export type AssetState = "loading" | "empty" | "ready" | "stale" | "error" | "permission-denied" | "disabled" | "busy" | "success" | "progress";
 export type AssetParameterType = "string" | "number" | "integer" | "boolean" | "string-list" | "record-list";
 export type AccessibilityRole = "img" | "navigation" | "tree" | "list" | "region" | "form" | "table" | "status" | "alert" | "dialog";
 export type LiveMode = "off" | "polite" | "assertive";
@@ -26,7 +26,9 @@ export interface ThemeOverrides { accent?: string; focus?: string; surface?: str
 export interface ThemeProfile { schemaVersion: "1.0"; userId: string; revision: number; base: ThemeBase; density: Density; overrides: ThemeOverrides; reducedMotion: boolean }
 export interface WorkbenchRelease { releaseId: string; definitionId: string; revision: number; schemaDigest: string; definition: WorkbenchDefinition }
 export interface ViewState { version: 1; selectedWorkbench: string; sidebarOpen: boolean; sidebarWidth: number; selection: string | null; expanded: string[] }
-export interface AssetParameter { name: string; type: AssetParameterType; required: boolean; maxLength?: number; maxItems?: number; enum?: string[] }
+export interface RecordField { type: "string" | "number" | "integer" | "boolean"; minLength?: number; maxLength?: number }
+export interface RecordItem { type: "object"; additionalProperties: false; required: string[]; properties: Record<string, RecordField> }
+export interface AssetParameter { name: string; type: AssetParameterType; required: boolean; maxLength?: number; maxItems?: number; items?: RecordItem; uniqueBy?: string; enum?: string[] }
 export interface Accessibility { role: AccessibilityRole; keyboard: string; live?: LiveMode }
 export interface Provenance { source: string; license: string }
 export interface AssetDescriptor { id: string; kind: AssetKind; allowedRegions: Region[]; properties: AssetParameter[]; inputs: AssetParameter[]; outputs: AssetParameter[]; states: AssetState[]; actions: ActionKind[]; accessibility: Accessibility; provenance: Provenance; example: Record<string, Scalar> }

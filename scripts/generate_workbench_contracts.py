@@ -145,7 +145,7 @@ def outputs() -> dict[Path, str]:
     parameter_schema = catalog["$defs"]["parameters"]["items"]
     assert_fields(
         parameter_schema,
-        {"name", "type", "required", "maxLength", "maxItems", "enum"},
+        {"name", "type", "required", "maxLength", "maxItems", "items", "uniqueBy", "enum"},
         "asset-parameter",
     )
     assert_fields(
@@ -267,6 +267,19 @@ class ViewState(TypedDict):
     expanded: list[str]
 
 
+class RecordField(TypedDict):
+    type: Literal["string", "number", "integer", "boolean"]
+    minLength: NotRequired[int]
+    maxLength: NotRequired[int]
+
+
+class RecordItem(TypedDict):
+    type: Literal["object"]
+    additionalProperties: Literal[False]
+    required: list[str]
+    properties: dict[str, RecordField]
+
+
 class AssetParameter(TypedDict):
     name: str
     type: AssetParameterType
@@ -274,6 +287,8 @@ class AssetParameter(TypedDict):
     maxLength: NotRequired[int]
     maxItems: NotRequired[int]
     enum: NotRequired[list[str]]
+    items: NotRequired[RecordItem]
+    uniqueBy: NotRequired[str]
 
 
 class Accessibility(TypedDict):
@@ -316,6 +331,8 @@ from .models import (
     Binding,
     Component,
     Panel,
+    RecordField,
+    RecordItem,
     Sidebar,
     ThemeProfile,
     ViewState,
@@ -332,6 +349,8 @@ __all__ = [
     "Binding",
     "Component",
     "Panel",
+    "RecordField",
+    "RecordItem",
     "Sidebar",
     "ThemeProfile",
     "ViewState",
@@ -368,7 +387,9 @@ export interface ThemeOverrides {{ {" ".join(f"{name}?: string;" for name in the
 export interface ThemeProfile {{ schemaVersion: "1.0"; userId: string; revision: number; base: ThemeBase; density: Density; overrides: ThemeOverrides; reducedMotion: boolean }}
 export interface WorkbenchRelease {{ releaseId: string; definitionId: string; revision: number; schemaDigest: string; definition: WorkbenchDefinition }}
 export interface ViewState {{ version: 1; selectedWorkbench: string; sidebarOpen: boolean; sidebarWidth: number; selection: string | null; expanded: string[] }}
-export interface AssetParameter {{ name: string; type: AssetParameterType; required: boolean; maxLength?: number; maxItems?: number; enum?: string[] }}
+export interface RecordField {{ type: "string" | "number" | "integer" | "boolean"; minLength?: number; maxLength?: number }}
+export interface RecordItem {{ type: "object"; additionalProperties: false; required: string[]; properties: Record<string, RecordField> }}
+export interface AssetParameter {{ name: string; type: AssetParameterType; required: boolean; maxLength?: number; maxItems?: number; items?: RecordItem; uniqueBy?: string; enum?: string[] }}
 export interface Accessibility {{ role: AccessibilityRole; keyboard: string; live?: LiveMode }}
 export interface Provenance {{ source: string; license: string }}
 export interface AssetDescriptor {{ id: string; kind: AssetKind; allowedRegions: Region[]; properties: AssetParameter[]; inputs: AssetParameter[]; outputs: AssetParameter[]; states: AssetState[]; actions: ActionKind[]; accessibility: Accessibility; provenance: Provenance; example: Record<string, Scalar> }}

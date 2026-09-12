@@ -8,12 +8,12 @@
 
 ## 상태 기준
 
-| 상태 | 의미 |
-| --- | --- |
-| 완료 | 목표 구조와 완료 조건을 충족하고 해당 검증 근거가 있다. |
+| 상태      | 의미                                                              |
+| --------- | ----------------------------------------------------------------- |
+| 완료      | 목표 구조와 완료 조건을 충족하고 해당 검증 근거가 있다.           |
 | 부분 완료 | 재사용할 현행 구현이나 문서는 있지만 목표 경계로 이전되지 않았다. |
-| 미착수 | 목표 파일·계약·실행 경로가 아직 없다. |
-| 후순위 | 선행 vertical slice 또는 실제 고객 사례가 확인된 뒤 진행한다. |
+| 미착수    | 목표 파일·계약·실행 경로가 아직 없다.                             |
+| 후순위    | 선행 vertical slice 또는 실제 고객 사례가 확인된 뒤 진행한다.     |
 
 상태는 소스 트리와 기존 기록을 바탕으로 판정했다. 이번 현황표 작성 과정에서는 제품
 테스트, 브라우저 테스트, PostgreSQL 통합 테스트, 빌드 또는 배포를 다시 실행하지 않았다.
@@ -28,166 +28,166 @@
 
 ## 전체 현황
 
-| 영역 | 현재 상태 | 현재 근거 | 다음 완료 지점 |
-| --- | --- | --- | --- |
-| 목표 아키텍처 | 부분 완료 | 모노레포·Workbench·포팅 방향과 [ADR-001~010](../adr/) 적용 결정 존재 | 신규 apps/packages 의존성 규칙 자동 검사 |
-| 현행 서비스 경계 | 부분 완료 | `app/modules`, 얇은 router를 검사하는 architecture test, 공유 서비스 일부 존재 | core port와 adapter 경계를 목표 패키지에서 강제 |
-| 모노레포 골격 | 미착수 | 루트 `apps/`, `packages/`, `contracts/`, pnpm/uv workspace 없음 | 최소 앱·패키지·계약 fixture가 한 공통 gate에서 동작 |
-| 공통 UI 기반 | 부분 완료 | `assets/ui-kit`, `static/ui`, `ui.css`, 제품 적용·브라우저 검증 기록 존재 | `packages/design-system`으로 포팅하고 공개 카탈로그 계약 제공 |
-| 작업 목록 에셋 | 부분 완료 | 현재 작업 아이콘은 템플릿 inline SVG와 일부 Tabler SVG로 분산 | 다수 SVG를 출처·버전·상태가 있는 작업 아이콘 registry로 제공 |
-| 사이드바 에셋 | 부분 완료 | `bindSidebarHost`, `explorerTree`, native tree, 상태·리사이저 어댑터 존재 | 여러 조합을 versioned asset으로 등록하고 작성기에서 선택 가능 |
-| 패널 레이아웃 | 부분 완료 | vanilla UI 키트에 page/list-detail/collection/settings layout 존재 | 여러 React 레이아웃과 schema·상태·미리보기 카탈로그 제공 |
-| 사용자 테마 | 미착수 | 고정 공통 토큰과 단일 제품 테마만 존재 | 서버 저장 `ThemeProfile`, 검증, 캐시와 전체 화면 적용 |
-| Workbench 계약 | 미착수 | `contracts/`와 생성된 Python/TypeScript 계약 패키지 없음 | 닫힌 JSON Schema, 제한, 예제와 validator parity 통과 |
-| Workbench runtime | 미착수 | component/action/binding registry와 선언형 renderer 없음 | 등록 에셋만으로 대표 정의를 안전하게 렌더링 |
-| 사용자 작성기 | 미착수 | React editor, asset/layout palette, theme editor 없음 | 편집→검증→상태별 미리보기→게시 흐름 통과 |
-| Workbench 도메인 | 미착수 | `WorkbenchDefinition`, `WorkbenchRelease` 모델·migration 없음 | draft/publish/archive, immutable release, RBAC/RLS 통과 |
-| React Workbench shell | 미착수 | 현재 HTML/CSS/vanilla shell만 존재 | shadow route에서 작업 목록｜사이드바｜패널 및 복원 동작 통과 |
-| 표준 작업 포팅 | 미착수 | 표준 화면은 현행 template/static JS에 결합 | 작업별 compatibility adapter와 feature flag로 순차 전환 |
-| MCP App host | 후순위 | Document preview sandbox는 있으나 MCP AppBridge host는 없음 | 실제 사례 후 CSP·capability·message·teardown 보안 gate 통과 |
-| 전환·제거 | 후순위 | 신규 경로가 없어 시작할 수 없음 | 관측·rollback 조건 충족 후 legacy 경로 제거 |
+| 영역                  | 현재 상태 | 현재 근거                                                                                                        | 다음 완료 지점                                                |
+| --------------------- | --------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 목표 아키텍처         | 부분 완료 | 모노레포·Workbench·포팅 방향과 [ADR-001~010](../adr/) 적용 결정 존재                                             | 신규 apps/packages 의존성 규칙 자동 검사                      |
+| 현행 서비스 경계      | 부분 완료 | `app/modules`, 얇은 router를 검사하는 architecture test, 공유 서비스 일부 존재                                   | core port와 adapter 경계를 목표 패키지에서 강제               |
+| 모노레포 골격         | 완료      | Stage 1 독립 Verification에서 frozen install, 공통 gate, worker smoke, web/Python build와 no-cleanup 재실행 통과 | 후속 slice에서 같은 gate 유지                                 |
+| 공통 UI 기반          | 부분 완료 | `packages/design-system` semantic theme, React 에셋 registry와 별도 catalog preview 구현                         | Stage 2 독립 component/browser/visual 검증                    |
+| 작업 목록 에셋        | 부분 완료 | 현재 작업 아이콘은 템플릿 inline SVG와 일부 Tabler SVG로 분산                                                    | 다수 SVG를 출처·버전·상태가 있는 작업 아이콘 registry로 제공  |
+| 사이드바 에셋         | 부분 완료 | `bindSidebarHost`, `explorerTree`, native tree, 상태·리사이저 어댑터 존재                                        | 여러 조합을 versioned asset으로 등록하고 작성기에서 선택 가능 |
+| 패널 레이아웃         | 부분 완료 | vanilla UI 키트에 page/list-detail/collection/settings layout 존재                                               | 여러 React 레이아웃과 schema·상태·미리보기 카탈로그 제공      |
+| 사용자 테마           | 미착수    | 고정 공통 토큰과 단일 제품 테마만 존재                                                                           | 서버 저장 `ThemeProfile`, 검증, 캐시와 전체 화면 적용         |
+| Workbench 계약        | 완료      | 닫힌 schema, 제한, 예제, 생성 Python/TypeScript 패키지가 Stage 1 parity/codegen gate 통과                        | Stage 2 확장 enum 재검증 및 이후 호환성 유지                  |
+| Workbench runtime     | 미착수    | component/action/binding registry와 선언형 renderer 없음                                                         | 등록 에셋만으로 대표 정의를 안전하게 렌더링                   |
+| 사용자 작성기         | 미착수    | React editor, asset/layout palette, theme editor 없음                                                            | 편집→검증→상태별 미리보기→게시 흐름 통과                      |
+| Workbench 도메인      | 미착수    | `WorkbenchDefinition`, `WorkbenchRelease` 모델·migration 없음                                                    | draft/publish/archive, immutable release, RBAC/RLS 통과       |
+| React Workbench shell | 미착수    | 현재 HTML/CSS/vanilla shell만 존재                                                                               | shadow route에서 작업 목록｜사이드바｜패널 및 복원 동작 통과  |
+| 표준 작업 포팅        | 미착수    | 표준 화면은 현행 template/static JS에 결합                                                                       | 작업별 compatibility adapter와 feature flag로 순차 전환       |
+| MCP App host          | 후순위    | Document preview sandbox는 있으나 MCP AppBridge host는 없음                                                      | 실제 사례 후 CSP·capability·message·teardown 보안 gate 통과   |
+| 전환·제거             | 후순위    | 신규 경로가 없어 시작할 수 없음                                                                                  | 관측·rollback 조건 충족 후 legacy 경로 제거                   |
 
 ## 단계별 작업 현황표
 
 ### 0. 결정과 기준선
 
-| ID | 작업 | 상태 | 남은 작업 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-000 | 목표 아키텍처와 상세 디렉터리 구조 작성 | 완료 | 변경 시 유지관리 구조 계약과 동기화 | 목표 문서와 구조 계약이 같은 경계·명칭 사용 |
-| RF-001 | 다중 공통 에셋과 사용자별 테마를 범위에 포함 | 완료 | 구현 ADR과 schema에서 구체화 | 작업 목록·사이드바·패널 카탈로그와 `ThemeProfile`이 계획·완료 조건에 존재 |
-| RF-002 | ADR-001~010 작성 | 완료 | 후속 구현과 실제 결과가 결정을 변경하면 같은 ADR의 상태·결과 갱신 | `docs/adr/`에 결정·대안·결과·계약 소유·rollout과 적용 상태 기록 |
-| RF-003 | 현행 핵심 흐름 characterization 기준선 | 부분 완료 | [실행 계획](2026-09-12-workbench-baseline.md)의 fixture/API·browser·disposable DB matrix를 독립 Verification에서 실행하고 결과 기록 | 조직·작업공간·문서·일정·에이전트·연동·MCP 핵심 흐름 기준선 통과 |
-| RF-004 | 현행 파일의 목표 소유자 매핑 | 완료 | 실제 포팅 때 tracked inventory 변화와 removal checkpoint를 행별 갱신 | [migration map](2026-09-12-workbench-migration-map.md)에 모든 포팅 대상의 목표 경로·호환 경계·제거 조건 존재 |
+| ID     | 작업                                         | 상태      | 남은 작업                                                                                                                           | 완료 조건                                                                                                    |
+| ------ | -------------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| RF-000 | 목표 아키텍처와 상세 디렉터리 구조 작성      | 완료      | 변경 시 유지관리 구조 계약과 동기화                                                                                                 | 목표 문서와 구조 계약이 같은 경계·명칭 사용                                                                  |
+| RF-001 | 다중 공통 에셋과 사용자별 테마를 범위에 포함 | 완료      | 구현 ADR과 schema에서 구체화                                                                                                        | 작업 목록·사이드바·패널 카탈로그와 `ThemeProfile`이 계획·완료 조건에 존재                                    |
+| RF-002 | ADR-001~010 작성                             | 완료      | 후속 구현과 실제 결과가 결정을 변경하면 같은 ADR의 상태·결과 갱신                                                                   | `docs/adr/`에 결정·대안·결과·계약 소유·rollout과 적용 상태 기록                                              |
+| RF-003 | 현행 핵심 흐름 characterization 기준선       | 부분 완료 | [실행 계획](2026-09-12-workbench-baseline.md)의 fixture/API·browser·disposable DB matrix를 독립 Verification에서 실행하고 결과 기록 | 조직·작업공간·문서·일정·에이전트·연동·MCP 핵심 흐름 기준선 통과                                              |
+| RF-004 | 현행 파일의 목표 소유자 매핑                 | 완료      | 실제 포팅 때 tracked inventory 변화와 removal checkpoint를 행별 갱신                                                                | [migration map](2026-09-12-workbench-migration-map.md)에 모든 포팅 대상의 목표 경로·호환 경계·제거 조건 존재 |
 
 ### 1. 계약과 의존성 기반
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-100 | Workbench JSON Schema v1 | 부분 완료 | RF-002 | schema·Documents/invalid fixture 구현; 독립 parity/제한 검증 필요 |
-| RF-101 | 공통 에셋 descriptor schema | 부분 완료 | RF-002 | 닫힌 descriptor와 broad catalog 구현; 독립 catalog test 필요 |
-| RF-102 | 사용자 `ThemeProfile` schema | 부분 완료 | RF-002 | allowlist schema·거부 fixture 구현; 독립 parity 검증 필요 |
-| RF-103 | Python·TypeScript 생성 패키지 | 부분 완료 | RF-100~102 | 타입·validator·byte check 생성기 구현; frozen install 후 독립 검증 필요 |
-| RF-104 | schema 호환성 정책과 CI | 부분 완료 | RF-100~103 | 실제 구조 변경 탐지와 제한 gate 구현; dedicated CI 실행 필요 |
-| RF-105 | 목표 의존 방향 검사 | 부분 완료 | RF-002 | Python/TS·relative/dynamic 검사와 위반 fixture 구현; 독립 실행 필요 |
+| ID     | 작업                          | 상태 | 선행       | 완료 조건                                                       |
+| ------ | ----------------------------- | ---- | ---------- | --------------------------------------------------------------- |
+| RF-100 | Workbench JSON Schema v1      | 완료 | RF-002     | Stage 1 독립 parity·제한 검증 통과; 후속 확장 재검증 유지       |
+| RF-101 | 공통 에셋 descriptor schema   | 완료 | RF-002     | 닫힌 descriptor와 catalog 계약 독립 검증 통과                   |
+| RF-102 | 사용자 `ThemeProfile` schema  | 완료 | RF-002     | allowlist schema·거부 fixture 독립 parity 통과                  |
+| RF-103 | Python·TypeScript 생성 패키지 | 완료 | RF-100~102 | frozen install, codegen byte check와 두 생성 package build 통과 |
+| RF-104 | schema 호환성 정책과 CI       | 완료 | RF-100~103 | compatibility fixture와 dedicated Workbench gate 통과           |
+| RF-105 | 목표 의존 방향 검사           | 완료 | RF-002     | Python/TS·manifest·generated-output 경계 검증 통과              |
 
 ### 2. 최소 모노레포 골격
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-200 | pnpm workspace와 루트 TypeScript 구성 | 부분 완료 | RF-002 | manifest·`pnpm-lock.yaml` 구현; frozen install과 gate 독립 검증 필요 |
-| RF-201 | uv Python workspace와 공통 lock | 부분 완료 | RF-002 | workspace manifest·`uv.lock` 구현; frozen install과 gate 독립 검증 필요 |
-| RF-202 | `apps/web`, `apps/api`, `apps/worker` 최소 실행점 | 부분 완료 | RF-200~201 | health 화면·정직한 readiness·worker smoke 구현; 독립 실행 필요 |
-| RF-203 | `packages/*`와 `contracts/*` 최소 실제 slice | 부분 완료 | RF-100~103 | validated Documents fixture 호출 경로 구현; 독립 build/test 필요 |
-| RF-204 | 공통 `make check` 확장 | 부분 완료 | RF-200~203 | legacy gate와 신규 TS/schema/codegen/dependency gate 결합; 독립 실행 필요 |
+| ID     | 작업                                              | 상태      | 선행       | 완료 조건                                                                          |
+| ------ | ------------------------------------------------- | --------- | ---------- | ---------------------------------------------------------------------------------- |
+| RF-200 | pnpm workspace와 루트 TypeScript 구성             | 완료      | RF-002     | pnpm 10.15.1 frozen install, gate와 Vite build 통과                                |
+| RF-201 | uv Python workspace와 공통 lock                   | 완료      | RF-002     | uv 0.8.15 frozen sync와 여섯 Python package build 통과                             |
+| RF-202 | `apps/web`, `apps/api`, `apps/worker` 최소 실행점 | 완료      | RF-200~201 | health/readiness 계약, worker smoke와 web build 통과                               |
+| RF-203 | `packages/*`와 `contracts/*` 최소 실제 slice      | 완료      | RF-100~103 | validated Documents fixture가 package test/build 경로에서 통과                     |
+| RF-204 | 공통 `make check` 확장                            | 부분 완료 | RF-200~203 | `make workbench-check`는 반복 통과; root legacy Ruff·pytest prerequisite 제한 유지 |
 
 ### 3. Design System과 공통 에셋 카탈로그
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-300 | 기존 UI kit 자산·라이선스·검증 포팅 계획 | 부분 완료 | RF-004 | 소스/생성물/라이선스별 목표 경로와 byte/provenance 비교 기준 확정 |
-| RF-301 | semantic token과 기본 dark/light/high-contrast 테마 | 부분 완료 | RF-200 | 현행 토큰을 이전하고 모든 React 에셋이 raw 색상 없이 소비 |
-| RF-302 | 작업 목록 SVG 카탈로그 | 부분 완료 | RF-101, RF-300 | 여러 작업 범주의 SVG, manifest, stable ID, 선택·비활성·알림 상태와 미리보기 통과 |
-| RF-303 | 사이드바 에셋 카탈로그 | 부분 완료 | RF-101, RF-300 | 평면 목록·그룹·트리·검색·필터·상세 행·상태·하단 동작 조합 제공 |
-| RF-304 | 패널 레이아웃 카탈로그 | 부분 완료 | RF-101, RF-300 | 상세·목록-상세·컬렉션·설정·대시보드·문서·분할·타임라인·칸반 제공 |
-| RF-305 | 기본 입력·표시·피드백 컴포넌트 | 부분 완료 | RF-101, RF-300 | 버튼·필드·선택·표·차트 frame·코드·Markdown·dialog·toast·공통 상태 제공 |
-| RF-306 | 카탈로그 metadata와 미리보기 | 미착수 | RF-302~305 | 모든 공개 ID에 schema, 예제, 상태 matrix, 접근성 설명과 interactive preview 존재 |
-| RF-307 | 중복·폐기 정책 | 미착수 | RF-306 | 의미가 겹치는 alias 방지, deprecation과 major-version 전환 계약 존재 |
-| RF-308 | 접근성·반응형·visual gate | 부분 완료 | RF-302~306 | 180/268/520px 사이드바, 390px 화면, 키보드, focus, contrast, 주요 상태 검증 |
+| ID     | 작업                                                | 상태      | 선행           | 완료 조건                                                                      |
+| ------ | --------------------------------------------------- | --------- | -------------- | ------------------------------------------------------------------------------ |
+| RF-300 | 기존 UI kit 자산·라이선스·검증 포팅 계획            | 부분 완료 | RF-004         | exact-byte SVG/provenance와 vendor 보존 정책 구현; 독립 hash/license gate 필요 |
+| RF-301 | semantic token과 기본 dark/light/high-contrast 테마 | 부분 완료 | RF-200         | 세 foundation과 React 소비 구현; 독립 contrast/visual 검증 필요                |
+| RF-302 | 작업 목록 SVG 카탈로그                              | 부분 완료 | RF-101, RF-300 | 16개 React SVG와 선택·비활성·알림 상태 구현; 미리보기 검증 필요                |
+| RF-303 | 사이드바 에셋 카탈로그                              | 부분 완료 | RF-101, RF-300 | 단일 host의 7개 조합과 footer 구현; 폭·키보드 검증 필요                        |
+| RF-304 | 패널 레이아웃 카탈로그                              | 부분 완료 | RF-101, RF-300 | 9개 실제 조합과 조절 split 구현; browser/remount 검증 필요                     |
+| RF-305 | 기본 입력·표시·피드백 컴포넌트                      | 부분 완료 | RF-101, RF-300 | 입력·표시·overlay·8개 상태 구현; 접근성 component 검증 필요                    |
+| RF-306 | 카탈로그 metadata와 미리보기                        | 부분 완료 | RF-302~305     | 단일 descriptor/registry와 `/catalog` 대화형 preview 구현; Chromium 검증 필요  |
+| RF-307 | 중복·폐기 정책                                      | 부분 완료 | RF-306         | alias 금지와 major deprecation 정책 구현; compatibility gate 검증 필요         |
+| RF-308 | 접근성·반응형·visual gate                           | 부분 완료 | RF-302~306     | 180/268/520px와 390px 구현; 독립 keyboard/focus/contrast/screenshot gate 필요  |
 
 ### 4. 사용자별 테마
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-400 | `ThemeProfile` 도메인과 PostgreSQL migration | 미착수 | RF-102, RF-201 | 사용자 소유, revision, 기본값과 RLS가 있는 append-only migration 통과 |
-| RF-401 | 테마 조회·저장 API와 권한 | 미착수 | RF-400 | 현재 사용자만 조회·수정하고 optimistic conflict와 감사 정책 처리 |
-| RF-402 | 테마 해석·검증기 | 미착수 | RF-102, RF-301 | token allowlist, 색상 형식, contrast와 focus 가시성 검증 |
-| RF-403 | 초기 렌더링과 브라우저 캐시 | 미착수 | RF-401~402 | 깜박임을 줄이는 캐시, 서버 권위 재조정, 로그아웃·사용자 전환 격리 |
-| RF-404 | Theme editor와 전체 적용 | 미착수 | RF-306, RF-401~403 | shell·작성기·native Workbench가 즉시 미리보기하고 저장 후 기기 간 복원 |
-| RF-405 | 접근성 우선순위 | 미착수 | RF-402~404 | 사용자 고대비·reduced motion 설정이 조직/Workspace 기본값보다 우선 |
+| ID     | 작업                                         | 상태   | 선행               | 완료 조건                                                              |
+| ------ | -------------------------------------------- | ------ | ------------------ | ---------------------------------------------------------------------- |
+| RF-400 | `ThemeProfile` 도메인과 PostgreSQL migration | 미착수 | RF-102, RF-201     | 사용자 소유, revision, 기본값과 RLS가 있는 append-only migration 통과  |
+| RF-401 | 테마 조회·저장 API와 권한                    | 미착수 | RF-400             | 현재 사용자만 조회·수정하고 optimistic conflict와 감사 정책 처리       |
+| RF-402 | 테마 해석·검증기                             | 미착수 | RF-102, RF-301     | token allowlist, 색상 형식, contrast와 focus 가시성 검증               |
+| RF-403 | 초기 렌더링과 브라우저 캐시                  | 미착수 | RF-401~402         | 깜박임을 줄이는 캐시, 서버 권위 재조정, 로그아웃·사용자 전환 격리      |
+| RF-404 | Theme editor와 전체 적용                     | 미착수 | RF-306, RF-401~403 | shell·작성기·native Workbench가 즉시 미리보기하고 저장 후 기기 간 복원 |
+| RF-405 | 접근성 우선순위                              | 미착수 | RF-402~404         | 사용자 고대비·reduced motion 설정이 조직/Workspace 기본값보다 우선     |
 
 ### 5. Workbench runtime과 작성기
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-500 | Component/Layout/Icon registry | 미착수 | RF-101, RF-302~306 | stable ID를 구현에 연결하고 unknown/version mismatch를 안전하게 표시 |
-| RF-501 | sidebar/panel renderer | 미착수 | RF-100, RF-500 | 닫힌 schema로 검증된 component tree만 렌더링 |
-| RF-502 | Binding client와 입출력 검증 | 미착수 | RF-100, RF-103 | transport 독립 port, 취소·경합·cache·output mismatch 처리 |
-| RF-503 | 제한된 Action registry | 미착수 | RF-100, RF-500 | select/refresh/submit/navigate 등 allowlist action만 실행 |
-| RF-504 | view state와 복원 | 미착수 | RF-100, RF-501 | 사용자·조직·Workspace·Workbench별 선택/접힘/너비 격리와 stale ID 정리 |
-| RF-505 | runtime 보안 제한 | 미착수 | RF-100~104 | raw CSS/SVG/import/expression/secret/arbitrary URL과 과도한 정의 거부 |
-| RF-506 | AssetCatalog·ComponentPalette·LayoutPalette | 미착수 | RF-306, RF-500 | 사용자가 여러 에셋을 검색·선택·배치하고 허용 위치만 조합 |
-| RF-507 | Property·Binding·Theme editor | 미착수 | RF-404, RF-502, RF-506 | schema 기반 편집, 진단과 상태별 미리보기 제공 |
-| RF-508 | draft→preview→validate→publish UX | 미착수 | RF-600~604 | 권한과 revision을 지키며 전체 작성 흐름 E2E 통과 |
+| ID     | 작업                                        | 상태   | 선행                   | 완료 조건                                                             |
+| ------ | ------------------------------------------- | ------ | ---------------------- | --------------------------------------------------------------------- |
+| RF-500 | Component/Layout/Icon registry              | 미착수 | RF-101, RF-302~306     | stable ID를 구현에 연결하고 unknown/version mismatch를 안전하게 표시  |
+| RF-501 | sidebar/panel renderer                      | 미착수 | RF-100, RF-500         | 닫힌 schema로 검증된 component tree만 렌더링                          |
+| RF-502 | Binding client와 입출력 검증                | 미착수 | RF-100, RF-103         | transport 독립 port, 취소·경합·cache·output mismatch 처리             |
+| RF-503 | 제한된 Action registry                      | 미착수 | RF-100, RF-500         | select/refresh/submit/navigate 등 allowlist action만 실행             |
+| RF-504 | view state와 복원                           | 미착수 | RF-100, RF-501         | 사용자·조직·Workspace·Workbench별 선택/접힘/너비 격리와 stale ID 정리 |
+| RF-505 | runtime 보안 제한                           | 미착수 | RF-100~104             | raw CSS/SVG/import/expression/secret/arbitrary URL과 과도한 정의 거부 |
+| RF-506 | AssetCatalog·ComponentPalette·LayoutPalette | 미착수 | RF-306, RF-500         | 사용자가 여러 에셋을 검색·선택·배치하고 허용 위치만 조합              |
+| RF-507 | Property·Binding·Theme editor               | 미착수 | RF-404, RF-502, RF-506 | schema 기반 편집, 진단과 상태별 미리보기 제공                         |
+| RF-508 | draft→preview→validate→publish UX           | 미착수 | RF-600~604             | 권한과 revision을 지키며 전체 작성 흐름 E2E 통과                      |
 
 ### 6. 서버 도메인과 adapter
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-600 | `WorkbenchDefinition` aggregate | 미착수 | RF-100, RF-201 | draft/update/archive 상태 전이, Workspace 소유와 optimistic revision |
-| RF-601 | immutable `WorkbenchRelease` | 미착수 | RF-600 | 게시가 새 snapshot과 digest를 만들고 기존 release 수정 금지 |
-| RF-602 | Workbench repository port와 PostgreSQL adapter | 미착수 | RF-600~601 | core가 SQLAlchemy를 import하지 않고 RLS 격리 통합 테스트 통과 |
-| RF-603 | Workbench command/query use case | 미착수 | RF-602 | 권한·transaction·오류 의미를 HTTP/MCP 밖에서 소유 |
-| RF-604 | 얇은 HTTP·MCP adapter | 미착수 | RF-603 | 같은 publish/read use case를 호출하고 transport별 표현만 담당 |
-| RF-605 | 기존 도메인의 `platform-core` 포팅 | 부분 완료 | RF-201, RF-004 | 도메인별 vertical slice와 port로 이동, framework/DB/provider import 차단 |
-| RF-606 | 기존 외부 구현의 `platform-adapters` 포팅 | 부분 완료 | RF-201, RF-004 | PostgreSQL·Redis·storage·MCP·HTTP·embedding·secret adapter 경계 완성 |
-| RF-607 | API/worker composition 분리 | 부분 완료 | RF-605~606 | 별도 entrypoint가 같은 core use case를 조립하고 모델을 복사하지 않음 |
+| ID     | 작업                                           | 상태      | 선행           | 완료 조건                                                                |
+| ------ | ---------------------------------------------- | --------- | -------------- | ------------------------------------------------------------------------ |
+| RF-600 | `WorkbenchDefinition` aggregate                | 미착수    | RF-100, RF-201 | draft/update/archive 상태 전이, Workspace 소유와 optimistic revision     |
+| RF-601 | immutable `WorkbenchRelease`                   | 미착수    | RF-600         | 게시가 새 snapshot과 digest를 만들고 기존 release 수정 금지              |
+| RF-602 | Workbench repository port와 PostgreSQL adapter | 미착수    | RF-600~601     | core가 SQLAlchemy를 import하지 않고 RLS 격리 통합 테스트 통과            |
+| RF-603 | Workbench command/query use case               | 미착수    | RF-602         | 권한·transaction·오류 의미를 HTTP/MCP 밖에서 소유                        |
+| RF-604 | 얇은 HTTP·MCP adapter                          | 미착수    | RF-603         | 같은 publish/read use case를 호출하고 transport별 표현만 담당            |
+| RF-605 | 기존 도메인의 `platform-core` 포팅             | 부분 완료 | RF-201, RF-004 | 도메인별 vertical slice와 port로 이동, framework/DB/provider import 차단 |
+| RF-606 | 기존 외부 구현의 `platform-adapters` 포팅      | 부분 완료 | RF-201, RF-004 | PostgreSQL·Redis·storage·MCP·HTTP·embedding·secret adapter 경계 완성     |
+| RF-607 | API/worker composition 분리                    | 부분 완료 | RF-605~606     | 별도 entrypoint가 같은 core use case를 조립하고 모델을 복사하지 않음     |
 
 ### 7. React shell과 첫 vertical slice
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-700 | Vite React shadow route | 미착수 | RF-200, RF-202 | 기존 경로와 병행 배포되고 manifest 기반 production asset 로딩 |
-| RF-701 | 작업 목록｜사이드바｜패널 shell | 부분 완료 | RF-700, RF-302~304 | 현행 UX를 characterization 기준으로 보존한 React shell과 반응형 동작 |
-| RF-702 | 표준·고객 단일 WorkbenchRegistry | 미착수 | RF-500, RF-603 | 동일 descriptor로 순서·표시·선택·권한·복원 처리 |
-| RF-703 | 대표 vertical slice로 `문서` 작업 범위 고정 | 미착수 | RF-002, RF-004 | 문서 아이콘, 사이드바 tree, 선택, binding, 패널 문서 layout과 fixture 범위 기록 |
-| RF-704 | 대표 vertical slice 구현 | 미착수 | RF-501~505, RF-603~604, RF-701~703 | 아이콘→사이드바 선택→binding→패널 렌더→상태·테마 복원을 종단 검증 |
-| RF-705 | feature flag와 rollback | 미착수 | RF-700, RF-704 | Workspace 단위 전환, 즉시 legacy 복귀, state key migration 검증 |
+| ID     | 작업                                        | 상태      | 선행                               | 완료 조건                                                                       |
+| ------ | ------------------------------------------- | --------- | ---------------------------------- | ------------------------------------------------------------------------------- |
+| RF-700 | Vite React shadow route                     | 미착수    | RF-200, RF-202                     | 기존 경로와 병행 배포되고 manifest 기반 production asset 로딩                   |
+| RF-701 | 작업 목록｜사이드바｜패널 shell             | 부분 완료 | RF-700, RF-302~304                 | 현행 UX를 characterization 기준으로 보존한 React shell과 반응형 동작            |
+| RF-702 | 표준·고객 단일 WorkbenchRegistry            | 미착수    | RF-500, RF-603                     | 동일 descriptor로 순서·표시·선택·권한·복원 처리                                 |
+| RF-703 | 대표 vertical slice로 `문서` 작업 범위 고정 | 미착수    | RF-002, RF-004                     | 문서 아이콘, 사이드바 tree, 선택, binding, 패널 문서 layout과 fixture 범위 기록 |
+| RF-704 | 대표 vertical slice 구현                    | 미착수    | RF-501~505, RF-603~604, RF-701~703 | 아이콘→사이드바 선택→binding→패널 렌더→상태·테마 복원을 종단 검증               |
+| RF-705 | feature flag와 rollback                     | 미착수    | RF-700, RF-704                     | Workspace 단위 전환, 즉시 legacy 복귀, state key migration 검증                 |
 
 ### 8. 표준 작업 순차 포팅
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-800 | 작업공간·조직·계정·관리자 | 미착수 | RF-704~705 | 권한·선택·조직 전환·위험 작업 회귀와 API 결과 비교 |
-| RF-801 | 문서·검색·지식 | 미착수 | RF-704~705 | tree/editor/preview/revision/provenance와 전달 흐름 회귀 |
-| RF-802 | 일정 | 미착수 | RF-704~705 | tree/timeline/today/kanban, 생성·수정·복원 회귀 |
-| RF-803 | 에이전트·보고·로그·테스트 | 미착수 | RF-704~705 | 계층·실행 상태·증거 표시와 장시간 갱신 회귀 |
-| RF-804 | 연동·MCP 연결·데이터베이스 | 미착수 | RF-704~705 | credential 비노출, OAuth, 연결 증거, 설정 전달과 권한 회귀 |
-| RF-805 | legacy UI 제거 후보 확인 | 후순위 | RF-800~804 | 실제 사용자·route·asset 참조가 없고 관측 기간과 rollback 기준 충족 |
+| ID     | 작업                       | 상태   | 선행       | 완료 조건                                                          |
+| ------ | -------------------------- | ------ | ---------- | ------------------------------------------------------------------ |
+| RF-800 | 작업공간·조직·계정·관리자  | 미착수 | RF-704~705 | 권한·선택·조직 전환·위험 작업 회귀와 API 결과 비교                 |
+| RF-801 | 문서·검색·지식             | 미착수 | RF-704~705 | tree/editor/preview/revision/provenance와 전달 흐름 회귀           |
+| RF-802 | 일정                       | 미착수 | RF-704~705 | tree/timeline/today/kanban, 생성·수정·복원 회귀                    |
+| RF-803 | 에이전트·보고·로그·테스트  | 미착수 | RF-704~705 | 계층·실행 상태·증거 표시와 장시간 갱신 회귀                        |
+| RF-804 | 연동·MCP 연결·데이터베이스 | 미착수 | RF-704~705 | credential 비노출, OAuth, 연결 증거, 설정 전달과 권한 회귀         |
+| RF-805 | legacy UI 제거 후보 확인   | 후순위 | RF-800~804 | 실제 사용자·route·asset 참조가 없고 관측 기간과 rollback 기준 충족 |
 
 ### 9. MCP Apps host
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-900 | 실제 외부 UI 사례와 capability 범위 확인 | 후순위 | RF-704 | native renderer로 부족한 사례를 확인하고 최소 capability를 ADR에 기록 |
-| RF-901 | sandbox iframe과 CSP 교집합 | 후순위 | RF-900 | opaque/별도 origin, 최소 sandbox와 네트워크 정책 보안 테스트 |
-| RF-902 | AppBridge lifecycle과 messaging | 후순위 | RF-900 | exact origin/source/schema, pending request와 teardown 검증 |
-| RF-903 | 읽기 전용 theme context | 후순위 | RF-404, RF-901~902 | 계산된 token만 전달하고 host storage·credential 접근 차단 |
+| ID     | 작업                                     | 상태   | 선행               | 완료 조건                                                             |
+| ------ | ---------------------------------------- | ------ | ------------------ | --------------------------------------------------------------------- |
+| RF-900 | 실제 외부 UI 사례와 capability 범위 확인 | 후순위 | RF-704             | native renderer로 부족한 사례를 확인하고 최소 capability를 ADR에 기록 |
+| RF-901 | sandbox iframe과 CSP 교집합              | 후순위 | RF-900             | opaque/별도 origin, 최소 sandbox와 네트워크 정책 보안 테스트          |
+| RF-902 | AppBridge lifecycle과 messaging          | 후순위 | RF-900             | exact origin/source/schema, pending request와 teardown 검증           |
+| RF-903 | 읽기 전용 theme context                  | 후순위 | RF-404, RF-901~902 | 계산된 token만 전달하고 host storage·credential 접근 차단             |
 
 ### 10. 검증·배포·전환
 
-| ID | 작업 | 상태 | 선행 | 완료 조건 |
-| --- | --- | --- | --- | --- |
-| RF-1000 | package별 unit 및 root contract gate | 미착수 | RF-103, RF-200~204 | Python/TS validator parity, package unit, cross-boundary test 통과 |
-| RF-1001 | tenant·RLS·schema·SSRF·sandbox 보안 gate | 부분 완료 | 관련 slice | 현행 보안 테스트를 목표 경계로 포팅하고 새 제한 검증 |
-| RF-1002 | 브라우저·접근성·visual gate | 부분 완료 | RF-308, RF-701 | 데스크톱/좁은 폭, keyboard, 복원, theme, 권한과 모든 상태 통과 |
-| RF-1003 | migration·build·image·smoke gate | 부분 완료 | RF-201~204, DB 변경 | clean DB head, immutable build, staging smoke와 rollback rehearsal |
-| RF-1004 | 관측과 단계적 기본 경로 전환 | 후순위 | RF-800~804, RF-1000~1003 | 오류율·binding latency·publish rollback·sandbox violation 기준 충족 |
-| RF-1005 | compatibility adapter와 legacy 경로 제거 | 후순위 | RF-1004 | 사용자 잔존 없음 확인, 제거 후 전체 gate 및 복구 절차 검증 |
+| ID      | 작업                                     | 상태      | 선행                     | 완료 조건                                                           |
+| ------- | ---------------------------------------- | --------- | ------------------------ | ------------------------------------------------------------------- |
+| RF-1000 | package별 unit 및 root contract gate     | 미착수    | RF-103, RF-200~204       | Python/TS validator parity, package unit, cross-boundary test 통과  |
+| RF-1001 | tenant·RLS·schema·SSRF·sandbox 보안 gate | 부분 완료 | 관련 slice               | 현행 보안 테스트를 목표 경계로 포팅하고 새 제한 검증                |
+| RF-1002 | 브라우저·접근성·visual gate              | 부분 완료 | RF-308, RF-701           | 데스크톱/좁은 폭, keyboard, 복원, theme, 권한과 모든 상태 통과      |
+| RF-1003 | migration·build·image·smoke gate         | 부분 완료 | RF-201~204, DB 변경      | clean DB head, immutable build, staging smoke와 rollback rehearsal  |
+| RF-1004 | 관측과 단계적 기본 경로 전환             | 후순위    | RF-800~804, RF-1000~1003 | 오류율·binding latency·publish rollback·sandbox violation 기준 충족 |
+| RF-1005 | compatibility adapter와 legacy 경로 제거 | 후순위    | RF-1004                  | 사용자 잔존 없음 확인, 제거 후 전체 gate 및 복구 절차 검증          |
 
 ## 현재 재사용 가능한 기반
 
-| 현행 자산 | 목표 사용 | 주의점 |
-| --- | --- | --- |
-| `assets/ui-kit/src/components/` | design-system primitive·navigation·layout 포팅 입력 | vanilla DOM 계약을 React 공개 API로 그대로 간주하지 않는다. |
-| `assets/ui-kit/vendor/`와 provenance | 아이콘·외부 소스의 출처 및 라이선스 입력 | 생성물과 editable source를 분리하고 고지를 보존한다. |
-| `static/ui/` | 전환 기간 legacy runtime | 목표 design-system의 편집 원본으로 직접 수정하지 않는다. |
-| `static/css/ui.css` | semantic token과 공통 상태의 현행 기준 | 사용자 테마와 React용 token build 계약이 추가로 필요하다. |
-| `template/workspace/index.html` inline SVG | 작업 목록 아이콘 inventory | stable ID와 manifest로 이동 후 compatibility route에서만 유지한다. |
-| `tests/test_architecture_boundaries.py` | 목표 dependency 검사 출발점 | Python legacy 경계 외에 TS와 apps/packages 방향을 추가한다. |
-| `tests/browser/*.cjs` | 현행 사용자 흐름 characterization | mocked API 범위와 실제 DB/브라우저 범위를 구분한다. |
-| `app/modules/*` 서비스·repository | `platform-core`/`platform-adapters` 포팅 입력 | 파일 이동과 도메인 의미 변경을 같은 단계에서 수행하지 않는다. |
-| `app/worker`, `app/scheduler` | `apps/worker`와 execution use case 포팅 입력 | durable Job 권위와 payload 재검증을 유지한다. |
-| `app/db/migrations` | 루트 `migrations` 전환 입력 | 배포된 revision history를 다시 쓰지 않고 append-only로 유지한다. |
+| 현행 자산                                  | 목표 사용                                           | 주의점                                                             |
+| ------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------------ |
+| `assets/ui-kit/src/components/`            | design-system primitive·navigation·layout 포팅 입력 | vanilla DOM 계약을 React 공개 API로 그대로 간주하지 않는다.        |
+| `assets/ui-kit/vendor/`와 provenance       | 아이콘·외부 소스의 출처 및 라이선스 입력            | 생성물과 editable source를 분리하고 고지를 보존한다.               |
+| `static/ui/`                               | 전환 기간 legacy runtime                            | 목표 design-system의 편집 원본으로 직접 수정하지 않는다.           |
+| `static/css/ui.css`                        | semantic token과 공통 상태의 현행 기준              | 사용자 테마와 React용 token build 계약이 추가로 필요하다.          |
+| `template/workspace/index.html` inline SVG | 작업 목록 아이콘 inventory                          | stable ID와 manifest로 이동 후 compatibility route에서만 유지한다. |
+| `tests/test_architecture_boundaries.py`    | 목표 dependency 검사 출발점                         | Python legacy 경계 외에 TS와 apps/packages 방향을 추가한다.        |
+| `tests/browser/*.cjs`                      | 현행 사용자 흐름 characterization                   | mocked API 범위와 실제 DB/브라우저 범위를 구분한다.                |
+| `app/modules/*` 서비스·repository          | `platform-core`/`platform-adapters` 포팅 입력       | 파일 이동과 도메인 의미 변경을 같은 단계에서 수행하지 않는다.      |
+| `app/worker`, `app/scheduler`              | `apps/worker`와 execution use case 포팅 입력        | durable Job 권위와 payload 재검증을 유지한다.                      |
+| `app/db/migrations`                        | 루트 `migrations` 전환 입력                         | 배포된 revision history를 다시 쓰지 않고 append-only로 유지한다.   |
 
 ## 진행 순서
 
@@ -217,11 +217,11 @@ MCP Apps host(RF-900~903)는 대표 native Workbench가 완성되고 실제 외�
 
 ## 현 시점의 다음 작업
 
-1. RF-003: [기준선 matrix](2026-09-12-workbench-baseline.md)를 독립 Verification에서
-   실행하고 명령·결과·한계를 기록한다. 현재는 계획만 존재하므로 부분 완료를 유지한다.
-2. RF-100~105: ADR-003·010과 [migration map](2026-09-12-workbench-migration-map.md)에
-   따라 Workbench·에셋·테마 계약과 의존성 검사를 먼저 구현한다.
-3. RF-200~204: 계약 fixture가 실제로 동작하는 최소 모노레포 골격을 만든다.
+1. RF-300~308: [Stage 2 구현 기록](2026-09-12-workbench-stage2-evidence.md)의 package,
+   Chromium, 접근성, visual, remount와 production build gate를 독립 Verification에서 실행한다.
+2. RF-003: 전체 legacy [기준선 matrix](2026-09-12-workbench-baseline.md)의 fixture/API,
+   browser와 disposable infrastructure 범위를 별도 실행하고 전역 제한을 해소한다.
+3. Stage 2 통과 뒤 RF-400~405 사용자별 테마 domain/API/editor vertical slice로 진행한다.
 
 단순 디렉터리 생성만으로 상태를 완료로 바꾸지 않는다. 각 행의 완료 조건과 해당 검증이
 함께 충족된 경우에만 완료로 갱신한다.

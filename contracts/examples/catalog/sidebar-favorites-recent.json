@@ -1,0 +1,19 @@
+{
+  "id": "favorites-recent@1",
+  "kind": "sidebar",
+  "allowedRegions": ["sidebar"],
+  "properties": [
+    { "name": "title", "type": "string", "required": false, "maxLength": 80 },
+    { "name": "items", "type": "record-list", "required": false, "maxItems": 100 }
+  ],
+  "inputs": [{ "name": "records", "type": "record-list", "required": false, "maxItems": 100 }],
+  "outputs": [{ "name": "selectedId", "type": "string", "required": false, "maxLength": 64 }],
+  "states": ["ready", "empty"],
+  "actions": ["select"],
+  "accessibility": {
+    "role": "navigation",
+    "keyboard": "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics."
+  },
+  "provenance": { "source": "Agent Factory design-system React source", "license": "Project-owned" },
+  "example": { "title": "favorites-recent 예제" }
+}

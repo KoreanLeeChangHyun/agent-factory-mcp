@@ -2,8 +2,10 @@ import { documentsFixture } from "@agent-factory/contracts";
 import { summarizeWorkbench } from "@agent-factory/workbench-runtime";
 import "@agent-factory/design-system/tokens.css";
 import "./app.css";
+import { CatalogPreview } from "./CatalogPreview.js";
 
-export function App() {
+export function App({ path = window.location.pathname }: { path?: string }) {
+  if (path === "/catalog" || path === "/catalog/") return <CatalogPreview />;
   const summary = summarizeWorkbench(documentsFixture);
   return (
     <main className="health-shell">

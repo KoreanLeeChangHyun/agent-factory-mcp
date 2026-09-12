@@ -6,8 +6,18 @@
   "additionalProperties": false,
   "required": ["asset", "components"],
   "properties": {
-    "asset": {"enum": ["flat-list@1", "group-list@1", "tree@1", "search-list@1", "filter-list@1", "detail-list@1"]},
-    "label": {"type": "string", "minLength": 1, "maxLength": 80},
-    "components": {"type": "array", "minItems": 1, "maxItems": 40, "items": {"$ref": "component.schema.json"}}
+    "asset": {
+      "enum": [
+        "flat-list@1",
+        "group-list@1",
+        "tree@1",
+        "search-list@1",
+        "filter-list@1",
+        "detail-list@1",
+        "favorites-recent@1"
+      ]
+    },
+    "label": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "components": { "type": "array", "minItems": 1, "maxItems": 40, "items": { "$ref": "component.schema.json" } }
   }
 }

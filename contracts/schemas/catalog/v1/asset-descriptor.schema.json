@@ -4,38 +4,140 @@
   "title": "Catalog asset descriptor v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "kind", "allowedRegions", "properties", "inputs", "outputs", "states", "actions", "accessibility", "provenance", "example"],
+  "required": [
+    "id",
+    "kind",
+    "allowedRegions",
+    "properties",
+    "inputs",
+    "outputs",
+    "states",
+    "actions",
+    "accessibility",
+    "provenance",
+    "example"
+  ],
   "properties": {
-    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}@1$"},
-    "kind": {"enum": ["icon", "sidebar", "panel", "control", "display", "feedback"]},
-    "allowedRegions": {"type": "array", "minItems": 1, "maxItems": 3, "items": {"enum": ["task-list", "sidebar", "panel"]}, "uniqueItems": true},
-    "properties": {"$ref": "#/$defs/parameters"},
-    "inputs": {"$ref": "#/$defs/parameters"},
-    "outputs": {"$ref": "#/$defs/parameters"},
-    "states": {"type": "array", "maxItems": 8, "items": {"enum": ["loading", "empty", "ready", "stale", "error", "permission-denied", "disabled"]}, "uniqueItems": true},
-    "actions": {"type": "array", "maxItems": 8, "items": {"enum": ["select", "refresh", "submit", "navigate-internal", "toggle", "dismiss"]}, "uniqueItems": true},
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}@1$" },
+    "kind": { "enum": ["icon", "sidebar", "panel", "control", "display", "feedback"] },
+    "allowedRegions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": { "enum": ["task-list", "sidebar", "panel"] },
+      "uniqueItems": true
+    },
+    "properties": { "$ref": "#/$defs/parameters" },
+    "inputs": { "$ref": "#/$defs/parameters" },
+    "outputs": { "$ref": "#/$defs/parameters" },
+    "states": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "enum": [
+          "loading",
+          "empty",
+          "ready",
+          "stale",
+          "error",
+          "permission-denied",
+          "disabled",
+          "busy",
+          "success",
+          "progress"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "actions": {
+      "type": "array",
+      "maxItems": 8,
+      "items": { "enum": ["select", "refresh", "submit", "navigate-internal", "toggle", "dismiss"] },
+      "uniqueItems": true
+    },
     "accessibility": {
-      "type": "object", "additionalProperties": false, "required": ["role", "keyboard"],
-      "properties": {"role": {"type": "string", "enum": ["img", "navigation", "tree", "list", "region", "form", "table", "status", "alert", "dialog"]}, "keyboard": {"type": "string", "minLength": 1, "maxLength": 300}, "live": {"enum": ["off", "polite", "assertive"]}}
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "keyboard"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": ["img", "navigation", "tree", "list", "region", "form", "table", "status", "alert", "dialog"]
+        },
+        "keyboard": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "live": { "enum": ["off", "polite", "assertive"] }
+      }
     },
     "provenance": {
-      "type": "object", "additionalProperties": false, "required": ["source", "license"],
-      "properties": {"source": {"type": "string", "minLength": 1, "maxLength": 200}, "license": {"type": "string", "minLength": 1, "maxLength": 80}}
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "license"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "license": { "type": "string", "minLength": 1, "maxLength": 80 }
+      }
     },
-    "example": {"type": "object", "additionalProperties": {"type": ["string", "number", "integer", "boolean", "null"]}, "maxProperties": 16}
+    "example": {
+      "type": "object",
+      "additionalProperties": { "type": ["string", "number", "integer", "boolean", "null"] },
+      "maxProperties": 16
+    }
   },
   "$defs": {
-    "parameters": {
-      "type": "array", "maxItems": 24,
-      "items": {
-        "type": "object", "additionalProperties": false, "required": ["name", "type", "required"],
+    "recordField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "enum": ["string", "number", "integer", "boolean"] },
+        "minLength": { "type": "integer", "minimum": 1, "maximum": 4096 },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 4096 }
+      }
+    },
+    "recordItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "additionalProperties", "required", "properties"],
+      "properties": {
+        "type": { "const": "object" },
+        "additionalProperties": { "const": false },
+        "required": {
+          "type": "array",
+          "maxItems": 16,
+          "items": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]{0,63}$" },
+          "uniqueItems": true
+        },
         "properties": {
-          "name": {"type": "string", "pattern": "^[a-z][a-zA-Z0-9]{0,63}$"},
-          "type": {"enum": ["string", "number", "integer", "boolean", "string-list", "record-list"]},
-          "required": {"type": "boolean"},
-          "maxLength": {"type": "integer", "minimum": 1, "maximum": 2048},
-          "maxItems": {"type": "integer", "minimum": 1, "maximum": 1000},
-          "enum": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"type": "string", "maxLength": 80}, "uniqueItems": true}
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 16,
+          "propertyNames": { "pattern": "^[a-z][a-zA-Z0-9]{0,63}$" },
+          "additionalProperties": { "$ref": "#/$defs/recordField" }
+        }
+      }
+    },
+    "parameters": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "type", "required"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]{0,63}$" },
+          "type": { "enum": ["string", "number", "integer", "boolean", "string-list", "record-list"] },
+          "required": { "type": "boolean" },
+          "maxLength": { "type": "integer", "minimum": 1, "maximum": 2048 },
+          "maxItems": { "type": "integer", "minimum": 1, "maximum": 1000 },
+          "items": { "$ref": "#/$defs/recordItem" },
+          "uniqueBy": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9]{0,63}$" },
+          "enum": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "items": { "type": "string", "maxLength": 80 },
+            "uniqueItems": true
+          }
         }
       }
     }

@@ -8,10 +8,10 @@ ThemeBase = Literal['dark', 'light', 'high-contrast']
 Density = Literal['compact', 'comfortable']
 Region = Literal['task-list', 'sidebar', 'panel']
 ComponentState = Literal['loading', 'empty', 'ready', 'stale', 'error', 'permission-denied', 'disabled']
-SidebarAsset = Literal['flat-list@1', 'group-list@1', 'tree@1', 'search-list@1', 'filter-list@1', 'detail-list@1']
+SidebarAsset = Literal['flat-list@1', 'group-list@1', 'tree@1', 'search-list@1', 'filter-list@1', 'detail-list@1', 'favorites-recent@1']
 PanelAsset = Literal['detail@1', 'list-detail@1', 'collection@1', 'settings@1', 'dashboard@1', 'document@1', 'split@1', 'timeline@1', 'kanban@1']
 AssetKind = Literal['icon', 'sidebar', 'panel', 'control', 'display', 'feedback']
-AssetState = Literal['loading', 'empty', 'ready', 'stale', 'error', 'permission-denied', 'disabled']
+AssetState = Literal['loading', 'empty', 'ready', 'stale', 'error', 'permission-denied', 'disabled', 'busy', 'success', 'progress']
 AssetParameterType = Literal['string', 'number', 'integer', 'boolean', 'string-list', 'record-list']
 AccessibilityRole = Literal['img', 'navigation', 'tree', 'list', 'region', 'form', 'table', 'status', 'alert', 'dialog']
 LiveMode = Literal['off', 'polite', 'assertive']
@@ -129,6 +129,19 @@ class ViewState(TypedDict):
     expanded: list[str]
 
 
+class RecordField(TypedDict):
+    type: Literal["string", "number", "integer", "boolean"]
+    minLength: NotRequired[int]
+    maxLength: NotRequired[int]
+
+
+class RecordItem(TypedDict):
+    type: Literal["object"]
+    additionalProperties: Literal[False]
+    required: list[str]
+    properties: dict[str, RecordField]
+
+
 class AssetParameter(TypedDict):
     name: str
     type: AssetParameterType
@@ -136,6 +149,8 @@ class AssetParameter(TypedDict):
     maxLength: NotRequired[int]
     maxItems: NotRequired[int]
     enum: NotRequired[list[str]]
+    items: NotRequired[RecordItem]
+    uniqueBy: NotRequired[str]
 
 
 class Accessibility(TypedDict):

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { documentsFixture } from "@agent-factory/contracts";
-import { summarizeWorkbench } from "./index.js";
+import { renderRegisteredAsset, summarizeWorkbench } from "./index.js";
 
 describe("Workbench runtime", () => {
   it("interprets the shared Documents fixture", () => {
@@ -11,5 +11,9 @@ describe("Workbench runtime", () => {
       panel: "문서 패널",
       componentCount: 3,
     });
+  });
+  it("instantiates registered assets and rejects undeclared IDs", () => {
+    expect(renderRegisteredAsset("button@1", { label: "저장" })).toBeTruthy();
+    expect(() => renderRegisteredAsset("unknown@1")).toThrow(/not declared/);
   });
 });

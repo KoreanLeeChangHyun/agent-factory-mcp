@@ -92,19 +92,28 @@ transform without changing fixture resolution.
 ## Locks and independent verification
 
 The revision Work generated real root `pnpm-lock.yaml` and `uv.lock` files from the
-declared workspace manifests. No tests, validators, lint checks, type checks, builds,
-servers, health probes, worker smoke, or frozen-install verification were performed by
-Work. Independent Verification should perform clean frozen installs and the requested
-gates without changing either lockfile:
+declared workspace manifests. Work did not run verification. Independent Verification
+run `run-20260912T110652332335Z-131f19c5`, bound to Work run
+`run-20260912T110519020161Z-d6ce4e31`, subsequently passed the Stage 1 slice at commit
+`301a4ea`.
 
 ```sh
-pnpm install --frozen-lockfile
-uv sync --frozen --all-packages --extra dev
-make workbench-check
-uv run agent-factory-worker --smoke
-make workbench-build
-make check
+pnpm install --frozen-lockfile                         # passed with pnpm 10.15.1 / Node 22
+uv sync --frozen --all-packages --extra dev           # passed with uv 0.8.15
+make workbench-check                                  # passed
+uv run agent-factory-worker --smoke                   # passed
+make workbench-build                                  # passed
+make workbench-check                                  # passed again without cleanup
 ```
 
-The dedicated workflow already uses frozen installs. RF-100–105 and RF-200–204 remain
-`부분 완료` until independent Verification supplies successful evidence.
+The common Workbench gate covered formatting, Ruff, ESLint, TypeScript and mypy,
+deterministic generation, validator parity, compatibility and dependency checks, six
+TypeScript tests, and 14 Python tests. The build transformed 211 Vite modules and built
+all six Python sdists and wheels. The second no-cleanup gate demonstrates that generated
+`dist-types` output no longer breaks dependency inspection.
+
+This evidence does not make the global legacy baseline green. Root `make check` still
+encounters pre-existing Ruff formatting drift after dependency resolution, and the
+legacy full pytest surface retains packaging/setuptools, source-inventory,
+runtime-image, and PostgreSQL prerequisite limitations. Those limitations remain
+outside the Stage 1 focused pass and are not reclassified here.

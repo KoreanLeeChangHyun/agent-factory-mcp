@@ -2,12 +2,16 @@
   "id": "documents@1",
   "kind": "icon",
   "allowedRegions": ["task-list"],
-  "properties": [{"name": "label", "type": "string", "required": true, "maxLength": 80}],
+  "properties": [{ "name": "label", "type": "string", "required": true, "maxLength": 80 }],
   "inputs": [],
   "outputs": [],
   "states": ["ready", "disabled"],
-  "actions": ["select"],
-  "accessibility": {"role": "img", "keyboard": "The containing task-list button owns keyboard selection.", "live": "off"},
-  "provenance": {"source": "Agent Factory reviewed icon catalog", "license": "Project-owned"},
-  "example": {"label": "문서"}
+  "actions": [],
+  "accessibility": {
+    "role": "img",
+    "keyboard": "The containing task-list button owns keyboard selection.",
+    "live": "off"
+  },
+  "provenance": { "source": "Agent Factory reviewed icon catalog", "license": "Project-owned" },
+  "example": { "label": "문서" }
 }

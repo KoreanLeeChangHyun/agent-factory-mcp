@@ -1,68 +1,670 @@
-import type { AssetDescriptor, AssetKind } from "@agent-factory/contracts";
+import { createElement, type ComponentType } from "react";
+import type { ActionKind, AssetDescriptor, AssetKind, AssetParameter } from "@agent-factory/contracts";
+import {
+  Button,
+  ChartFrame,
+  Checkbox,
+  CodeBlock,
+  DataTable,
+  DateInput,
+  Dialog,
+  Field,
+  IconButton,
+  JsonView,
+  Markdown,
+  Menu,
+  Metric,
+  MultiSelect,
+  NumberInput,
+  PanelLayout,
+  Popover,
+  ResourceHeader,
+  Select,
+  SidebarPattern,
+  StateView,
+  Tabs,
+  TaskIcon,
+  TextInput,
+  Toast,
+  Toggle,
+  type CommonState,
+  type PanelSlot,
+  type PanelVariant,
+  type SidebarVariant,
+  type TaskIconName,
+} from "./components.js";
 
-const states: AssetDescriptor["states"] = [
-  "loading",
-  "empty",
-  "ready",
-  "stale",
-  "error",
-  "permission-denied",
-  "disabled",
-];
-const projectOwned = { source: "Agent Factory stage-1 reviewed catalog", license: "Project-owned" };
+const projectOwned = { source: "Agent Factory design-system React source", license: "Project-owned" };
+const reviewedIcons = {
+  source: "Agent Factory inline inventory; geometry redrawn as reusable React SVG",
+  license: "Project-owned",
+};
+const parameter = (
+  name: string,
+  type: "string" | "number" | "integer" | "boolean" | "string-list" | "record-list",
+  required = false,
+  extra: {
+    maxLength?: number;
+    maxItems?: number;
+    items?: AssetParameter["items"];
+    uniqueBy?: string;
+    enum?: string[];
+  } = {},
+) => ({ name, type, required, ...extra });
 
-function assets(
+const panelSlotItems: NonNullable<AssetParameter["items"]> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "title"],
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 64 },
+    title: { type: "string", minLength: 1, maxLength: 80 },
+    content: { type: "string", maxLength: 4096 },
+    meta: { type: "string", maxLength: 240 },
+  },
+};
+
+function descriptor(
+  id: string,
   kind: AssetKind,
   region: AssetDescriptor["allowedRegions"][number],
-  ids: string[],
-  actions: AssetDescriptor["actions"],
-): AssetDescriptor[] {
-  const role = kind === "icon" ? "img" : kind === "sidebar" ? "navigation" : kind === "feedback" ? "status" : "region";
-  return ids.map((id) => ({
+  role: AssetDescriptor["accessibility"]["role"],
+  properties: AssetDescriptor["properties"] = [],
+  actions: AssetDescriptor["actions"] = [],
+  example: AssetDescriptor["example"] = {},
+  inputs: AssetDescriptor["inputs"] = [],
+  outputs: AssetDescriptor["outputs"] = [],
+): AssetDescriptor {
+  const supportsDisabled = properties.some((property) => property.name === "disabled");
+  const feedbackState = id.endsWith("-state") ? id.slice(0, -6) : undefined;
+  const states: AssetDescriptor["states"] =
+    feedbackState &&
+    ["loading", "empty", "error", "permission-denied", "busy", "stale", "success", "progress"].includes(feedbackState)
+      ? [feedbackState as AssetDescriptor["states"][number]]
+      : kind === "sidebar"
+        ? ["ready", "empty"]
+        : supportsDisabled
+          ? ["ready", "disabled"]
+          : ["ready"];
+  return {
     id: `${id}@1`,
     kind,
     allowedRegions: [region],
+    properties,
+    inputs,
+    outputs,
     states,
     actions,
-    properties: [{ name: "label", type: "string", required: false, maxLength: 80 }],
-    inputs: [],
-    outputs: [],
-    accessibility: { role, keyboard: "All interactive descendants use native controls and visible focus." },
-    provenance: projectOwned,
-    example: {},
-  }));
+    accessibility: {
+      role,
+      keyboard: "Native controls provide keyboard operation, visible focus, names, and disabled or busy semantics.",
+    },
+    provenance: kind === "icon" ? reviewedIcons : projectOwned,
+    example,
+  };
 }
 
-export const assetCatalog: readonly AssetDescriptor[] = [
-  ...assets(
-    "icon",
-    "task-list",
-    ["documents", "workspace", "knowledge", "connections", "jobs", "audit", "calendar", "agents"],
-    ["select"],
-  ),
-  ...assets(
-    "sidebar",
-    "sidebar",
-    ["flat-list", "group-list", "tree", "search-list", "filter-list", "detail-list"],
-    ["select", "refresh", "toggle"],
-  ),
-  ...assets("sidebar", "sidebar", ["resource-tree"], ["select", "refresh", "toggle"]),
-  ...assets(
-    "panel",
-    "panel",
-    ["detail", "list-detail", "collection", "settings", "dashboard", "document", "split", "timeline", "kanban"],
-    ["select", "refresh", "submit"],
-  ),
-  ...assets("control", "panel", ["button", "field", "select", "dialog"], ["select", "submit", "dismiss"]),
-  ...assets(
-    "display",
-    "panel",
-    ["resource-header", "resource-table", "markdown", "code", "chart-frame"],
-    ["select", "refresh"],
-  ),
-  ...assets("feedback", "panel", ["status", "toast", "empty-state", "error-state"], ["dismiss", "refresh"]),
+const taskIcons: { id: string; icon: TaskIconName; label: string }[] = [
+  { id: "documents", icon: "documents", label: "문서" },
+  { id: "workspace", icon: "workspace", label: "작업공간" },
+  { id: "knowledge", icon: "knowledge", label: "지식" },
+  { id: "connections", icon: "connections", label: "연동" },
+  { id: "jobs", icon: "jobs", label: "작업" },
+  { id: "audit", icon: "audit", label: "감사" },
+  { id: "calendar", icon: "calendar", label: "일정" },
+  { id: "agents", icon: "agents", label: "에이전트" },
+  { id: "logs", icon: "logs", label: "로그" },
+  { id: "tests", icon: "tests", label: "테스트" },
+  { id: "database", icon: "database", label: "데이터베이스" },
+  { id: "account", icon: "account", label: "계정" },
+  { id: "admin", icon: "admin", label: "관리자" },
+  { id: "search", icon: "search", label: "검색" },
+  { id: "preferences", icon: "settings", label: "설정" },
+  { id: "favorites", icon: "favorites", label: "즐겨찾기" },
 ];
+const sidebars: SidebarVariant[] = [
+  "flat-list",
+  "group-list",
+  "tree",
+  "search-list",
+  "filter-list",
+  "detail-list",
+  "favorites-recent",
+];
+const panels: PanelVariant[] = [
+  "detail",
+  "list-detail",
+  "collection",
+  "settings",
+  "dashboard",
+  "document",
+  "split",
+  "timeline",
+  "kanban",
+];
+const controls = [
+  "button",
+  "icon-button",
+  "field",
+  "text-input",
+  "number-input",
+  "date-input",
+  "select",
+  "multiselect",
+  "checkbox",
+  "toggle",
+] as const;
+const displays = [
+  "tabs",
+  "resource-tree",
+  "resource-table",
+  "resource-header",
+  "metric",
+  "chart-frame",
+  "code",
+  "markdown",
+  "json",
+] as const;
+const overlays = ["dialog", "menu", "popover", "toast"] as const;
+const feedback: CommonState[] = [
+  "loading",
+  "empty",
+  "error",
+  "permission-denied",
+  "busy",
+  "stale",
+  "success",
+  "progress",
+];
+
+export const assetCatalog: readonly AssetDescriptor[] = [
+  ...taskIcons.map(({ id, label }) =>
+    descriptor(
+      id,
+      "icon",
+      "task-list",
+      "img",
+      [
+        parameter("label", "string", true, { maxLength: 80 }),
+        parameter("selected", "boolean"),
+        parameter("disabled", "boolean"),
+        parameter("notification", "boolean"),
+      ],
+      [],
+      { label },
+    ),
+  ),
+  ...sidebars.map((id) =>
+    descriptor(
+      id,
+      "sidebar",
+      "sidebar",
+      id === "tree" ? "tree" : "navigation",
+      [
+        parameter("title", "string", false, { maxLength: 80 }),
+        parameter("items", "record-list", false, { maxItems: 100 }),
+      ],
+      ["select"],
+      { title: `${id} 예제` },
+      [parameter("records", "record-list", false, { maxItems: 100 })],
+      [parameter("selectedId", "string", false, { maxLength: 64 })],
+    ),
+  ),
+  ...panels.map((id) =>
+    descriptor(
+      id,
+      "panel",
+      "panel",
+      id === "settings" ? "form" : "region",
+      [],
+      id === "detail" || id === "settings" ? ["submit"] : id === "split" ? ["toggle"] : [],
+      {},
+      [parameter("slots", "record-list", false, { maxItems: 12, items: panelSlotItems, uniqueBy: "id" })],
+      id === "split" ? [parameter("value", "number", false)] : [],
+    ),
+  ),
+  ...controls.map((id) =>
+    descriptor(
+      id,
+      "control",
+      "panel",
+      id === "field" ? "form" : "region",
+      [parameter("label", "string", false, { maxLength: 80 }), parameter("disabled", "boolean")],
+      id === "button" || id === "icon-button"
+        ? ["submit"]
+        : id === "checkbox" || id === "toggle"
+          ? ["toggle"]
+          : ["select"],
+      { label: `${id} 예제` },
+      id === "button" || id === "icon-button"
+        ? []
+        : [
+            parameter(
+              "value",
+              id === "number-input"
+                ? "number"
+                : id === "checkbox" || id === "toggle"
+                  ? "boolean"
+                  : id === "multiselect"
+                    ? "string-list"
+                    : "string",
+              false,
+              id === "number-input" || id === "checkbox" || id === "toggle"
+                ? {}
+                : id === "multiselect"
+                  ? { maxItems: 32 }
+                  : { maxLength: 2048 },
+            ),
+          ],
+      id === "button" || id === "icon-button"
+        ? []
+        : [
+            parameter(
+              "value",
+              id === "number-input"
+                ? "number"
+                : id === "checkbox" || id === "toggle"
+                  ? "boolean"
+                  : id === "multiselect"
+                    ? "string-list"
+                    : "string",
+              false,
+              id === "number-input" || id === "checkbox" || id === "toggle"
+                ? {}
+                : id === "multiselect"
+                  ? { maxItems: 32 }
+                  : { maxLength: 2048 },
+            ),
+          ],
+    ),
+  ),
+  ...displays.map((id) =>
+    descriptor(
+      id,
+      "display",
+      id === "resource-tree" ? "sidebar" : "panel",
+      id === "resource-table" ? "table" : id === "resource-tree" ? "tree" : "region",
+      id === "resource-header"
+        ? [
+            parameter("title", "string", false, { maxLength: 80 }),
+            parameter("status", "string", false, { maxLength: 80 }),
+          ]
+        : [],
+      id === "tabs" || id === "resource-tree" ? ["select"] : [],
+      id === "resource-header" ? { title: "선택한 문서", status: "준비됨" } : {},
+      id === "resource-tree" ? [parameter("records", "record-list", false, { maxItems: 100 })] : [],
+      id === "tabs" || id === "resource-tree" ? [parameter("selectedId", "string", false, { maxLength: 64 })] : [],
+    ),
+  ),
+  ...overlays.map((id) =>
+    descriptor(
+      id,
+      id === "toast" ? "feedback" : "control",
+      "panel",
+      id === "dialog" ? "dialog" : id === "toast" ? "status" : "region",
+      [parameter("open", "boolean")],
+      id === "dialog" || id === "toast" ? ["dismiss"] : id === "menu" ? ["select"] : [],
+      { open: true },
+      [],
+      id === "menu" ? [parameter("selectedId", "string", false, { maxLength: 64 })] : [],
+    ),
+  ),
+  ...feedback.map((id) => descriptor(`${id}-state`, "feedback", "panel", id === "error" ? "alert" : "status", [], [])),
+];
+
+type Implementation = { component: ComponentType<Record<string, unknown>>; allowedProps: ReadonlySet<string> };
+export type AssetActionEvent = { assetId: string; action: ActionKind; output: Record<string, unknown> };
+export type AssetRuntime = { inputs?: Record<string, unknown>; onAction?: (event: AssetActionEvent) => void };
+const implementations = new Map<string, Implementation>();
+const register = (id: string, component: ComponentType<Record<string, unknown>>, allowedProps: string[] = []) =>
+  implementations.set(`${id}@1`, { component, allowedProps: new Set(allowedProps) });
+const runtimeOf = (props: Record<string, unknown>) => (props.$runtime ?? {}) as AssetRuntime;
+const validateValues = (id: string, values: Record<string, unknown>, parameters: AssetParameter[], subject: string) => {
+  const allowed = new Set(parameters.map((parameter) => parameter.name));
+  const unknown = Object.keys(values).filter((name) => !allowed.has(name));
+  if (unknown.length) throw new Error(`Unsupported ${subject} for ${id}: ${unknown.join(", ")}`);
+  for (const parameter of parameters) {
+    const value = values[parameter.name];
+    if (parameter.required && value === undefined)
+      throw new Error(`Missing required ${subject} for ${id}: ${parameter.name}`);
+    if (value === undefined) continue;
+    const valid =
+      (parameter.type === "string" && typeof value === "string") ||
+      (parameter.type === "number" && typeof value === "number" && Number.isFinite(value)) ||
+      (parameter.type === "integer" && Number.isInteger(value)) ||
+      (parameter.type === "boolean" && typeof value === "boolean") ||
+      (parameter.type === "string-list" && Array.isArray(value) && value.every((item) => typeof item === "string")) ||
+      (parameter.type === "record-list" &&
+        Array.isArray(value) &&
+        value.every((item) => typeof item === "object" && item !== null && !Array.isArray(item)));
+    if (!valid) throw new Error(`Invalid ${parameter.type} ${subject} for ${id}: ${parameter.name}`);
+    if (typeof value === "string" && parameter.maxLength !== undefined && value.length > parameter.maxLength)
+      throw new Error(`${subject} exceeds maxLength for ${id}: ${parameter.name}`);
+    if (Array.isArray(value) && parameter.maxItems !== undefined && value.length > parameter.maxItems)
+      throw new Error(`${subject} exceeds maxItems for ${id}: ${parameter.name}`);
+    if (parameter.type === "record-list" && Array.isArray(value) && parameter.items) {
+      const itemContract = parameter.items;
+      for (const [index, entry] of value.entries()) {
+        const record = entry as Record<string, unknown>;
+        const unknownFields = Object.keys(record).filter((name) => !(name in itemContract.properties));
+        if (!itemContract.additionalProperties && unknownFields.length)
+          throw new Error(`Unsupported ${subject} item field for ${id}: ${unknownFields.join(", ")}`);
+        for (const name of itemContract.required) {
+          if (record[name] === undefined) throw new Error(`Missing required ${subject} item for ${id}: ${name}`);
+        }
+        for (const [name, field] of Object.entries(itemContract.properties)) {
+          const fieldValue = record[name];
+          if (fieldValue === undefined) continue;
+          const fieldValid =
+            (field.type === "string" && typeof fieldValue === "string") ||
+            (field.type === "number" && typeof fieldValue === "number" && Number.isFinite(fieldValue)) ||
+            (field.type === "integer" && Number.isInteger(fieldValue)) ||
+            (field.type === "boolean" && typeof fieldValue === "boolean");
+          if (!fieldValid) throw new Error(`Invalid ${subject} item field for ${id}: ${name} at ${index}`);
+          if (typeof fieldValue === "string" && field.minLength !== undefined && fieldValue.length < field.minLength)
+            throw new Error(`${subject} item is shorter than minLength for ${id}: ${name}`);
+          if (typeof fieldValue === "string" && field.maxLength !== undefined && fieldValue.length > field.maxLength)
+            throw new Error(`${subject} item exceeds maxLength for ${id}: ${name}`);
+        }
+      }
+      if (parameter.uniqueBy) {
+        const uniqueBy = parameter.uniqueBy;
+        const unique = new Set(value.map((entry) => (entry as Record<string, unknown>)[uniqueBy]));
+        if (unique.size !== value.length) throw new Error(`Duplicate ${subject} item for ${id}: ${uniqueBy}`);
+      }
+    }
+  }
+};
+const emit = (id: string, runtime: AssetRuntime, action: ActionKind, output: Record<string, unknown> = {}) => {
+  const assetId = `${id}@1`;
+  const descriptor = assetCatalog.find((asset) => asset.id === assetId);
+  if (!descriptor?.actions.includes(action)) throw new Error(`Unsupported action for ${assetId}: ${action}`);
+  validateValues(assetId, output, descriptor.outputs, "output");
+  runtime.onAction?.({ assetId, action, output });
+};
+
+export function invokeAssetAction(
+  id: string,
+  action: ActionKind,
+  output: Record<string, unknown>,
+  runtime: AssetRuntime = {},
+) {
+  emit(id.replace(/@1$/, ""), runtime, action, output);
+}
+
+for (const { id, icon, label } of taskIcons)
+  register(
+    id,
+    (props) =>
+      createElement(TaskIcon, {
+        name: icon,
+        label: String(props.label ?? label),
+        selected: Boolean(props.selected),
+        disabled: Boolean(props.disabled),
+        notification: Boolean(props.notification),
+      }),
+    ["label", "selected", "disabled", "notification"],
+  );
+for (const variant of sidebars)
+  register(
+    variant,
+    (props) => {
+      const runtime = runtimeOf(props);
+      return createElement(SidebarPattern, {
+        variant,
+        title: typeof props.title === "string" ? props.title : undefined,
+        items: Array.isArray(runtime.inputs?.records)
+          ? (runtime.inputs.records as never)
+          : Array.isArray(props.items)
+            ? (props.items as never)
+            : undefined,
+        onSelect: (selectedId) => emit(variant, runtime, "select", { selectedId }),
+      });
+    },
+    ["title", "items"],
+  );
+for (const variant of panels)
+  register(variant, (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(PanelLayout, {
+      variant,
+      slots: runtime.inputs?.slots as PanelSlot[] | undefined,
+      onAction: (action, value) => emit(variant, runtime, action, value === undefined ? {} : { value }),
+    });
+  });
+register(
+  "button",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(
+      Button,
+      { disabled: Boolean(props.disabled), onClick: () => emit("button", runtime, "submit") },
+      String(props.label ?? "동작"),
+    );
+  },
+  ["label", "disabled"],
+);
+register(
+  "icon-button",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(IconButton, {
+      icon: "settings",
+      label: String(props.label ?? "설정"),
+      disabled: Boolean(props.disabled),
+      onClick: () => emit("icon-button", runtime, "submit"),
+    });
+  },
+  ["label", "disabled"],
+);
+register(
+  "field",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(
+      Field,
+      { label: String(props.label ?? "필드") },
+      createElement(TextInput, {
+        disabled: Boolean(props.disabled),
+        defaultValue: typeof runtime.inputs?.value === "string" ? runtime.inputs.value : undefined,
+        onChange: (event) => emit("field", runtime, "select", { value: event.currentTarget.value }),
+      }),
+    );
+  },
+  ["label", "disabled"],
+);
+register(
+  "text-input",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(TextInput, {
+      "aria-label": String(props.label ?? "텍스트"),
+      disabled: Boolean(props.disabled),
+      defaultValue: typeof runtime.inputs?.value === "string" ? runtime.inputs.value : undefined,
+      onChange: (event) => emit("text-input", runtime, "select", { value: event.currentTarget.value }),
+    });
+  },
+  ["label", "disabled"],
+);
+register(
+  "number-input",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(NumberInput, {
+      "aria-label": String(props.label ?? "숫자"),
+      disabled: Boolean(props.disabled),
+      defaultValue: typeof runtime.inputs?.value === "number" ? runtime.inputs.value : undefined,
+      onChange: (event) =>
+        emit(
+          "number-input",
+          runtime,
+          "select",
+          event.currentTarget.value === "" ? {} : { value: event.currentTarget.valueAsNumber },
+        ),
+    });
+  },
+  ["label", "disabled"],
+);
+register(
+  "date-input",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(DateInput, {
+      "aria-label": String(props.label ?? "날짜"),
+      disabled: Boolean(props.disabled),
+      defaultValue: typeof runtime.inputs?.value === "string" ? runtime.inputs.value : undefined,
+      onChange: (event) => emit("date-input", runtime, "select", { value: event.currentTarget.value }),
+    });
+  },
+  ["label", "disabled"],
+);
+register(
+  "select",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(
+      Select,
+      {
+        "aria-label": String(props.label ?? "선택"),
+        disabled: Boolean(props.disabled),
+        defaultValue: typeof runtime.inputs?.value === "string" ? runtime.inputs.value : "option",
+        onChange: (event) => emit("select", runtime, "select", { value: event.currentTarget.value }),
+      },
+      createElement("option", { value: "option" }, "선택 항목"),
+    );
+  },
+  ["label", "disabled"],
+);
+register(
+  "multiselect",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(MultiSelect, {
+      label: String(props.label ?? "여러 항목 선택"),
+      options: ["A", "B"],
+      value: Array.isArray(runtime.inputs?.value) ? (runtime.inputs.value as string[]) : [],
+      onChange: (value) => emit("multiselect", runtime, "select", { value }),
+      disabled: Boolean(props.disabled),
+    });
+  },
+  ["label", "disabled"],
+);
+register(
+  "checkbox",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(Checkbox, {
+      label: String(props.label ?? "확인"),
+      disabled: Boolean(props.disabled),
+      defaultChecked: typeof runtime.inputs?.value === "boolean" ? runtime.inputs.value : undefined,
+      onChange: (event) => emit("checkbox", runtime, "toggle", { value: event.currentTarget.checked }),
+    });
+  },
+  ["label", "disabled"],
+);
+register(
+  "toggle",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(Toggle, {
+      label: String(props.label ?? "사용"),
+      disabled: Boolean(props.disabled),
+      defaultChecked: typeof runtime.inputs?.value === "boolean" ? runtime.inputs.value : undefined,
+      onChange: (event) => emit("toggle", runtime, "toggle", { value: event.currentTarget.checked }),
+    });
+  },
+  ["label", "disabled"],
+);
+register("tabs", (props) => {
+  const runtime = runtimeOf(props);
+  return createElement(Tabs, {
+    labels: ["개요", "세부 정보"],
+    onSelect: (selectedId) => emit("tabs", runtime, "select", { selectedId }),
+  });
+});
+register("resource-tree", (props) => {
+  const runtime = runtimeOf(props);
+  return createElement(SidebarPattern, {
+    variant: "tree",
+    title: "리소스 트리",
+    items: Array.isArray(runtime.inputs?.records) ? (runtime.inputs.records as never) : undefined,
+    onSelect: (selectedId) => emit("resource-tree", runtime, "select", { selectedId }),
+  });
+});
+register("resource-table", () => createElement(DataTable));
+register(
+  "resource-header",
+  (props) =>
+    createElement(ResourceHeader, {
+      title: typeof props.title === "string" ? props.title : undefined,
+      status: typeof props.status === "string" ? props.status : undefined,
+    }),
+  ["title", "status"],
+);
+register("metric", () => createElement(Metric));
+register("chart-frame", () => createElement(ChartFrame));
+register("code", () => createElement(CodeBlock));
+register("markdown", () => createElement(Markdown));
+register("json", () => createElement(JsonView));
+register(
+  "dialog",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(
+      Dialog,
+      { open: Boolean(props.open), title: "예제 대화상자", onClose: () => emit("dialog", runtime, "dismiss") },
+      "실제 포커스 및 닫기 동작을 제공합니다.",
+    );
+  },
+  ["open"],
+);
+register(
+  "menu",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(Menu, {
+      open: Boolean(props.open),
+      onSelect: (selectedId) => emit("menu", runtime, "select", { selectedId }),
+    });
+  },
+  ["open"],
+);
+register("popover", (props) => createElement(Popover, { open: Boolean(props.open) }), ["open"]);
+register(
+  "toast",
+  (props) => {
+    const runtime = runtimeOf(props);
+    return createElement(Toast, { open: Boolean(props.open), onClose: () => emit("toast", runtime, "dismiss") });
+  },
+  ["open"],
+);
+for (const state of feedback) register(`${state}-state`, () => createElement(StateView, { state }));
 
 export function catalogHas(id: string): boolean {
   return assetCatalog.some((asset) => asset.id === id);
 }
+export function implementationIds(): string[] {
+  return [...implementations.keys()];
+}
+export function implementationPropertyNames(id: string): string[] {
+  const implementation = implementations.get(id);
+  if (!implementation) throw new Error(`No implementation registered for ${id}`);
+  return [...implementation.allowedProps].sort();
+}
+export function instantiateAsset(id: string, props: Record<string, unknown> = {}, runtime: AssetRuntime = {}) {
+  const implementation = implementations.get(id);
+  if (!implementation) throw new Error(`No implementation registered for ${id}`);
+  const descriptor = assetCatalog.find((asset) => asset.id === id);
+  if (!descriptor) throw new Error(`No descriptor declared for ${id}`);
+  const unsupported = Object.keys(props).filter((name) => !implementation.allowedProps.has(name));
+  if (unsupported.length) throw new Error(`Unsupported properties for ${id}: ${unsupported.join(", ")}`);
+  validateValues(id, props, descriptor.properties, "property");
+  validateValues(id, runtime.inputs ?? {}, descriptor.inputs, "input");
+  return createElement(implementation.component, { ...props, $runtime: runtime });
+}
+
+export const catalogCompatibility = {
+  policy: "Stable IDs are immutable within a major version. Replacement uses a new @major ID; aliases are prohibited.",
+  deprecation:
+    "Deprecated assets remain implemented for one release window and name their replacement before removal in the next major version.",
+} as const;
