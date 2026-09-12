@@ -88,3 +88,66 @@ def test_http_and_mcp_share_agent_execution_composition() -> None:
             for node in ast.walk(tree)
         )
         assert imported, f"{path.relative_to(ROOT)} bypasses shared Agent composition"
+
+
+def _import_names(tree: ast.AST) -> list[tuple[int, str]]:
+    imports: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imports.extend((node.lineno, alias.name) for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imports.append((node.lineno, node.module))
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "importlib"
+            and node.func.attr == "import_module"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+        ):
+            imports.append((node.lineno, node.args[0].value))
+        elif (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "__import__"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+        ):
+            imports.append((node.lineno, node.args[0].value))
+    return imports
+
+
+def test_identity_package_dependency_directions_include_dynamic_imports() -> None:
+    forbidden_core = (
+        "app",
+        "apps",
+        "agent_factory_adapters",
+        "fastapi",
+        "sqlalchemy",
+        "authlib",
+        "pwdlib",
+    )
+    violations: list[str] = []
+    core = ROOT / "packages/platform-core/src/agent_factory_core"
+    adapters = ROOT / "packages/platform-adapters/src/agent_factory_adapters/identity"
+    for path in sorted(core.rglob("*.py")):
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for line, name in _import_names(tree):
+            if name in forbidden_core or name.startswith(
+                tuple(f"{prefix}." for prefix in forbidden_core)
+            ):
+                violations.append(f"{path.relative_to(ROOT)}:{line}: {name}")
+    for path in sorted(adapters.rglob("*.py")):
+        tree = ast.parse(path.read_text(), filename=str(path))
+        for line, name in _import_names(tree):
+            if (
+                name == "app"
+                or name.startswith("app.")
+                or name == "apps"
+                or name.startswith("apps.")
+            ):
+                violations.append(f"{path.relative_to(ROOT)}:{line}: {name}")
+    assert not violations, "\n".join(violations)

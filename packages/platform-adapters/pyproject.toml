@@ -6,7 +6,14 @@ build-backend = "hatchling.build"
 name = "agent-factory-adapters"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["agent-factory-contracts", "agent-factory-core", "sqlalchemy[asyncio]>=2,<3"]
+dependencies = [
+    "agent-factory-contracts",
+    "agent-factory-core",
+    "authlib>=1.6,<2",
+    "pwdlib[argon2]>=0.3,<1",
+    "sqlalchemy[asyncio]>=2,<3",
+    "starlette>=1.6",
+]
 
 [tool.uv.sources]
 agent-factory-contracts = { workspace = true }

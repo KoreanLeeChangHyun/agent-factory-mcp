@@ -31,7 +31,7 @@
 | 영역                  | 현재 상태 | 현재 근거                                                                                                        | 다음 완료 지점                                              |
 | --------------------- | --------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | 목표 아키텍처         | 부분 완료 | 모노레포·Workbench·포팅 방향과 [ADR-001~010](../adr/) 적용 결정 존재                                             | 신규 apps/packages 의존성 규칙 자동 검사                    |
-| 현행 서비스 경계      | 부분 완료 | `app/modules`, 얇은 router를 검사하는 architecture test, 공유 서비스 일부 존재                                   | core port와 adapter 경계를 목표 패키지에서 강제             |
+| 현행 서비스 경계      | 부분 완료 | Stage 7 identity/authorization core·PostgreSQL/crypto/OAuth adapter·API composition과 dependency guard 작성       | Stage 7 독립 gate 후 나머지 도메인 경계를 순차 포팅         |
 | 모노레포 골격         | 완료      | Stage 1 독립 Verification에서 frozen install, 공통 gate, worker smoke, web/Python build와 no-cleanup 재실행 통과 | 후속 slice에서 같은 gate 유지                               |
 | 공통 UI 기반          | 완료      | Stage 2 독립 Verification에서 17 design-system tests, Chromium matrix와 10 screenshots 통과                      | 후속 소비자 전환 동안 같은 catalog gate 유지                |
 | 작업 목록 에셋        | 완료      | 16개 versioned React SVG와 상태·provenance가 Stage 2 독립 catalog/Chromium gate 통과                             | 후속 registry/runtime 소비에서 호환성 유지                  |
@@ -42,10 +42,10 @@
 | Workbench runtime     | 완료      | Stage 4 registry/renderer/binding/action/view-state 독립 package/browser gate 통과                               | 후속 server-backed 소비자에서 같은 gate 유지                |
 | 사용자 작성기         | 완료      | Stage 5 최종 독립 Verification에서 실제 DB-backed 저장·게시·release·reload browser gate 통과                     | 후속 표준 작업 포팅에서 같은 작성/게시 계약 유지            |
 | Workbench 도메인      | 완료      | Stage 5 최종 독립 Verification에서 0026, transaction/RBAC/RLS/HTTP·MCP parity와 불변 release 통과                | 후속 binding/표준 작업 소비에서 같은 계약 유지              |
-| React Workbench shell | 부분 완료 | Stage 6 production shadow route, 공유 shell, registry와 Documents 대표 slice 작성                                | RF-700~705 독립 production/DB/browser/rollback 검증         |
+| React Workbench shell | 완료      | Stage 6 독립 Verification에서 production route·DB·browser·양방향 rollback 통과                                   | 후속 표준 작업 포팅 동안 같은 production gate 유지          |
 | 표준 작업 포팅        | 부분 완료 | Stage 6 Documents 대표 범위 작성; 전체 Documents와 나머지 표준 작업은 legacy 유지                                | RF-801 전체 Documents parity와 RF-800/802~804 순차 전환     |
 | MCP App host          | 후순위    | Document preview sandbox는 있으나 MCP AppBridge host는 없음                                                      | 실제 사례 후 CSP·capability·message·teardown 보안 gate 통과 |
-| 전환·제거             | 후순위    | 신규 경로가 없어 시작할 수 없음                                                                                  | 관측·rollback 조건 충족 후 legacy 경로 제거                 |
+| 전환·제거             | 후순위    | production shadow route와 즉시 legacy rollback은 검증됨; 실제 rollout 관측과 제거 조건은 미충족                  | 관측·rollback 조건 충족 후 legacy 경로 제거                 |
 
 ## 단계별 작업 현황표
 
@@ -128,26 +128,26 @@
 | RF-602 | Workbench repository port와 PostgreSQL adapter | 완료      | RF-600~601     | Stage 5 독립 0026 migration·forced RLS·동시성 PostgreSQL 검증 통과       |
 | RF-603 | Workbench command/query use case               | 완료      | RF-602         | Stage 5 독립 권한·CAS·idempotency·transaction failure 검증 통과          |
 | RF-604 | 얇은 HTTP·MCP adapter                          | 완료      | RF-603         | Stage 5 독립 인증 HTTP/MCP 결과·오류 parity 검증 통과                    |
-| RF-605 | 기존 도메인의 `platform-core` 포팅             | 부분 완료 | RF-201, RF-004 | 도메인별 vertical slice와 port로 이동, framework/DB/provider import 차단 |
-| RF-606 | 기존 외부 구현의 `platform-adapters` 포팅      | 부분 완료 | RF-201, RF-004 | PostgreSQL·Redis·storage·MCP·HTTP·embedding·secret adapter 경계 완성     |
-| RF-607 | API/worker composition 분리                    | 부분 완료 | RF-605~606     | 별도 entrypoint가 같은 core use case를 조립하고 모델을 복사하지 않음     |
+| RF-605 | 기존 도메인의 `platform-core` 포팅             | 부분 완료 | RF-201, RF-004 | Stage 7 identity/authorization slice 작성; 독립 gate와 나머지 도메인 포팅 필요 |
+| RF-606 | 기존 외부 구현의 `platform-adapters` 포팅      | 부분 완료 | RF-201, RF-004 | Stage 7 PostgreSQL/crypto/OAuth slice 작성; 독립 gate와 나머지 adapter 필요   |
+| RF-607 | API/worker composition 분리                    | 부분 완료 | RF-605~606     | Stage 7 API identity composition 작성; worker와 나머지 도메인 분리 필요      |
 
 ### 7. React shell과 첫 vertical slice
 
 | ID     | 작업                                        | 상태      | 선행                               | 완료 조건                                                                        |
 | ------ | ------------------------------------------- | --------- | ---------------------------------- | -------------------------------------------------------------------------------- |
-| RF-700 | Vite React shadow route                     | 부분 완료 | RF-200, RF-202                     | 실제 server deep-link/manifest/package 경로 작성; 독립 production gate 대기      |
-| RF-701 | 작업 목록｜사이드바｜패널 shell             | 부분 완료 | RF-700, RF-302~304                 | design-system 공통 shell/resize와 React state 작성; 독립 gate 대기               |
-| RF-702 | 표준·고객 단일 WorkbenchRegistry            | 부분 완료 | RF-500, RF-603                     | 표준+authorized release projection 작성; 독립 isolation/collision gate 대기      |
-| RF-703 | 대표 vertical slice로 `문서` 작업 범위 고정 | 부분 완료 | RF-002, RF-004                     | 실제 Documents 대표 범위와 RF-801 잔여 inventory 기록; 독립 증거 대기            |
-| RF-704 | 대표 vertical slice 구현                    | 부분 완료 | RF-501~505, RF-603~604, RF-701~703 | 실제 API create/read/edit/conflict/revision/preview 작성; DB/browser gate 대기   |
-| RF-705 | feature flag와 rollback                     | 부분 완료 | RF-700, RF-704                     | established entry의 flag 선택과 one-shot legacy 복귀 작성; 양방향 독립 검증 대기 |
+| RF-700 | Vite React shadow route                     | 완료      | RF-200, RF-202                     | Stage 6 독립 production deep-link/manifest/package/CSP gate 통과                  |
+| RF-701 | 작업 목록｜사이드바｜패널 shell             | 완료      | RF-700, RF-302~304                 | Stage 6 독립 shell/resize/keyboard/390px/theme gate 통과                          |
+| RF-702 | 표준·고객 단일 WorkbenchRegistry            | 완료      | RF-500, RF-603                     | Stage 6 독립 authorized projection/isolation/collision gate 통과                  |
+| RF-703 | 대표 vertical slice로 `문서` 작업 범위 고정 | 완료      | RF-002, RF-004                     | 대표 범위와 RF-801 잔여 inventory를 Stage 6 evidence에 고정                       |
+| RF-704 | 대표 vertical slice 구현                    | 완료      | RF-501~505, RF-603~604, RF-701~703 | Stage 6 실제 DB-backed create/read/edit/conflict/revision/preview gate 통과       |
+| RF-705 | feature flag와 rollback                     | 완료      | RF-700, RF-704                     | Stage 6 one-shot legacy 복귀와 React 재진입 양방향 gate 통과                      |
 
 ### 8. 표준 작업 순차 포팅
 
 | ID     | 작업                       | 상태   | 선행       | 완료 조건                                                          |
 | ------ | -------------------------- | ------ | ---------- | ------------------------------------------------------------------ |
-| RF-800 | 작업공간·조직·계정·관리자  | 미착수 | RF-704~705 | 권한·선택·조직 전환·위험 작업 회귀와 API 결과 비교                 |
+| RF-800 | 작업공간·조직·계정·관리자  | 부분 완료 | RF-704~705 | Stage 7 계정 identity/authorization backend 작성; 독립 gate와 조직·작업공간·관리자 UI/API 포팅 필요 |
 | RF-801 | 문서·검색·지식             | 미착수 | RF-704~705 | tree/editor/preview/revision/provenance와 전달 흐름 회귀           |
 | RF-802 | 일정                       | 미착수 | RF-704~705 | tree/timeline/today/kanban, 생성·수정·복원 회귀                    |
 | RF-803 | 에이전트·보고·로그·테스트  | 미착수 | RF-704~705 | 계층·실행 상태·증거 표시와 장시간 갱신 회귀                        |
@@ -217,11 +217,11 @@ MCP Apps host(RF-900~903)는 대표 native Workbench가 완성되고 실제 외�
 
 ## 현 시점의 다음 작업
 
-1. RF-700~705: production-served React shadow route, 단일 registry, 실제 Documents 대표 slice와
-   Workspace별 즉시 rollback을 독립 Verification한다.
+1. RF-605~607: identity/authorization부터 기존 도메인·PostgreSQL/provider adapter와 API composition을
+   vertical slice로 순차 포팅한다.
 2. RF-003: 전체 legacy [기준선 matrix](2026-09-12-workbench-baseline.md)의 fixture/API,
    browser와 disposable infrastructure 범위를 별도 실행하고 전역 제한을 해소한다.
-3. RF-605~607 기존 전체 도메인/adapter 포팅과 RF-800~805 표준 기능 포팅은 후속 slice로 유지한다.
+3. RF-801 전체 Documents parity와 RF-800/802~805 표준 기능 포팅은 후속 slice로 유지한다.
 
 단순 디렉터리 생성만으로 상태를 완료로 바꾸지 않는다. 각 행의 완료 조건과 해당 검증이
 함께 충족된 경우에만 완료로 갱신한다.

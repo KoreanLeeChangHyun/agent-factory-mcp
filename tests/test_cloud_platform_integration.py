@@ -65,7 +65,7 @@ async def platform(monkeypatch, tmp_path):
     from app.db import models  # noqa: F401  # Register every mapped model with SQLAlchemy.
     from app.db.session import dispose_engine
     from app.modules.auth.crypto import token_digest
-    from app.modules.auth.models import ApiToken, AuthSession
+    from app.modules.auth.models import ApiToken, AuthSession, UserCredential
     from app.modules.identity.models import User
     from app.modules.mcp_connection.models import MCPConnection
     from app.modules.organization.models import Organization, OrganizationMembership
@@ -87,8 +87,10 @@ async def platform(monkeypatch, tmp_path):
     }
     browser_cookie = uuid4().hex
     reader_cookie = uuid4().hex
+    browser_email = f"{user}@example.com"
+    browser_password = "disposable-stage7-password"
     async with sessions() as session:
-        session.add(User(id=user, email=f"{user}@example.com", display_name="클라우드 테스트"))
+        session.add(User(id=user, email=browser_email, display_name="클라우드 테스트"))
         session.add(
             User(
                 id=reader_user,
@@ -196,6 +198,16 @@ async def platform(monkeypatch, tmp_path):
                 expires_at=now + timedelta(days=1),
             )
         )
+        from agent_factory_adapters.identity import SystemIdentityCrypto
+
+        session.add(
+            UserCredential(
+                user_id=user,
+                password_hash=SystemIdentityCrypto(
+                    settings.auth_token_secret.get_secret_value()
+                ).hash_password(browser_password),
+            )
+        )
         await session.commit()
     objects = IsolatedObjects(tmp_path)
     from app.mcp import documents
@@ -275,6 +287,8 @@ async def platform(monkeypatch, tmp_path):
                 requests=provider_requests,
                 provider_hook=provider_hook,
                 cookie=browser_cookie,
+                email=browser_email,
+                password=browser_password,
                 reader_cookie=reader_cookie,
                 settings=settings,
             )
@@ -355,6 +369,294 @@ def metadata(raw, *, slug=None, **extra):
         collection_context="Disposable HTTP source fixture",
         **extra,
     )
+
+
+async def test_identity_postgres_http_mcp_lifecycle_and_current_authority(platform):
+    """Exercise the production identity ports against forced-RLS PostgreSQL."""
+
+    p = platform
+    from agent_factory_adapters.identity import (
+        PostgresAuthorizationRepository,
+        PostgresIdentityRepository,
+        SystemIdentityCrypto,
+    )
+    from agent_factory_api.composition.identity import (
+        IdentityCompositionSettings,
+        compose_authorization,
+        compose_identity,
+    )
+    from agent_factory_core.identity import AuthorizationScope
+    from agent_factory_core.shared.errors import (
+        AuthenticationError,
+        NotFoundError,
+        PermissionDeniedError,
+    )
+    from app.db.session import get_session_factory
+    from app.modules.auth.models import AuthSession, ExternalIdentity
+    from app.modules.identity.models import User
+    from app.modules.organization.models import Organization, OrganizationMembership
+    from app.modules.organization.system_roles import (
+        VIEWER_ROLE_ID,
+        WORKSPACE_OWNER_ROLE_ID,
+    )
+    from app.modules.workspace.models import Workspace, WorkspaceMembership
+
+    composition_settings = IdentityCompositionSettings(
+        p.settings.auth_token_secret.get_secret_value(),
+        p.settings.auth_session_ttl_hours,
+        p.settings.auth_max_failed_attempts,
+        p.settings.auth_lock_minutes,
+    )
+    crypto = SystemIdentityCrypto(p.settings.auth_token_secret.get_secret_value())
+    sessions = get_session_factory()
+
+    async with sessions() as session:
+        authentication = compose_identity(session, composition_settings)
+        authorization = compose_authorization(session)
+        assert isinstance(authentication.repository, PostgresIdentityRepository)
+        assert isinstance(authorization.repository, PostgresAuthorizationRepository)
+        existing = await authentication.authenticate_session(p.cookie)
+        assert existing.user_id == p.user
+        assert (
+            await authentication.login(p.email.upper(), p.password, "stage7-port")
+        ).principal == existing
+
+    p.client.cookies.clear()
+    login = await p.client.post(
+        "/api/auth/login", json={"email": p.email.upper(), "password": p.password}
+    )
+    assert login.status_code == 200, login.text
+    http_session = p.client.cookies.get(p.settings.session_cookie_name)
+    assert http_session
+    assert (await p.client.get("/api/auth/me")).json()["user"]["id"] == str(p.user)
+
+    invalid_sessions = {
+        "expired": (datetime.now(UTC) - timedelta(seconds=1), None),
+        "revoked": (datetime.now(UTC) + timedelta(hours=1), datetime.now(UTC)),
+    }
+    async with p.admin() as session:
+        for raw, (expires_at, revoked_at) in invalid_sessions.items():
+            session.add(
+                AuthSession(
+                    user_id=p.user,
+                    token_digest=crypto.token_digest(raw),
+                    expires_at=expires_at,
+                    revoked_at=revoked_at,
+                )
+            )
+        await session.commit()
+    for raw in invalid_sessions:
+        p.client.cookies.clear()
+        p.client.cookies.set(p.settings.session_cookie_name, raw)
+        assert (await p.client.get("/api/auth/me")).status_code == 401
+
+    p.client.cookies.clear()
+    p.client.cookies.set(p.settings.session_cookie_name, http_session)
+    async with p.admin() as session:
+        await session.execute(update(User).where(User.id == p.user).values(status="suspended"))
+        await session.commit()
+    assert (await p.client.get("/api/auth/me")).status_code == 401
+    async with p.admin() as session:
+        await session.execute(
+            update(User)
+            .where(User.id == p.user)
+            .values(status="active", deleted_at=datetime.now(UTC))
+        )
+        await session.commit()
+    assert (await p.client.get("/api/auth/me")).status_code == 401
+    async with p.admin() as session:
+        await session.execute(update(User).where(User.id == p.user).values(deleted_at=None))
+        await session.commit()
+
+    async with sessions() as session:
+        authentication = compose_identity(session, composition_settings)
+        linked = await authentication.login_external(
+            provider="google",
+            subject="stage7-existing",
+            email=p.email,
+            display_name="Existing identity",
+            user_agent="stage7-external-existing",
+        )
+        assert linked.principal.user_id == p.user
+    new_external_email = f"stage7-{uuid4()}@example.test"
+    async with sessions() as session:
+        created = await compose_identity(session, composition_settings).login_external(
+            provider="github",
+            subject="stage7-new",
+            email=new_external_email,
+            display_name="New external identity",
+            user_agent="stage7-external-new",
+        )
+    async with p.admin() as session:
+        assert (
+            await session.scalar(
+                select(ExternalIdentity.id).where(
+                    ExternalIdentity.user_id == created.principal.user_id,
+                    ExternalIdentity.provider == "github",
+                )
+            )
+            is not None
+        )
+        personal_organization = await session.scalar(
+            select(Organization.id)
+            .join(OrganizationMembership)
+            .where(
+                OrganizationMembership.user_id == created.principal.user_id,
+                Organization.is_personal.is_(True),
+            )
+        )
+        assert personal_organization is not None
+
+    async with sessions() as session:
+        authentication = compose_identity(session, composition_settings)
+        _, mcp_token = await authentication.create_api_token(
+            user_id=p.user,
+            name="stage7-production-mcp",
+            scopes=["workbench:read"],
+            expires_in_days=1,
+            organization_id=p.org,
+            workspace_id=p.workspace,
+        )
+    p.tokens["stage7-production"] = mcp_token
+    assert (await rpc(p, "tools/list", token="stage7-production")).status_code == 200
+
+    principal = existing
+    scope = AuthorizationScope(p.org, p.workspace)
+    async with sessions() as session:
+        context = await compose_authorization(session).authorize(
+            principal, scope, "workbench.create"
+        )
+        assert "workbench.create" in context.permissions
+        assert await session.scalar(
+            text("SELECT current_setting('app.current_workspace_id', true)")
+        ) == str(p.workspace)
+    async with p.admin() as session:
+        await session.execute(
+            update(WorkspaceMembership)
+            .where(
+                WorkspaceMembership.user_id == p.user,
+                WorkspaceMembership.workspace_id == p.workspace,
+            )
+            .values(role_id=VIEWER_ROLE_ID)
+        )
+        await session.commit()
+    async with sessions() as session:
+        with pytest.raises(PermissionDeniedError):
+            await compose_authorization(session).authorize(principal, scope, "workbench.create")
+    async with p.admin() as session:
+        await session.execute(
+            update(WorkspaceMembership)
+            .where(
+                WorkspaceMembership.user_id == p.user,
+                WorkspaceMembership.workspace_id == p.workspace,
+            )
+            .values(role_id=WORKSPACE_OWNER_ROLE_ID)
+        )
+        await session.execute(
+            update(OrganizationMembership)
+            .where(
+                OrganizationMembership.user_id == p.user,
+                OrganizationMembership.organization_id == p.org,
+            )
+            .values(status="suspended")
+        )
+        await session.commit()
+    async with sessions() as session:
+        with pytest.raises(PermissionDeniedError):
+            await compose_authorization(session).authorize(principal, scope, "workbench.read")
+    assert (await rpc(p, "tools/list", token="stage7-production")).status_code == 401
+    async with p.admin() as session:
+        await session.execute(
+            update(OrganizationMembership)
+            .where(
+                OrganizationMembership.user_id == p.user,
+                OrganizationMembership.organization_id == p.org,
+            )
+            .values(status="active")
+        )
+        await session.execute(
+            update(Workspace).where(Workspace.id == p.workspace).values(status="inactive")
+        )
+        await session.commit()
+    async with sessions() as session:
+        with pytest.raises(NotFoundError):
+            await compose_authorization(session).resolve(principal, scope)
+    assert (await rpc(p, "tools/list", token="stage7-production")).status_code == 401
+    second_organization, second_workspace = uuid4(), uuid4()
+    async with p.admin() as session:
+        await session.execute(
+            update(Workspace).where(Workspace.id == p.workspace).values(status="active")
+        )
+        session.add(
+            Organization(
+                id=second_organization,
+                name="Stage 7 isolated tenant",
+                slug=str(second_organization),
+            )
+        )
+        await session.flush()
+        session.add(
+            Workspace(
+                id=second_workspace,
+                organization_id=second_organization,
+                name="Stage 7 isolated Workspace",
+                slug=str(second_workspace),
+            )
+        )
+        await session.commit()
+    assert (await rpc(p, "tools/list", token="stage7-production")).status_code == 200
+    async with sessions() as session:
+        repository = PostgresAuthorizationRepository(session)
+        await repository.establish_scope(principal, scope)
+        assert (
+            await session.scalar(
+                text("SELECT id FROM workspaces WHERE id=:id"), {"id": p.workspace}
+            )
+            == p.workspace
+        )
+        assert (
+            await session.scalar(
+                text("SELECT id FROM workspaces WHERE id=:id"), {"id": second_workspace}
+            )
+            is None
+        )
+        with pytest.raises(PermissionDeniedError):
+            await compose_authorization(session).authorize(
+                principal,
+                AuthorizationScope(second_organization, second_workspace),
+                "workbench.read",
+            )
+
+    async with sessions() as session:
+        delivery = await compose_identity(session, composition_settings).issue_password_reset(
+            p.email
+        )
+    assert delivery is not None
+    reset_token = delivery[1]
+
+    async def consume_reset() -> object:
+        async with sessions() as session:
+            try:
+                await compose_identity(session, composition_settings).reset_password(
+                    reset_token, "disposable-stage7-password-updated"
+                )
+            except AuthenticationError as error:
+                return error
+        return None
+
+    reset_results = await asyncio.gather(consume_reset(), consume_reset())
+    assert sum(result is None for result in reset_results) == 1
+    assert sum(isinstance(result, AuthenticationError) for result in reset_results) == 1
+    async with sessions() as session:
+        authentication = compose_identity(session, composition_settings)
+        with pytest.raises(AuthenticationError):
+            await authentication.authenticate_session(http_session)
+        with pytest.raises(AuthenticationError):
+            await authentication.login(p.email, p.password, "stage7-old-password")
+        updated = await authentication.login(
+            p.email, "disposable-stage7-password-updated", "stage7-new-password"
+        )
+        assert updated.principal.user_id == p.user
 
 
 async def test_http_mcp_auth_scope_rls_and_import_races(platform):
@@ -1315,6 +1617,7 @@ async def test_authenticated_workbench_authoring_with_real_postgres_and_http(pla
     from agent_factory_contracts.generated.schema_bundle import DOCUMENTS_FIXTURE
     from agent_factory_core import WorkbenchActor
     from app.db.session import get_session_factory
+    from app.modules.auth.models import AuthSession
 
     actor = WorkbenchActor(
         p.user,
@@ -1359,6 +1662,8 @@ async def test_authenticated_workbench_authoring_with_real_postgres_and_http(pla
         "WORKBENCH_APP_BASE": frontend_app_base,
         "WORKBENCH_BROWSER_COOKIE": p.cookie,
         "WORKBENCH_BROWSER_COOKIE_NAME": p.settings.session_cookie_name,
+        "WORKBENCH_BROWSER_EMAIL": p.email,
+        "WORKBENCH_BROWSER_PASSWORD": p.password,
         "WORKBENCH_BROWSER_ORGANIZATION": str(p.org),
         "WORKBENCH_BROWSER_WORKSPACE": str(p.workspace),
     }
@@ -1444,6 +1749,16 @@ async def test_authenticated_workbench_authoring_with_real_postgres_and_http(pla
         )
         documents_output, _ = await asyncio.wait_for(documents_process.communicate(), 90)
         assert documents_process.returncode == 0, documents_output.decode()
+        async with p.admin() as session:
+            assert (
+                await session.scalar(
+                    select(AuthSession.revoked_at).where(
+                        AuthSession.user_id == p.user,
+                        AuthSession.user_agent == "agent-factory-stage7-browser",
+                    )
+                )
+                is not None
+            )
     finally:
         if frontend.returncode is None:
             frontend.terminate()

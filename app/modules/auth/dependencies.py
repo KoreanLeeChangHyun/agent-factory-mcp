@@ -5,16 +5,24 @@ from typing import Annotated
 from fastapi import Cookie, Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_factory_api.composition.identity import IdentityCompositionSettings, compose_identity
+from agent_factory_core.identity import AuthService, Principal
 from app.common.errors import PermissionDeniedError
 from app.core.config import settings
 from app.db.session import get_session
 from app.infrastructure.email import EmailSender
-from app.modules.auth.repository import AuthRepository
-from app.modules.auth.service import AuthService, Principal
 
 
 def get_auth_service(session: Annotated[AsyncSession, Depends(get_session)]) -> AuthService:
-    return AuthService(AuthRepository(session), settings)
+    return compose_identity(
+        session,
+        IdentityCompositionSettings(
+            token_secret=settings.auth_token_secret.get_secret_value(),
+            session_ttl_hours=settings.auth_session_ttl_hours,
+            max_failed_attempts=settings.auth_max_failed_attempts,
+            lock_minutes=settings.auth_lock_minutes,
+        ),
+    )
 
 
 def get_email_sender() -> EmailSender:

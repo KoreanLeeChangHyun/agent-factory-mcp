@@ -50,8 +50,8 @@ test, deploy, script와 configuration 소유자를 목표 구조에 빠짐없이
 
 | 현행 도메인과 adapter | 목표 core owner | 목표 transport/adapter | compatibility 및 제거 조건 |
 | --- | --- | --- | --- |
-| `app/modules/auth/*`, `identity/*`; routers `auth`, `account` | `platform-core/identity` | API session dependencies + PostgreSQL/OAuth/crypto adapters | legacy opaque sessions, hashes, external accounts와 cookies를 그대로 읽고 auth baseline 통과 |
-| `app/modules/organization/*`; routers `organizations`, `workspace_management`, `account` | `platform-core/organizations` 및 `workspaces` | API routes + PostgreSQL/email | permission catalog, owner/delegation/team/invitation/audit와 personal org 보존; 조직 RLS gate 후 제거 |
+| `app/modules/auth/*`, `identity/*`; routers `auth`, `account` | `platform-core/identity` | API session dependencies + PostgreSQL/OAuth/crypto adapters | Stage 7에서 core lifecycle·PostgreSQL/crypto/OAuth adapter·API composition과 legacy bridge 작성; auth/DB/browser 독립 gate 후 기존 schema·cookie 호환 확정 |
+| `app/modules/organization/*`; routers `organizations`, `workspace_management`, `account` | `platform-core/organizations` 및 `workspaces` | API routes + PostgreSQL/email | Stage 7에서 permission catalog와 authorization context/policy를 core로 이동하고 호환 import 유지; 나머지 owner/delegation/team/invitation/audit와 조직 RLS gate 후 제거 |
 | `app/modules/workspace/*`; routers `workspace`, `workspace_management` | `platform-core/workspaces` | API routes/repositories; `apps/web/standard/workspace` | selection/revision/recent visit/repository identity와 live state 유지; API/browser/RLS 비교 후 제거 |
 | `app/modules/admin/*`; router `admin` | `platform-core/identity,organizations,workspaces,executions,audit`의 admin queries | `apps/api/http/routes/admin` + `apps/web/standard/admin` | tenant와 분리된 platform-admin principal, safe config/health/flags 보존; fail-closed gate 후 제거 |
 | `app/modules/document/*`; routers `documents`, `cloud_documents`, `search` | `platform-core/knowledge` | PostgreSQL/pgvector/object storage adapters, API/MCP document tools, `apps/web/standard/documents` | Original/Processed/Specification, revisions, package pair, preview sandbox, lexical/vector search 모두 Documents slice로 비교; 첫 slice 완료 전 제거 금지 |

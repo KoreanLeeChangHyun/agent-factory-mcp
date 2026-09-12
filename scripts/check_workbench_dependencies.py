@@ -23,6 +23,10 @@ FORBIDDEN_CORE = {
     "httpx",
     "openai",
     "anthropic",
+    "authlib",
+    "pwdlib",
+    "app",
+    "apps",
 }
 PYTHON_INTERNAL = {
     "agent-factory-contracts": "contracts",
@@ -86,8 +90,14 @@ def imports(path: Path) -> list[str]:
                 result.append(prefix + (node.module or ""))
             elif (
                 isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Name)
-                and node.func.id == "__import__"
+                and (
+                    isinstance(node.func, ast.Name)
+                    and node.func.id == "__import__"
+                    or isinstance(node.func, ast.Attribute)
+                    and isinstance(node.func.value, ast.Name)
+                    and node.func.value.id == "importlib"
+                    and node.func.attr == "import_module"
+                )
                 and node.args
                 and isinstance(node.args[0], ast.Constant)
             ):
@@ -127,8 +137,13 @@ def check_edge(path: Path, source: str, imported: str, target: str | None) -> li
             f"{path.relative_to(ROOT)}: {source} depends on forbidden {target} target {imported!r}"
         ]
     normalized = imported.lower().replace("_", "-").split("[", 1)[0]
-    if source == "core" and normalized in FORBIDDEN_CORE:
+    if source == "core" and any(
+        normalized == forbidden or normalized.startswith(f"{forbidden}.")
+        for forbidden in FORBIDDEN_CORE
+    ):
         return [f"{path.relative_to(ROOT)}: core depends on forbidden dependency {imported!r}"]
+    if source == "adapters" and (normalized == "app" or normalized.startswith("app.")):
+        return [f"{path.relative_to(ROOT)}: adapter depends on legacy application {imported!r}"]
     return []
 
 

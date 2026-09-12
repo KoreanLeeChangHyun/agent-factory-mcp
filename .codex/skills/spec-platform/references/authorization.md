@@ -6,8 +6,9 @@ transaction-local PostgreSQL RLS context and verifies active membership and live
 Workspace state. Organization membership suspension/removal overrides direct and
 team Workspace grants.
 
-`app/modules/organization/permissions.py` owns the permission catalog and built-in
-role definitions. Organization roles govern organization operations; Workspace
+`packages/platform-core/src/agent_factory_core/organizations/permissions.py` owns the permission
+catalog and built-in role definitions; `app/modules/organization/permissions.py` is a transitional
+compatible import. Organization roles govern organization operations; Workspace
 roles apply only through direct or team membership in the selected Workspace.
 Effective permissions are the union of those grants. User-defined roles cannot
 include unknown keys, another scope, or owner-only transfer/delete permissions.

@@ -13,6 +13,7 @@ dependencies = [
     "fastapi",
     "pydantic>=2,<3",
     "sqlalchemy[asyncio]>=2,<3",
+    "starlette>=1.6",
 ]
 
 [tool.uv.sources]

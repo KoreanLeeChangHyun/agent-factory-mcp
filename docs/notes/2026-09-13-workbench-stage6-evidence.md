@@ -142,3 +142,28 @@ Work did not execute tests, linters, type checks, builds, browsers, servers, mig
 Only write-mode formatters were applied to revised files. The rows RF-700–705 remain partial until
 independent Verification establishes the exact production route, DB, authorization, isolation,
 rollback, browser, package, and regression evidence.
+
+## Final independent Verification
+
+Verification run `run-20260912T191355170132Z-819b062c` passed the final Work run
+`run-20260912T191246711239Z-02e7cb7a` for original request SHA-256
+`e394b08144a7801ee381e7562fff600225ed87b06123ae13b7d9aaeff3a7bdd8`, with no remaining
+findings. The independent evidence establishes RF-700–705 at this bounded stage:
+
+- `make workbench-check` passed 61 TypeScript and 17 Python checks, and the runtime/editor runner
+  passed 21 runtime and three editor tests plus its Chromium shell, authoring, responsive, theme,
+  keyboard, and restoration gate.
+- Offline builds of the contracts, core, adapters, API, and root wheels passed the isolated installed
+  resource checks, including byte-identical legacy resources, catalog inputs, hashed React assets,
+  and the Vite manifest.
+- A fresh PostgreSQL 16.15/pgvector 0.6 database migrated through `0026`. A
+  NOSUPERUSER/NOBYPASSRLS application role exercised authenticated production HTTP, forced RLS,
+  persisted Documents authoring and revision recovery, exact stale-409 recovery, strict CSP, the
+  canonical `/workbench/` base, 180/268/520 px and 390 px layouts, themes, and immediate
+  React-to-legacy-to-React rollback with visible legacy navigation.
+- Sixty-four related API/authentication/authorization/legacy Documents/delivery regressions passed.
+
+This evidence does not establish a real external OAuth login, deployment or rollout observation,
+full RF-801 Documents/search/knowledge parity, legacy removal, or RF-605–607 ports. The source
+inventory case requiring the external sibling `skills/document` checkout also remains a fixture
+limitation. Those items remain explicitly open.

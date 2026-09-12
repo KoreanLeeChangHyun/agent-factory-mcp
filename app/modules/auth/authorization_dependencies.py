@@ -7,10 +7,10 @@ from uuid import UUID
 from fastapi import Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agent_factory_api.composition.identity import compose_authorization
 from app.common.errors import ApplicationError, PermissionDeniedError
 from app.db.session import get_session
 from app.modules.auth.authorization import (
-    AuthorizationRepository,
     AuthorizationScope,
     AuthorizationService,
     AuthorizedContext,
@@ -22,7 +22,7 @@ from app.modules.auth.service import Principal
 def get_authorization_service(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> AuthorizationService:
-    return AuthorizationService(AuthorizationRepository(session))
+    return compose_authorization(session)
 
 
 def require_permission(
@@ -36,7 +36,11 @@ def require_permission(
         workspace_header: Annotated[str | None, Header(alias="X-Workspace-ID")] = None,
     ) -> AuthorizedContext:
         organization_value = request.path_params.get("organization_id") or organization_header
-        workspace_value = (request.path_params.get("workspace_id") or workspace_header) if workspace_required else None
+        workspace_value = (
+            (request.path_params.get("workspace_id") or workspace_header)
+            if workspace_required
+            else None
+        )
         if organization_value is None:
             raise ApplicationError(
                 "organization_scope_required", "Organization scope is required", 400

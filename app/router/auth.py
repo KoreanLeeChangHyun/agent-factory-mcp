@@ -7,6 +7,11 @@ from authlib.integrations.base_client.errors import OAuthError
 from fastapi import APIRouter, Cookie, Depends, Request, Response
 from fastapi.responses import RedirectResponse
 
+from agent_factory_api.http.sessions import (
+    SessionCookieSettings,
+    clear_session_cookies,
+    set_session_cookies,
+)
 from app.common.errors import AuthenticationError, NotFoundError
 from app.core.config import settings
 from app.core.urls import public_path
@@ -49,23 +54,16 @@ def _user_response(principal: Principal) -> UserResponse:
 def _set_auth_cookies(response: Response, session_token: str) -> None:
     max_age = settings.auth_session_ttl_hours * 60 * 60
     cookie_path = settings.root_path or "/"
-    response.set_cookie(
-        settings.session_cookie_name,
+    set_session_cookies(
+        response,
+        SessionCookieSettings(
+            settings.session_cookie_name,
+            cookie_path,
+            settings.session_cookie_secure,
+            max_age,
+        ),
         session_token,
-        max_age=max_age,
-        httponly=True,
-        secure=settings.session_cookie_secure,
-        samesite="lax",
-        path=cookie_path,
-    )
-    response.set_cookie(
-        "agent_factory_csrf",
         new_opaque_token(),
-        max_age=max_age,
-        httponly=False,
-        secure=settings.session_cookie_secure,
-        samesite="strict",
-        path=cookie_path,
     )
 
 
@@ -89,8 +87,15 @@ async def logout(
 ) -> None:
     await service.logout(session_token)
     cookie_path = settings.root_path or "/"
-    response.delete_cookie(settings.session_cookie_name, path=cookie_path)
-    response.delete_cookie("agent_factory_csrf", path=cookie_path)
+    clear_session_cookies(
+        response,
+        SessionCookieSettings(
+            settings.session_cookie_name,
+            cookie_path,
+            settings.session_cookie_secure,
+            settings.auth_session_ttl_hours * 60 * 60,
+        ),
+    )
 
 
 @router.get("/me", response_model=SessionResponse)
@@ -216,9 +221,7 @@ async def oauth_login(provider: str, request: Request) -> Response:
     client = oauth.create_client(provider)
     if client is None:
         raise NotFoundError("oauth_provider_not_configured", "OAuth provider is not configured")
-    redirect_uri = (
-        f"{settings.public_base_url.rstrip('/')}/api/auth/oauth/{provider}/callback"
-    )
+    redirect_uri = f"{settings.public_base_url.rstrip('/')}/api/auth/oauth/{provider}/callback"
     return await client.authorize_redirect(request, redirect_uri)
 
 

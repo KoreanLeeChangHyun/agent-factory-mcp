@@ -16,7 +16,7 @@ from app.modules.auth.authorization import (
 from app.modules.auth.crypto import token_digest
 from app.modules.auth.repository import AuthRepository
 from app.modules.auth.service import Principal
-from app.modules.identity.models import UserStatus
+from agent_factory_core.identity import UserStatus
 from app.modules.mcp_connection.models import MCPConnection
 from app.modules.organization.permissions import token_permissions
 from app.modules.workspace.models import Workspace, WorkspaceStatus
@@ -71,7 +71,7 @@ class ApiTokenVerifier:
             client_id=f"agent-factory-connection:{connection.id}"
             if connection
             else "agent-factory-api-token",
-            scopes=record.token.scopes,
+            scopes=list(record.token.scopes),
             expires_at=(
                 int(record.token.expires_at.timestamp()) if record.token.expires_at else None
             ),

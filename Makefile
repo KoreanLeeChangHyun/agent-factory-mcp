@@ -46,7 +46,7 @@ workbench-typecheck:
 
 workbench-test:
 	pnpm test
-	uv run pytest -q tests/contracts tests/architecture apps/api/tests apps/worker/tests
+	uv run pytest -q tests/contracts tests/architecture apps/api/tests apps/worker/tests packages/platform-core/tests packages/platform-adapters/tests
 
 workbench-codegen-check:
 	python3 scripts/generate_workbench_contracts.py --check

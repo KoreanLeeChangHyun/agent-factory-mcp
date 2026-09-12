@@ -7,7 +7,9 @@ import pytest
 from app.common.errors import PermissionDeniedError
 from app.modules.auth.authorization import (
     AuthorizationScope,
+    AuthorizationState,
     AuthorizationService,
+    PermissionSource,
 )
 from app.modules.auth.service import Principal
 
@@ -24,11 +26,22 @@ class FakeAuthorizationRepository:
     async def establish_scope(self, principal: Principal, scope: AuthorizationScope) -> None:
         self.established = (principal, scope)
 
-    async def permission_keys(
+    async def authorization_state(
         self, principal: Principal, scope: AuthorizationScope
-    ) -> frozenset[str]:
-        del principal, scope
-        return frozenset(self.permissions)
+    ) -> AuthorizationState:
+        del principal
+        return AuthorizationState(
+            True,
+            sources=(
+                PermissionSource(
+                    "direct",
+                    UUID(int=4),
+                    "Member",
+                    frozenset(self.permissions),
+                    "workspace" if scope.workspace_id else "organization",
+                ),
+            ),
+        )
 
 
 def principal(*, platform_admin: bool = False) -> Principal:

@@ -17,6 +17,24 @@ def test_rejects_forbidden_python_and_dynamic_typescript_imports(
     assert len(findings) == 2
 
 
+def test_rejects_dotted_and_dynamic_legacy_imports_from_core_and_adapters(
+    tmp_path: Path, monkeypatch
+) -> None:
+    core = tmp_path / "packages/platform-core/src/dynamic.py"
+    adapter = tmp_path / "packages/platform-adapters/src/dotted.py"
+    core.parent.mkdir(parents=True)
+    adapter.parent.mkdir(parents=True)
+    core.write_text(
+        "import importlib\nmodel = importlib.import_module('app.modules.auth.models')\n"
+    )
+    adapter.write_text("from app.db.session import get_session\n")
+    import scripts.check_workbench_dependencies as guard
+
+    monkeypatch.setattr(guard, "ROOT", tmp_path)
+    findings = guard.violations([core, adapter])
+    assert len(findings) == 2
+
+
 def test_allows_core_contract_and_adapter_core_dependencies(tmp_path: Path, monkeypatch) -> None:
     core = tmp_path / "packages/platform-core/src/good.py"
     adapter = tmp_path / "packages/platform-adapters/src/good.py"

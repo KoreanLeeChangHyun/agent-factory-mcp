@@ -8,7 +8,9 @@
 
 ## 권한 범위와 기본 역할
 
-권한의 단일 카탈로그는 `app/modules/organization/permissions.py`다. `resource.action`
+권한의 단일 카탈로그는
+`packages/platform-core/src/agent_factory_core/organizations/permissions.py`다. 기존
+`app/modules/organization/permissions.py`는 전환 기간의 호환 import다. `resource.action`
 형식의 고정 권한을 선택해 사용자 지정 역할을 만들며, 알 수 없는 키와 범위를 섞은
 역할은 거부한다. 조직 역할과 작업공간 역할을 분리한다. 개별 문서 ACL은 아직 없다.
 

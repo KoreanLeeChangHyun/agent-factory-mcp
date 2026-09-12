@@ -575,6 +575,20 @@ class OrganizationService:
             )
         )
         scopes = []
+
+        def source_payload(source):
+            return {
+                "source": source.source,
+                "role_id": source.role_id,
+                "role_name": source.role_name,
+                "permissions": sorted(source.permissions),
+                **(
+                    {"team_id": source.team_id, "team_name": source.team_name}
+                    if source.team_id
+                    else {}
+                ),
+            }
+
         for workspace in workspaces:
             sources = await self.repository.permission_sources(
                 target, AuthorizationScope(self.organization_id, workspace.id)
@@ -584,9 +598,14 @@ class OrganizationService:
                     {
                         "workspace_id": workspace.id,
                         "name": workspace.name,
-                        "sources": sources,
+                        "sources": [source_payload(source) for source in sources],
                         "permissions": sorted(
-                            {key for s in sources for key in s["permissions"] if key in CATALOG}
+                            {
+                                key
+                                for source in sources
+                                for key in source.permissions
+                                if key in CATALOG
+                            }
                         ),
                     }
                 )
@@ -598,9 +617,12 @@ class OrganizationService:
             "status": member.status,
             "teams": [{"id": t.id, "name": t.name} for t in teams],
             "workspaces": scopes,
-            "organization_sources": await self.repository.permission_sources(
-                target, AuthorizationScope(self.organization_id)
-            ),
+            "organization_sources": [
+                source_payload(source)
+                for source in await self.repository.permission_sources(
+                    target, AuthorizationScope(self.organization_id)
+                )
+            ],
         }
 
     async def teams(self):

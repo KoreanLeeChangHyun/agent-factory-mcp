@@ -1,6 +1,4 @@
-"""Compatibility aliases for framework-independent application errors."""
-
-from agent_factory_core.shared.errors import (
+from .errors import (
     ApplicationError,
     AuthenticationError,
     ConflictError,

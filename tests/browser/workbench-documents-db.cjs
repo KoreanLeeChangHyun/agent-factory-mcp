@@ -12,12 +12,156 @@ const assert = require("node:assert/strict");
   });
   const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
   try {
-    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
-    await context.addCookies([
-      { name: process.env.WORKBENCH_BROWSER_COOKIE_NAME, value: process.env.WORKBENCH_BROWSER_COOKIE, url: base },
-      { name: "agent_factory_csrf", value: "workbench-browser-csrf", url: base },
-    ]);
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 900 },
+      userAgent: "agent-factory-stage7-browser",
+    });
     const page = await context.newPage();
+    let navigationPhase = null;
+    const scopedApiPath = `/api/organizations/${process.env.WORKBENCH_BROWSER_ORGANIZATION}/workspaces/${process.env.WORKBENCH_BROWSER_WORKSPACE}`;
+    const waitForFinished = (method, path) =>
+      page.waitForEvent("requestfinished", {
+        predicate: (request) =>
+          request.method() === method && new URL(request.url()).pathname === path,
+      });
+    const expectFinishedStatus = async (request, status) => {
+      const response = await request.response();
+      assert(
+        response,
+        `finished request has no response: ${request.method()} ${new URL(request.url()).pathname}`,
+      );
+      assert.equal(response.status(), status, `${request.method()} ${new URL(request.url()).pathname}`);
+    };
+    const trackOptionalRequests = (method, path) => {
+      const cancellableTransitions = new Set(["react-to-legacy", "legacy-to-react"]);
+      const tracked = new Map();
+      let accepting = true;
+      let activeTransition = null;
+      const matches = (request) => {
+        const requestUrl = new URL(request.url());
+        return (
+          request.method() === method &&
+          requestUrl.origin === new URL(base).origin &&
+          requestUrl.pathname === path
+        );
+      };
+      const started = (request) => {
+        if (!accepting || !matches(request) || tracked.has(request)) return;
+        let resolveOutcome;
+        const outcome = new Promise((resolve) => {
+          resolveOutcome = resolve;
+        });
+        const entry = {
+          outcome,
+          request,
+          settled: false,
+          startedPhase: navigationPhase,
+          startedPage: page.url(),
+          cancellableTransition: activeTransition,
+        };
+        entry.resolve = (terminalOutcome, terminalTransition = null) => {
+          if (entry.settled) return;
+          entry.settled = true;
+          entry.terminalOutcome = terminalOutcome;
+          entry.terminalTransition = terminalTransition;
+          resolveOutcome({
+            outcome: terminalOutcome,
+            request,
+            startedPhase: entry.startedPhase,
+            startedPage: entry.startedPage,
+            terminalTransition,
+          });
+        };
+        tracked.set(request, entry);
+      };
+      const finished = (request) => {
+        tracked.get(request)?.resolve("finished");
+      };
+      const failed = (request) => {
+        const entry = tracked.get(request);
+        const terminalTransition = entry?.cancellableTransition ?? null;
+        entry?.resolve("failed", terminalTransition);
+      };
+      page.on("request", started);
+      page.on("requestfinished", finished);
+      page.on("requestfailed", failed);
+      return {
+        beginTransition: (transition) => {
+          assert(cancellableTransitions.has(transition), `unsupported visit transition: ${transition}`);
+          assert.equal(activeTransition, null, "visit transitions must not overlap");
+          activeTransition = transition;
+          for (const entry of tracked.values()) {
+            if (!entry.settled) entry.cancellableTransition = transition;
+          }
+        },
+        endTransition: (transition) => {
+          assert.equal(activeTransition, transition, "visit transition boundary mismatch");
+          activeTransition = null;
+        },
+        permitsAbort: (request) => {
+          const entry = tracked.get(request);
+          return (
+            entry?.terminalOutcome === "failed" &&
+            cancellableTransitions.has(entry.terminalTransition)
+          );
+        },
+        closeAndSettle: async () => {
+          accepting = false;
+          page.off("request", started);
+          const outcomes = await Promise.all(
+            [...tracked.values()].map((entry) => {
+              if (entry.settled) return entry.outcome;
+              return new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                  reject(
+                    new Error(
+                      `started request did not settle: ${method} ${path} (phase: ${entry.startedPhase ?? "none"}, page: ${entry.startedPage})`,
+                    ),
+                  );
+                }, 30000);
+                entry.outcome.then((value) => {
+                  clearTimeout(timeout);
+                  resolve(value);
+                }, reject);
+              });
+            }),
+          );
+          page.off("requestfinished", finished);
+          page.off("requestfailed", failed);
+          return outcomes;
+        },
+      };
+    };
+    const visitTracker = trackOptionalRequests("POST", `${scopedApiPath}/visits`);
+    let logoutRequest = null;
+    await page.goto(`${base}/login/`);
+    await page.getByLabel("이메일").fill(process.env.WORKBENCH_BROWSER_EMAIL);
+    await page.getByLabel("비밀번호").fill(process.env.WORKBENCH_BROWSER_PASSWORD);
+    const organizationsLoaded = waitForFinished("GET", "/api/account/organizations");
+    const initialWorkspaceListPath = `/api/organizations/${process.env.WORKBENCH_BROWSER_ORGANIZATION}/workspaces`;
+    const initialWorkspaceReads = [
+      waitForFinished("GET", initialWorkspaceListPath),
+      waitForFinished("GET", `${initialWorkspaceListPath}/recent`),
+      waitForFinished("GET", `${initialWorkspaceListPath}/groups`),
+    ];
+    const [, organizationsRequest] = await Promise.all([
+      page.waitForURL(/\/workspace\/$/),
+      organizationsLoaded,
+      page.getByRole("button", { name: "로그인" }).click(),
+    ]);
+    await expectFinishedStatus(organizationsRequest, 200);
+    for (const request of initialWorkspaceReads)
+      await expectFinishedStatus(await request, 200);
+    assert.equal((await page.request.get(`${base}/api/auth/me`)).status(), 200);
+    const csrfToken = await page.evaluate(() =>
+      decodeURIComponent(
+        document.cookie
+          .split("; ")
+          .find((value) => value.startsWith("agent_factory_csrf="))
+          ?.split("=")[1] ?? "",
+      ),
+    );
+    assert(csrfToken, "login did not issue the CSRF cookie");
     const errors = [];
     const consoleErrors = [];
     const observedRequests = [];
@@ -29,8 +173,6 @@ const assert = require("node:assert/strict");
     let expectedConflictConsoleCount = 0;
     let unexpectedConsoleErrorCount = 0;
     let unexpectedFailedRequestCount = 0;
-    let navigationPhase = null;
-    const scopedApiPath = `/api/organizations/${process.env.WORKBENCH_BROWSER_ORGANIZATION}/workspaces/${process.env.WORKBENCH_BROWSER_WORKSPACE}`;
     const retain = (items, value, limit = 20) => {
       items.push(value);
       if (items.length > limit) items.shift();
@@ -60,13 +202,14 @@ const assert = require("node:assert/strict");
       const isRevisionContent =
         requestUrl.pathname.startsWith(`${scopedApiPath}/documents/`) &&
         /\/revisions\/\d+\/content$/.test(requestUrl.pathname);
-      const isWorkspaceVisit = requestUrl.pathname === `${scopedApiPath}/visits`;
+      const deferredLogoutFailure = request === logoutRequest;
       const permittedNavigationAbort =
         requestUrl.origin === new URL(base).origin &&
         error === "net::ERR_ABORTED" &&
         ((["document-reload", "react-to-legacy"].includes(navigationPhase) && isRevisionContent) ||
-          (navigationPhase === "legacy-to-react" && isWorkspaceVisit));
-      if (!permittedNavigationAbort) unexpectedFailedRequestCount += 1;
+          visitTracker.permitsAbort(request));
+      if (!permittedNavigationAbort && !deferredLogoutFailure)
+        unexpectedFailedRequestCount += 1;
       retain(
         failedRequests,
         {
@@ -74,6 +217,7 @@ const assert = require("node:assert/strict");
           error: error.slice(0, 300),
           navigationPhase,
           permittedNavigationAbort,
+          deferredLogoutFailure,
         },
         10,
       );
@@ -150,11 +294,11 @@ const assert = require("node:assert/strict");
       },
       { organization: process.env.WORKBENCH_BROWSER_ORGANIZATION, workspace: process.env.WORKBENCH_BROWSER_WORKSPACE },
     );
-    await page.evaluate(
-      async ({ organization, workspace, record }) => {
-        await fetch(`/api/organizations/${organization}/workspaces/${workspace}/documents/${record.id}`, {
+    const concurrentUpdate = await page.evaluate(
+      async ({ organization, workspace, record, csrfToken }) => {
+        const response = await fetch(`/api/organizations/${organization}/workspaces/${workspace}/documents/${record.id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json", "X-CSRF-Token": "workbench-browser-csrf" },
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
           body: JSON.stringify({
             title: "동시 변경",
             status: record.status,
@@ -162,19 +306,24 @@ const assert = require("node:assert/strict");
             revision: record.revision,
           }),
         });
+        return { status: response.status, body: (await response.text()).slice(0, 500) };
       },
       {
         organization: process.env.WORKBENCH_BROWSER_ORGANIZATION,
         workspace: process.env.WORKBENCH_BROWSER_WORKSPACE,
         record,
+        csrfToken,
       },
     );
+    assert.equal(concurrentUpdate.status, 200, concurrentUpdate.body);
     const staleUpdateUrl = `${base}/api/organizations/${process.env.WORKBENCH_BROWSER_ORGANIZATION}/workspaces/${process.env.WORKBENCH_BROWSER_WORKSPACE}/documents/${record.id}`;
     const staleUpdate = page.waitForResponse(
       (response) => response.url() === staleUpdateUrl && response.request().method() === "PUT",
     );
+    const conflictRefresh = waitForFinished("GET", new URL(staleUpdateUrl).pathname);
     await page.getByRole("button", { name: "정보 저장" }).click();
     assert.equal((await staleUpdate).status(), 409);
+    await expectFinishedStatus(await conflictRefresh, 200);
     await page.getByText(/충돌.*입력한 제목은 유지/).waitFor();
     assert.equal(await title.inputValue(), "충돌 뒤 유지할 제목");
     navigationPhase = "document-reload";
@@ -187,8 +336,16 @@ const assert = require("node:assert/strict");
     assert.equal(await separator.getAttribute("aria-valuenow"), "180");
     for (let index = 0; index < 30; index += 1) await separator.press("ArrowRight");
     assert.equal(await separator.getAttribute("aria-valuenow"), "520");
+    const reloadedDocumentReads = [
+      [waitForFinished("GET", `${scopedApiPath}/documents`), 200],
+      [waitForFinished("GET", new URL(staleUpdateUrl).pathname), 200],
+      [waitForFinished("GET", `${new URL(staleUpdateUrl).pathname}/revisions`), 200],
+      [waitForFinished("GET", `${new URL(staleUpdateUrl).pathname}/revisions/1/content`), 200],
+    ];
     navigationPhase = "document-reload";
     await page.reload();
+    for (const [request, status] of reloadedDocumentReads)
+      await expectFinishedStatus(await request, status);
     assert.equal(
       await page.getByRole("separator", { name: "사이드바 너비 조절" }).getAttribute("aria-valuenow"),
       "520",
@@ -200,9 +357,21 @@ const assert = require("node:assert/strict");
     await page.getByLabel("기본 테마").selectOption("light");
     await page.getByLabel("기본 테마").selectOption("high-contrast");
     assert.equal(await page.evaluate(() => document.documentElement.dataset.afTheme), "high-contrast");
+    const workspaceListPath = `/api/organizations/${process.env.WORKBENCH_BROWSER_ORGANIZATION}/workspaces`;
+    const legacyReads = [
+      [waitForFinished("GET", "/api/account/organizations"), 200],
+      [waitForFinished("GET", workspaceListPath), 200],
+      [waitForFinished("GET", `${workspaceListPath}/recent`), 200],
+      [waitForFinished("GET", `${workspaceListPath}/groups`), 200],
+      [waitForFinished("GET", `${scopedApiPath}/documents`), 200],
+    ];
     navigationPhase = "react-to-legacy";
+    visitTracker.beginTransition(navigationPhase);
     await page.getByRole("link", { name: "기존 화면" }).click();
     await page.locator("[data-workspace-shell]").waitFor();
+    for (const [request, status] of legacyReads)
+      await expectFinishedStatus(await request, status);
+    visitTracker.endTransition(navigationPhase);
     navigationPhase = null;
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.getByRole("button", { name: "작업공간 목록", exact: true }).click();
@@ -217,11 +386,103 @@ const assert = require("node:assert/strict");
       if ((await containingGroup.count()) && (await containingGroup.getAttribute("aria-expanded")) === "false")
         await containingGroup.locator(":scope > .af-explorer-line").click();
     }
+    await workspaceRow.waitFor({ state: "visible" });
+    const selectionPath = `${scopedApiPath}/workbench/selection`;
+    const selectionLoaded = waitForFinished("GET", selectionPath);
     navigationPhase = "legacy-to-react";
+    visitTracker.beginTransition(navigationPhase);
     await workspaceRow.click();
+    await expectFinishedStatus(await selectionLoaded, 200);
     await page.getByRole("navigation", { name: "작업 목록" }).waitFor();
     await page.getByText("DB-backed revision").waitFor();
+    visitTracker.endTransition(navigationPhase);
     navigationPhase = null;
+    let resolveLogoutTerminal;
+    const logoutTerminal = new Promise((resolve) => {
+      resolveLogoutTerminal = resolve;
+    });
+    const matchesLogout = (request) => {
+      const requestUrl = new URL(request.url());
+      return (
+        request.method() === "POST" &&
+        requestUrl.origin === new URL(base).origin &&
+        requestUrl.pathname === "/api/auth/logout"
+      );
+    };
+    const logoutStarted = (request) => {
+      if (!logoutRequest && matchesLogout(request)) logoutRequest = request;
+    };
+    const logoutFinished = (request) => {
+      if (request === logoutRequest)
+        resolveLogoutTerminal({ outcome: "finished", request, transition: null });
+    };
+    const logoutFailed = (request) => {
+      if (request === logoutRequest)
+        resolveLogoutTerminal({
+          outcome: "failed",
+          request,
+        });
+    };
+    page.on("request", logoutStarted);
+    page.on("requestfinished", logoutFinished);
+    page.on("requestfailed", logoutFailed);
+    const logoutResponseSeen = page.waitForResponse((response) => {
+      const responseUrl = new URL(response.url());
+      return (
+        response.request().method() === "POST" &&
+        responseUrl.origin === new URL(base).origin &&
+        responseUrl.pathname === "/api/auth/logout"
+      );
+    });
+    const logoutStatus = await page.evaluate(async (csrfToken) => {
+      return (
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: { "X-CSRF-Token": csrfToken },
+        })
+      ).status;
+    }, csrfToken);
+    const logoutResponse = await logoutResponseSeen;
+    assert.equal(logoutStatus, 204);
+    assert.equal(logoutResponse.status(), 204);
+    assert.equal(logoutResponse.request(), logoutRequest);
+    assert.equal((await page.request.get(`${base}/api/auth/me`)).status(), 401);
+    await page.goto(`${appBase}?${query}`);
+    await page.waitForURL(/\/login\/$/);
+    const logoutTerminalResult = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error("logout request did not reach a terminal event")),
+        30000,
+      );
+      logoutTerminal.then((value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      }, reject);
+    });
+    page.off("request", logoutStarted);
+    page.off("requestfinished", logoutFinished);
+    page.off("requestfailed", logoutFailed);
+    assert.equal(logoutTerminalResult.request, logoutRequest);
+    if (logoutTerminalResult.outcome === "finished")
+      await expectFinishedStatus(logoutTerminalResult.request, 204);
+    else {
+      assert.equal(new URL(logoutTerminalResult.request.url()).origin, new URL(base).origin);
+      assert.equal(logoutTerminalResult.request.failure()?.errorText, "net::ERR_ABORTED");
+    }
+    const visits = await visitTracker.closeAndSettle();
+    for (const visit of visits) {
+      assert.equal(visit.request.method(), "POST");
+      assert.equal(new URL(visit.request.url()).origin, new URL(base).origin);
+      assert.equal(new URL(visit.request.url()).pathname, `${scopedApiPath}/visits`);
+      if (visit.outcome === "finished") await expectFinishedStatus(visit.request, 204);
+      else {
+        assert(
+          ["react-to-legacy", "legacy-to-react"].includes(visit.terminalTransition),
+          `visit abort was not bound to an explicit route transition (started phase: ${visit.startedPhase ?? "none"}, page: ${visit.startedPage})`,
+        );
+        assert.equal(visit.request.failure()?.errorText, "net::ERR_ABORTED");
+      }
+    }
     assert.deepEqual(errors, []);
     assert.equal(unexpectedFailedRequestCount, 0, JSON.stringify(failedRequests));
     assert.deepEqual(

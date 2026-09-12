@@ -1,6 +1,7 @@
 """First-use personal provisioning keeps ownership and authorization bound to the caller."""
 
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -40,9 +41,31 @@ class ProvisionSession:
             self.context["app.is_platform_admin"] = "true"
         if parameters and "key" in parameters and "value" in parameters:
             self.context[parameters["key"]] = parameters["value"]
+        if parameters and "app.current_organization_id" in sql:
+            self.context.update(
+                {
+                    "app.current_user_id": parameters["user_id"],
+                    "app.current_organization_id": parameters["organization_id"],
+                    "app.current_workspace_id": parameters["workspace_id"],
+                    "app.is_platform_admin": parameters["is_admin"],
+                }
+            )
+        if "FROM organization_memberships m JOIN roles r" in sql:
+            return [
+                SimpleNamespace(
+                    source="organization",
+                    role_id=ORGANIZATION_OWNER_ROLE_ID,
+                    role_name="organization_owner",
+                    team_id=None,
+                    team_name=None,
+                    permissions=["workspace.create"],
+                )
+            ]
 
     async def scalar(self, statement):
         sql = str(statement)
+        if "SELECT m.status FROM organization_memberships m" in sql:
+            return "active"
         if "FROM organization_memberships JOIN organizations" in sql:
             return OrganizationMembership(
                 role_id=ORGANIZATION_OWNER_ROLE_ID, status=MembershipStatus.ACTIVE
