@@ -1,22 +1,11 @@
-"""Authenticated tenant discovery and personal Workspace provisioning."""
+"""Compatibility bridge to target account-discovery and personal-Workspace use cases."""
 
-from __future__ import annotations
-
-from uuid import uuid4
+from agent_factory_api.composition.workspaces import workspace_use_cases
+from agent_factory_core.identity.domain import Principal
 
 from app.core.config import Settings
-from app.modules.auth.authorization import (
-    AuthorizationRepository,
-    AuthorizationScope,
-    AuthorizationService,
-)
-from app.modules.auth.service import Principal
-from app.modules.organization.models import Organization
 from app.modules.organization.repository import OrganizationRepository
-from app.modules.organization.system_roles import ORGANIZATION_OWNER_ROLE_ID
-from app.modules.workspace.models import Workspace
 from app.modules.workspace.repository import WorkspaceRepositoryStore
-from app.modules.workspace.service import WorkspaceService
 
 
 class AccountService:
@@ -26,32 +15,13 @@ class AccountService:
         workspaces: WorkspaceRepositoryStore,
         settings: Settings,
     ) -> None:
-        self.organizations = organizations
-        self.workspaces = workspaces
-        self.settings = settings
+        del settings
+        if organizations.session is not workspaces.session:
+            raise ValueError("Account repositories must share one transaction")
+        self.core = workspace_use_cases(organizations.session)
 
-    async def list_organizations(self, principal: Principal) -> list[Organization]:
-        return await self.organizations.list_for_user(principal)
+    async def list_organizations(self, principal: Principal):
+        return await self.core.list_organizations(principal)
 
-    async def create_personal_workspace(
-        self, principal: Principal, name: str, slug: str
-    ) -> Workspace:
-        await self.organizations.lock_personal_provisioning(principal.user_id)
-        organization = await self.organizations.find_personal_for_user(principal.user_id)
-        if organization is None:
-            organization = Organization(
-                id=uuid4(),
-                name=f"{principal.display_name[:180]} Personal",
-                slug=f"personal-{uuid4().hex}",
-                is_personal=True,
-            )
-            await self.organizations.create_with_owner(
-                organization,
-                principal.user_id,
-                ORGANIZATION_OWNER_ROLE_ID,
-            )
-
-        context = await AuthorizationService(
-            AuthorizationRepository(self.organizations.session)
-        ).authorize(principal, AuthorizationScope(organization.id), "workspace.create")
-        return await WorkspaceService(self.workspaces, self.settings).create(context, name, slug)
+    async def create_personal_workspace(self, principal: Principal, name: str, slug: str):
+        return await self.core.create_personal_workspace(principal, name=name, slug=slug)

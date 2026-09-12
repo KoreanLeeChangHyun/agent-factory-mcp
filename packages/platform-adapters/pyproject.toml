@@ -9,6 +9,7 @@ requires-python = ">=3.12"
 dependencies = [
     "agent-factory-contracts",
     "agent-factory-core",
+    "aiosmtplib>=5,<6",
     "authlib>=1.6,<2",
     "pwdlib[argon2]>=0.3,<1",
     "sqlalchemy[asyncio]>=2,<3",

@@ -13,7 +13,6 @@ from app.modules.auth.dependencies import get_current_principal
 from app.modules.auth.service import Principal
 from app.modules.organization.models import (
     MembershipStatus,
-    Organization,
     OrganizationMembership,
     Role,
     RoleScope,
@@ -91,49 +90,31 @@ class ProvisionSession:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("has_personal", [False, True])
-async def test_personal_create_reuses_owner_and_restores_privileges(monkeypatch, has_personal):
+async def test_personal_create_uses_target_account_composition(monkeypatch):
     principal = Principal(uuid4(), "owner@example.com", "Owner", False)
-    existing = (
-        Organization(id=uuid4(), name="Personal", slug="personal", is_personal=True)
-        if has_personal
-        else None
-    )
-    session = ProvisionSession(existing)
+    session = ProvisionSession()
+    organization_id = uuid4()
 
-    async def create(service, context, name, slug):
-        assert context.principal == principal
-        assert context.permissions == frozenset({"workspace.create"})
-        assert session.context["app.is_platform_admin"] == "false"
-        assert session.context["app.current_user_id"] == str(principal.user_id)
-        assert session.context["app.current_organization_id"] == str(context.scope.organization_id)
-        now = datetime.now(UTC)
-        return Workspace(
-            id=uuid4(),
-            organization_id=context.scope.organization_id,
-            name=name,
-            slug=slug,
-            status=WorkspaceStatus.ACTIVE,
-            revision=1,
-            created_at=now,
-            updated_at=now,
-        )
+    class ComposedAccount:
+        async def create_personal_workspace(self, caller, *, name, slug):
+            assert caller == principal
+            now = datetime.now(UTC)
+            return Workspace(
+                id=uuid4(),
+                organization_id=organization_id,
+                name=name,
+                slug=slug,
+                status=WorkspaceStatus.ACTIVE,
+                revision=1,
+                created_at=now,
+                updated_at=now,
+            )
 
-    monkeypatch.setattr("app.modules.organization.account_service.WorkspaceService.create", create)
+    monkeypatch.setattr("app.router.account.workspace_use_cases", lambda actual: ComposedAccount())
     result = await create_personal_workspace(
         WorkspaceCreate(name="Project", slug="project"), principal, session
     )
-    assert session.lock == f"personal-workspace:{principal.user_id}"
-    assert principal.user_id in session.query.compile().params.values()
-    memberships = [row for row in session.added if isinstance(row, OrganizationMembership)]
-    if has_personal:
-        assert result.organization_id == existing.id
-        assert not session.added
-    else:
-        assert len(memberships) == 1
-        assert memberships[0].user_id == principal.user_id
-        assert memberships[0].organization_id == result.organization_id
-        assert memberships[0].role_id == ORGANIZATION_OWNER_ROLE_ID
+    assert result.organization_id == organization_id
 
 
 def test_personal_create_requires_csrf_before_provisioning():

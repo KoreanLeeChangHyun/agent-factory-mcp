@@ -255,6 +255,21 @@ async def platform(monkeypatch, tmp_path):
     from app.main import create_app
 
     app = create_app()
+    invitation_messages = []
+
+    class ControlledEmailSink:
+        async def send_verification(self, recipient, token):
+            invitation_messages.append(("verification", recipient, token))
+
+        async def send_password_reset(self, recipient, token):
+            invitation_messages.append(("password-reset", recipient, token))
+
+        async def send_organization_invitation(self, recipient, organization_id, token):
+            invitation_messages.append(("invitation", recipient, organization_id, token))
+
+    from app.modules.auth.dependencies import get_email_sender
+
+    app.dependency_overrides[get_email_sender] = ControlledEmailSink
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]
@@ -278,6 +293,7 @@ async def platform(monkeypatch, tmp_path):
                 url=str(client.base_url).rstrip("/"),
                 admin=sessions,
                 user=user,
+                reader_user=reader_user,
                 org=org,
                 workspace=workspace,
                 other=other,
@@ -291,6 +307,7 @@ async def platform(monkeypatch, tmp_path):
                 password=browser_password,
                 reader_cookie=reader_cookie,
                 settings=settings,
+                invitation_messages=invitation_messages,
             )
     finally:
         server.should_exit = True
@@ -352,6 +369,99 @@ async def call(p, name, arguments, *, error=False, **kwargs):
     if result.get("structuredContent") is not None:
         return result["structuredContent"]
     return json.loads(result["content"][0]["text"])
+
+
+async def test_stage8_real_http_organization_workspace_and_invitation_composition(platform):
+    """Exercise Stage 8 target composition through real sessions and forced RLS."""
+
+    p = platform
+    from app.modules.organization.system_roles import (
+        ORGANIZATION_MEMBER_ROLE_ID,
+        VIEWER_ROLE_ID,
+    )
+
+    p.client.cookies.set(p.settings.session_cookie_name, p.cookie)
+    p.client.cookies.set("agent_factory_csrf", "stage8-http-csrf")
+    headers = {"X-CSRF-Token": "stage8-http-csrf"}
+
+    discovery = await p.client.get("/api/account/organizations")
+    assert discovery.status_code == 200, discovery.text
+    assert str(p.org) in {row["id"] for row in discovery.json()}
+
+    created_org = await p.client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Stage 8 HTTP", "slug": f"stage8-{uuid4().hex}"},
+    )
+    assert created_org.status_code == 201, created_org.text
+    organization_id = created_org.json()["id"]
+
+    created_workspace = await p.client.post(
+        f"/api/organizations/{organization_id}/workspaces",
+        headers=headers,
+        json={"name": "Stage 8 Workspace", "slug": "stage8-workspace"},
+    )
+    assert created_workspace.status_code == 201, created_workspace.text
+    workspace = created_workspace.json()
+
+    stale = await p.client.put(
+        f"/api/organizations/{organization_id}/workspaces/{workspace['id']}",
+        headers=headers,
+        json={"name": "stale", "revision": workspace["revision"] + 1},
+    )
+    assert stale.status_code == 409, stale.text
+
+    group = await p.client.post(
+        f"/api/organizations/{organization_id}/workspaces/groups",
+        headers=headers,
+        json={"name": "HTTP group"},
+    )
+    assert group.status_code == 201, group.text
+    assigned = await p.client.put(
+        f"/api/organizations/{organization_id}/workspaces/groups/{group.json()['id']}"
+        f"/workspaces/{workspace['id']}",
+        headers=headers,
+    )
+    assert assigned.status_code == 204, assigned.text
+
+    repository = await p.client.post(
+        f"/api/organizations/{organization_id}/workspaces/{workspace['id']}/repositories",
+        headers=headers,
+        json={"location": "git@GitHub.COM:OpenAI/stage8.git", "metadata": {}},
+    )
+    assert repository.status_code == 201, repository.text
+    assert repository.json()["canonical_location"] == "ssh://git@github.com/OpenAI/stage8"
+    duplicate = await p.client.post(
+        f"/api/organizations/{organization_id}/workspaces/{workspace['id']}/repositories",
+        headers=headers,
+        json={"location": "ssh://git@github.com/OpenAI/stage8", "metadata": {}},
+    )
+    assert duplicate.status_code == 409, duplicate.text
+
+    reader_email = f"{p.reader_user}@example.com"
+    invitation = await p.client.post(
+        f"/api/organizations/{organization_id}/invitations",
+        headers=headers,
+        json={
+            "email": reader_email,
+            "role_id": str(ORGANIZATION_MEMBER_ROLE_ID),
+            "workspace_grants": [{"workspace_id": workspace["id"], "role_id": str(VIEWER_ROLE_ID)}],
+        },
+    )
+    assert invitation.status_code == 201, invitation.text
+    delivered = p.invitation_messages[-1]
+    assert delivered[:3] == ("invitation", reader_email, UUID(organization_id))
+
+    p.client.cookies.set(p.settings.session_cookie_name, p.reader_cookie)
+    accepted = await p.client.post(
+        f"/api/organizations/{organization_id}/accept-invitation",
+        headers=headers,
+        json={"token": delivered[3]},
+    )
+    assert accepted.status_code == 200, accepted.text
+    visible = await p.client.get(f"/api/organizations/{organization_id}/workspaces")
+    assert visible.status_code == 200, visible.text
+    assert [row["id"] for row in visible.json()] == [workspace["id"]]
 
 
 def metadata(raw, *, slug=None, **extra):

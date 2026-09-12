@@ -24,6 +24,7 @@ source = { editable = "packages/platform-adapters" }
 dependencies = [
     { name = "agent-factory-contracts" },
     { name = "agent-factory-core" },
+    { name = "aiosmtplib" },
     { name = "authlib" },
     { name = "pwdlib", extra = ["argon2"] },
     { name = "sqlalchemy", extra = ["asyncio"] },
@@ -34,6 +35,7 @@ dependencies = [
 requires-dist = [
     { name = "agent-factory-contracts", editable = "packages/contracts-py" },
     { name = "agent-factory-core", editable = "packages/platform-core" },
+    { name = "aiosmtplib", specifier = ">=5,<6" },
     { name = "authlib", specifier = ">=1.6,<2" },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3,<1" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2,<3" },

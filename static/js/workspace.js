@@ -995,6 +995,8 @@ const enterWorkspace = async (id) => {
   const record = workspaceRows.find((row) => row.id === id);
   if (!record) return;
   tenant.workspaceId = id;
+  applyActivityOrder();
+  applyActivityVisibility();
   const saved = savedWorkspaceView();
   try {
     const selection = await api(`/api/organizations/${tenant.organizationId}/workspaces/${id}/workbench/selection`);
@@ -1065,8 +1067,6 @@ const enterWorkspace = async (id) => {
   headerWorkspace.title = record.name;
   headerWorkspace.hidden = false;
   workspaceShell.dataset.mode = "workspace";
-  applyActivityOrder();
-  applyActivityVisibility();
   selectActivity("workspaces");
   try {
     sidebarSectionToggles.forEach(toggle => {
@@ -1088,9 +1088,12 @@ const enterWorkspace = async (id) => {
   await loadDocuments();
 };
 
-const loadWorkspaces = async () => {
+const loadWorkspaces = async (
+  restoreOrganizationView = true,
+  renderIdentity = true,
+) => {
   closeWorkspaceRenameMenu();
-  renderOrganizationIdentity();
+  if (renderIdentity) renderOrganizationIdentity();
   groupForm.hidden = true;
   const saved = savedWorkspaceView();
   const version = ++workspaceLoadVersion;
@@ -1135,7 +1138,9 @@ const loadWorkspaces = async () => {
       if (target.dataset.activity === "account") window.agentFactoryAdmin?.profile();
       if (target.dataset.activity === "admin") window.agentFactoryAdmin?.open();
     }
-    if (saved.activity === "organization") openOrganizationManagement();
+    if (restoreOrganizationView && saved.activity === "organization") {
+      openOrganizationManagement();
+    }
     const documentLink = Array.from(document.querySelectorAll("[data-processed-link], [data-specification-link]"))
       .find((link) => (["processed-document", "document-editor"].includes(saved.documentView) && saved.processedId && link.dataset.processedLink === saved.processedId)
         || (["specification-document", "document-editor"].includes(saved.documentView) && saved.specificationId && link.dataset.specificationLink === saved.specificationId));
@@ -1221,11 +1226,17 @@ createForm.addEventListener("submit", async (event) => {
     document.querySelector("[data-create-error]").textContent = error.status === 403 ? "이 공간에 작업공간을 만들 권한이 없습니다." : "작업공간을 만들지 못했습니다. 다시 시도해 주세요.";
   } finally { submit.disabled = false; submit.removeAttribute("aria-busy"); }
 });
-const openOrganizationManagement = (view = "overview", forceOpen = false) => {
+const openOrganizationManagement = (
+  view = "overview",
+  forceOpen = false,
+  restoreSavedView = true,
+) => {
   selectActivity("organization", forceOpen);
   const preferences = activityState("organization", false);
-  const restoredView = view === "overview" ? preferences?.read({}).view || view : view;
-  window.agentFactoryOrganizations?.open({ api, organizationId: tenant.organizationId, userId: activityUserId,
+  const restoredView = restoreSavedView && view === "overview"
+    ? preferences?.read({}).view || view
+    : view;
+  return window.agentFactoryOrganizations?.open({ api, organizationId: tenant.organizationId, userId: activityUserId,
     preferences,
     openWorkspace: enterWorkspace,
     createWorkspace: showCreateWorkspace,
@@ -1238,8 +1249,9 @@ const openOrganizationManagement = (view = "overview", forceOpen = false) => {
       accountOrganization.textContent = organizationSelect.selectedOptions[0]?.textContent || "—";
       if (tenant.organizationId) localStorage.setItem(`agentFactoryOrganizationId:${activityUserId}`, tenant.organizationId);
       else localStorage.removeItem(`agentFactoryOrganizationId:${activityUserId}`);
-      await loadWorkspaces();
-      openOrganizationManagement(view);
+      await loadWorkspaces(false, false);
+      await openOrganizationManagement(view, false, false);
+      renderOrganizationIdentity();
     },
   }, restoredView);
 };

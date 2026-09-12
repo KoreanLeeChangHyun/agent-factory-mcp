@@ -1,4 +1,4 @@
-# Workbench refactor stage 7 Work evidence
+# Workbench refactor stage 7 evidence
 
 ## Scope
 
@@ -82,3 +82,20 @@ fresh forced-RLS PostgreSQL matrix and all remaining acceptance gates from the d
 including package/offline installation, focused security checks, and relevant legacy regressions.
 Real OAuth provider credentials/network login, container image execution, deployment, rollout
 observation, and legacy removal remain unproved.
+
+## Final independent decision
+
+Independent Verification run `run-20260912T210629133865Z-53fef65b` passed the final Stage 7 Work
+run `run-20260912T210518583300Z-a7174acc`, bound to original-request SHA-256
+`280f3444bf846a686f1c56bcf613d1bd14d7927ddfc7926580f979b7afb05002`, with no remaining
+findings. The final evidence included `make workbench-check` (61 TypeScript and 33 Python tests plus
+format, lint, types, contracts, and dependency gates), the four personal-Workspace cases, the fresh
+PostgreSQL identity HTTP/MCP lifecycle matrix, and two independent fresh-database production
+browser passes. Each database used PostgreSQL 16.15 with pgvector 0.6 and a
+`NOSUPERUSER NOBYPASSRLS` application role migrated through `0026`. The browser passes covered
+rendered login, persisted Workbench/Documents authoring and conflict handling, both rollback
+directions, logout, stored session revocation, HTTP 401, and login redirect.
+
+This decision closes only the Stage 7 identity/authorization slice. It does not establish full
+RF-605–607 or RF-800 completion, complete remaining domains or administrator/standard UI, prove
+full Documents parity, workers, the MCP App case gate, deployment, observation, or removal.

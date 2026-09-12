@@ -1,47 +1,17 @@
-"""SMTP delivery adapter for transactional authentication messages."""
-
-from email.message import EmailMessage
-
-from aiosmtplib import SMTP
+"""Compatibility settings bridge to the target SMTP adapter."""
 
 from app.core.config import Settings
+from agent_factory_adapters.email import SMTPConfiguration, SMTPEmailSender
 
 
-class EmailSender:
+class EmailSender(SMTPEmailSender):
     def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-
-    async def send_verification(self, recipient: str, token: str) -> None:
-        await self._send(
-            recipient,
-            "Verify your Agent Factory email",
-            f"{self.settings.public_base_url}/verify-email?token={token}",
+        super().__init__(
+            SMTPConfiguration(
+                public_base_url=str(settings.public_base_url).rstrip("/"),
+                host=settings.smtp_host,
+                port=settings.smtp_port,
+                use_tls=settings.smtp_use_tls,
+                from_address=settings.smtp_from_address,
+            )
         )
-
-    async def send_password_reset(self, recipient: str, token: str) -> None:
-        await self._send(
-            recipient,
-            "Reset your Agent Factory password",
-            f"{self.settings.public_base_url}/reset-password?token={token}",
-        )
-
-    async def send_organization_invitation(self, recipient: str, organization_id, token: str) -> None:
-        await self._send(
-            recipient,
-            "Agent Factory 조직 초대",
-            f"{self.settings.public_base_url}/join/?organization_invite={organization_id}#invitation={token}",
-        )
-
-    async def _send(self, recipient: str, subject: str, body: str) -> None:
-        message = EmailMessage()
-        message["From"] = self.settings.smtp_from_address
-        message["To"] = recipient
-        message["Subject"] = subject
-        message.set_content(body)
-        client = SMTP(
-            hostname=self.settings.smtp_host,
-            port=self.settings.smtp_port,
-            use_tls=self.settings.smtp_use_tls,
-        )
-        async with client:
-            await client.send_message(message)

@@ -4,7 +4,7 @@
   const nav = document.querySelector('[data-organization-navigation]');
   const ui = window.agentFactoryUI;
   host.classList.add('af-kit');
-  let config, generation = 0, currentView = 'overview';
+  let config, generation = 0, currentView = 'overview', activeRequests;
   let confirmationDialog;
   const clearConfirmation = () => { confirmationDialog?.destroy(); confirmationDialog = null; };
   async function confirmAction(message, alive) {
@@ -84,12 +84,18 @@
   };
   async function open(next = config, view = currentView) {
     clearConfirmation();
+    activeRequests?.abort();
+    const requests = new AbortController();
+    activeRequests = requests;
     config = next; currentView = view;
     config?.preferences?.write({view});
     const version = ++generation, alive = () => version === generation;
     const local = {...config};
     const base = `/api/organizations/${local.organizationId}`;
-    const api = (path = '', options) => local.api(base + path, options);
+    const api = (path = '', options = {}) => local.api(base + path, {
+      ...options,
+      signal: requests.signal,
+    });
     const mutate = (path, method, body) => api(path, {method, ...(body === undefined ? {} : {body:JSON.stringify(body)})});
     const refresh = () => alive() ? open(local, view) : undefined;
     const titles={overview:'개요',workspaces:'작업공간',members:'구성원',teams:'팀',roles:'역할 및 권한',audit:'감사 로그',settings:'설정'};
@@ -290,5 +296,5 @@
     } catch(e) {if(alive()){loading.remove();errorBox.textContent=e.message;host.append(button('다시 불러오기',refresh));}}
   }
   nav?.querySelectorAll('[data-org-view]').forEach(node=>node.addEventListener('click',()=>open(config,node.dataset.orgView)));
-  window.agentFactoryOrganizations={open, reset(){generation++;clearConfirmation();host.replaceChildren();}};
+  window.agentFactoryOrganizations={open, reset(){generation++;activeRequests?.abort();activeRequests=null;clearConfirmation();host.replaceChildren();}};
 })();

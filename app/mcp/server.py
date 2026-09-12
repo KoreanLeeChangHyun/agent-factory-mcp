@@ -30,7 +30,7 @@ from app.modules.integration.repository import IntegrationRepository
 from app.modules.integration.schemas import ConnectionResponse
 from app.modules.organization.permissions import token_permissions
 from app.modules.schedule.repository import ScheduleRepository
-from app.modules.workspace.repository import WorkspaceRepositoryStore
+from agent_factory_api.composition.workspaces import workspace_use_cases
 from agent_factory_api.composition.workbenches import build_workbench_service
 from agent_factory_api.http.routes.workbenches import present_definition, present_release
 from agent_factory_core import (
@@ -228,21 +228,12 @@ def create_mcp_server() -> MCPServer:
             scope = AuthorizationScope(
                 UUID(organization_id), UUID(bound_workspace) if bound_workspace else None
             )
-            await AuthorizationService(AuthorizationRepository(session)).authorize(
+            context = await AuthorizationService(AuthorizationRepository(session)).authorize(
                 principal, scope, "workspace.read" if bound_workspace else "organization.read"
             )
-            rows = await WorkspaceRepositoryStore(session).list(scope.organization_id)
-            visible = []
-            for row in rows:
-                keys = await AuthorizationRepository(session).permission_keys(
-                    principal, AuthorizationScope(scope.organization_id, row.id)
-                )
-                if "workspace.read" in keys:
-                    visible.append(row)
-            rows = visible
-            return [
-                _model(row) for row in rows if not bound_workspace or str(row.id) == bound_workspace
-            ]
+            service = workspace_use_cases(session)
+            rows = [await service.get(context)] if bound_workspace else await service.list(context)
+            return [_model(row) for row in rows]
 
     @server.tool(name="document_list", description="List Workspace Documents")
     async def document_list(
@@ -601,17 +592,26 @@ def _resource_reader(activity: str, description: str):
 
 
 def _model(record: object) -> dict[str, object]:
+    from dataclasses import fields, is_dataclass
+    from typing import Any, cast
+
     from sqlalchemy import inspect
 
-    mapper = inspect(record).mapper
+    if is_dataclass(record):
+        values = (
+            (field.name, getattr(record, field.name))
+            for field in fields(cast(Any, record))
+        )
+    else:
+        mapper = inspect(record).mapper
+        values = ((column.key, getattr(record, column.key)) for column in mapper.columns)
     result: dict[str, object] = {}
-    for column in mapper.columns:
-        value = getattr(record, column.key)
+    for key, value in values:
         if isinstance(value, UUID):
             value = str(value)
         elif hasattr(value, "isoformat"):
             value = value.isoformat()
         elif hasattr(value, "value"):
             value = value.value
-        result[column.key] = value
+        result[key] = value
     return result

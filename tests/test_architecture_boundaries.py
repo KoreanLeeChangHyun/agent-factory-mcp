@@ -120,7 +120,7 @@ def _import_names(tree: ast.AST) -> list[tuple[int, str]]:
     return imports
 
 
-def test_identity_package_dependency_directions_include_dynamic_imports() -> None:
+def test_core_and_adapter_dependency_directions_include_dynamic_imports() -> None:
     forbidden_core = (
         "app",
         "apps",
@@ -132,7 +132,7 @@ def test_identity_package_dependency_directions_include_dynamic_imports() -> Non
     )
     violations: list[str] = []
     core = ROOT / "packages/platform-core/src/agent_factory_core"
-    adapters = ROOT / "packages/platform-adapters/src/agent_factory_adapters/identity"
+    adapters = ROOT / "packages/platform-adapters/src/agent_factory_adapters"
     for path in sorted(core.rglob("*.py")):
         tree = ast.parse(path.read_text(), filename=str(path))
         for line, name in _import_names(tree):

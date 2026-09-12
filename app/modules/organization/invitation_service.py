@@ -1,4 +1,4 @@
-"""Organization invitation persistence and delivery orchestration."""
+"""Compatibility invitation delivery signatures backed by the core use case."""
 
 from __future__ import annotations
 
@@ -7,9 +7,11 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
-from app.common.errors import ApplicationError
+from agent_factory_core.organizations import WorkspaceGrant
+from agent_factory_core.shared.errors import ConflictError
+
+from app.modules.organization.command_service import OrganizationCommandService
 from app.modules.organization.schemas import InvitationCreate
-from app.modules.organization.service import OrganizationService
 
 
 class InvitationSender(Protocol):
@@ -26,34 +28,36 @@ class InvitationDelivery:
 
 
 class OrganizationInvitationService:
-    def __init__(self, organizations: OrganizationService, sender: InvitationSender) -> None:
+    def __init__(self, organizations: OrganizationCommandService, sender: InvitationSender) -> None:
         self.organizations = organizations
         self.sender = sender
 
     async def create(self, payload: InvitationCreate) -> InvitationDelivery:
-        invitation, token = await self.organizations.invite(payload)
-        return await self._deliver(invitation, token)
+        workspace_ids = tuple(grant.workspace_id for grant in payload.workspace_grants)
+        invitation_id, expires_at = await self.organizations._target(self.sender).invite(
+            self.organizations.organization_id,
+            await self.organizations._actor(workspace_ids),
+            email=str(payload.email),
+            role_id=payload.role_id,
+            grants=tuple(
+                WorkspaceGrant(grant.workspace_id, grant.role_id)
+                for grant in payload.workspace_grants
+            ),
+        )
+        return InvitationDelivery(invitation_id, str(payload.email), expires_at)
 
     async def resend(self, invitation_id: UUID) -> InvitationDelivery:
-        invitation, token = await self.organizations.resend_invitation(invitation_id)
-        return await self._deliver(invitation, token)
-
-    async def _deliver(self, invitation, token: str) -> InvitationDelivery:
-        await self.organizations.commit()
-        try:
-            await self.sender.send_organization_invitation(
-                invitation.email,
-                self.organizations.organization_id,
-                token,
-            )
-        except Exception as exc:
-            raise ApplicationError(
-                "invitation_delivery_failed",
-                "초대가 저장되었지만 메일 전송에 실패했습니다. 재전송하세요.",
-                502,
-            ) from exc
-        return InvitationDelivery(
-            invitation.id,
-            invitation.email,
-            invitation.expires_at,
+        await self.organizations._all_workspace_ids()
+        snapshot = await self.organizations._target(self.sender).repository.lock_snapshot(
+            self.organizations.organization_id
         )
+        invitation = next((item for item in snapshot.invitations if item.id == invitation_id), None)
+        if invitation is None:
+            raise ConflictError("invitation_closed", "재전송할 수 없는 초대입니다.")
+        workspace_ids = tuple(grant.workspace_id for grant in invitation.workspace_grants)
+        expires_at = await self.organizations._target(self.sender).resend_invitation(
+            self.organizations.organization_id,
+            await self.organizations._actor(workspace_ids),
+            invitation_id,
+        )
+        return InvitationDelivery(invitation_id, invitation.email, expires_at)

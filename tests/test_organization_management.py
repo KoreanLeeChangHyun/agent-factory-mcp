@@ -698,17 +698,18 @@ async def test_organization_members_roles_teams_invitations_and_isolation(monkey
 
             from app.common.errors import ConflictError
             from app.modules.organization.schemas import MemberUpdate
-            from app.modules.organization.service import OrganizationService
+            from app.modules.organization.command_service import OrganizationCommandService
 
             async def suspend_self(caller):
                 async with sessions() as transaction:
                     await transaction.execute(text("SET LOCAL ROLE organization_verifier"))
-                    service = OrganizationService(transaction, caller, UUID(concurrent["id"]))
+                    service = OrganizationCommandService(
+                        transaction, caller, UUID(concurrent["id"])
+                    )
                     try:
                         await service.update_member(
                             caller.user_id, MemberUpdate(status="suspended")
                         )
-                        await transaction.commit()
                         return "suspended"
                     except ConflictError as exc:
                         await transaction.rollback()
