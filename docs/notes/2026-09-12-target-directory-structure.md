@@ -1,5 +1,7 @@
 # MCP 클라우드 Workbench 상세 디렉터리 구조
 
+구현 진행 상태와 단계별 완료 조건은 [Workbench 리팩터링 작업 현황](2026-09-12-workbench-refactoring-status.md)에서 추적한다.
+
 ## 결정
 
 목표 저장소는 Python과 TypeScript를 함께 관리하는 모노레포로 구성한다. 실행 애플리케이션은 `apps/`, 재사용 가능한 코드와 디자인 시스템은 `packages/`, 언어 중립 계약은 `contracts/`에 둔다.
@@ -658,7 +660,7 @@ tests/
 │   └── providers/
 ├── e2e/
 │   ├── author-publish-render.spec.ts
-│   ├── representative-workbench.spec.ts
+│   ├── documents-workbench.spec.ts
 │   ├── tenant-isolation.spec.ts
 │   ├── mcp-app-sandbox.spec.ts
 │   └── responsive-keyboard.spec.ts
@@ -749,7 +751,7 @@ tests/contracts
 tests/e2e
 ```
 
-첫 scaffold에는 한두 개의 임시 컴포넌트만 두지 않는다. 작업 목록 SVG, 사이드바 구성 요소, 패널 레이아웃과 상태·입력 컴포넌트의 초기 카탈로그를 함께 정의하고 각 항목의 schema와 미리보기를 검증한다. 첫 vertical slice의 완료 조건은 선정한 대표 작업 정의가 검증되고, 카탈로그의 작업 아이콘·사이드바·패널 레이아웃을 조합해 렌더링되며, 동일 화면에서 사용자 테마 변경과 복원이 검증되는 것이다. 특정 `주식` 기능은 필수 범위가 아니라 가능한 fixture 예시다.
+첫 scaffold에는 한두 개의 임시 컴포넌트만 두지 않는다. 작업 목록 SVG, 사이드바 구성 요소, 패널 레이아웃과 상태·입력 컴포넌트의 초기 카탈로그를 함께 정의하고 각 항목의 schema와 미리보기를 검증한다. 첫 vertical slice는 기존 `문서` 작업으로 고정한다. 완료 조건은 문서 정의가 검증되고, 카탈로그의 문서 아이콘·사이드바 트리·문서 패널 레이아웃을 조합해 렌더링되며, 동일 화면에서 사용자 테마 변경과 복원이 검증되는 것이다. `주식`은 계약 설명용 가상 fixture일 뿐 제품 구현 범위가 아니다.
 
 ## Sources
 

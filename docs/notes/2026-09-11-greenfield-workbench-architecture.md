@@ -1,6 +1,6 @@
 # MCP 클라우드 Workbench 목표 아키텍처
 
-상세 파일·패키지 배치는 [MCP 클라우드 Workbench 상세 디렉터리 구조](2026-09-12-target-directory-structure.md)를 따른다.
+상세 파일·패키지 배치는 [MCP 클라우드 Workbench 상세 디렉터리 구조](2026-09-12-target-directory-structure.md)를 따른다. 구현 진행 상태와 완료 조건은 [Workbench 리팩터링 작업 현황](2026-09-12-workbench-refactoring-status.md)에서 추적한다.
 
 ## 결론
 
@@ -487,7 +487,7 @@ Tenant-owned row에는 Workspace 식별자를 두고 애플리케이션 권한 �
 
 ### 0단계 — 결정 고정
 
-- ADR로 모노레포, FastAPI/React 경계, Workbench 계약 원본, sandbox 정책을 승인
+- ADR로 모노레포, FastAPI/React 경계, Workbench 계약 원본, sandbox 정책을 기록하고 구현에 적용
 - `작업`, `WorkbenchDefinition`, `Job` 용어를 확정
 - 포팅 전 핵심 사용자 흐름의 characterization test 확보
 
@@ -527,7 +527,7 @@ UI나 DB 구현 전에 정의가 “무엇을 표현할 수 있고 무엇을 금
 
 ### 5단계 — 선언형 renderer와 첫 vertical slice
 
-기존 제품 도메인에서 대표 작업 하나를 선택해 끝까지 구현한다. `주식`은 가능한 fixture 예시일 뿐 필수 제품 기능이 아니다.
+기존 `문서` 작업을 첫 vertical slice로 끝까지 구현한다. `주식`은 계약 설명용 가상 fixture일 뿐 제품 구현 범위가 아니다.
 
 - 작업 정의
 - 등록된 작업 목록 SVG
@@ -564,7 +564,7 @@ MCP Apps는 UI를 도구의 progressive enhancement로 취급한다.^13 Agent Fa
 - 오류율, binding latency, iframe violation, publish rollback을 관찰
 - 사용자가 남아 있지 않은 것이 확인된 뒤 이전 렌더 경로와 adapter 제거
 
-## 승인해야 할 ADR
+## 구현과 함께 고정할 ADR
 
 | ADR | 결정 |
 | --- | --- |
@@ -601,7 +601,7 @@ MCP Apps는 UI를 도구의 progressive enhancement로 취급한다.^13 Agent Fa
 3. `mcp-app-host`: 신뢰하지 않는 외부 UI 격리
 4. `platform-core`: tenant, 권한, 지식, 실행의 서버 권위
 
-따라서 먼저 이 목표 구조와 ADR을 승인하고, 기존 제품 도메인에서 선정한 대표 vertical slice로 계약을 검증한 뒤 현행 기능을 하나씩 포팅하는 것이 맞다. 목표 디렉터리만 먼저 대규모로 만들거나 파일을 일괄 이동하는 것은 구조를 만든 것이 아니라 이름을 바꾼 것에 불과하다.
+따라서 이 목표 구조를 ADR로 기록하면서 `문서` vertical slice로 계약을 검증한 뒤 현행 기능을 하나씩 포팅한다. ADR은 별도 승인 대기 단계가 아니라 일괄 리팩터링의 구현 판단과 결과를 남기는 기록이다. 목표 디렉터리만 먼저 대규모로 만들거나 파일을 일괄 이동하는 것은 구조를 만든 것이 아니라 이름을 바꾼 것에 불과하다.
 
 ## Sources
 

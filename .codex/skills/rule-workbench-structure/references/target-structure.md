@@ -333,7 +333,7 @@ tests/
 │   └── providers/
 ├── e2e/
 │   ├── author-publish-render.spec.ts
-│   ├── representative-workbench.spec.ts
+│   ├── documents-workbench.spec.ts
 │   ├── tenant-isolation.spec.ts
 │   ├── mcp-app-sandbox.spec.ts
 │   └── responsive-keyboard.spec.ts
@@ -407,4 +407,4 @@ tests/contracts
 tests/e2e
 ```
 
-The scaffold includes an initial multi-asset catalog for task-list SVGs, sidebar compositions, panel layouts, controls, and states, with schemas and previews. The first completion proof is a schema-validated representative Workbench that combines those registered assets across 작업 목록, 사이드바, and 패널 and restores a validated per-user theme. A stocks fixture may be used as an example but is not a required product feature.
+The scaffold includes an initial multi-asset catalog for task-list SVGs, sidebar compositions, panel layouts, controls, and states, with schemas and previews. Use the existing Documents Workbench as the first vertical slice. Completion requires a validated definition that combines the registered Documents icon, sidebar tree, and document panel layout across 작업 목록, 사이드바, and 패널 and restores a validated per-user theme. Stocks remains a fictional contract example, not a required product feature.
