@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 (async () => {
   const base = process.env.WORKBENCH_BROWSER_URL;
   assert(base && new URL(base).hostname === "127.0.0.1");
+  const appBase = `${(process.env.WORKBENCH_APP_BASE || `${base}/workbench/`).replace(/\/+$/, "")}/`;
   const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
   try {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -20,7 +21,7 @@ const assert = require("node:assert/strict");
       organization: process.env.WORKBENCH_BROWSER_ORGANIZATION,
       workspace: process.env.WORKBENCH_BROWSER_WORKSPACE,
     });
-    await page.goto(`${base}/authoring?${query}`);
+    await page.goto(`${appBase}authoring?${query}`);
     await page.getByRole("heading", { name: "Workbench 구성" }).waitFor();
     await page.getByLabel("에셋 검색").fill("button@1");
     const add = page.getByRole("button", { name: "button@1 패널에 추가", exact: true });

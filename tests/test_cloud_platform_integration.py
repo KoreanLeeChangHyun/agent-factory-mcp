@@ -1327,21 +1327,27 @@ async def test_authenticated_workbench_authoring_with_real_postgres_and_http(pla
                 "workbench.create",
                 "workbench.update",
                 "workbench.publish",
+                "workbench.archive",
+                "workbench.restore",
             }
         ),
     )
+    customer_definition = deepcopy(DOCUMENTS_FIXTURE)
+    customer_definition["descriptor"]["id"] = "customer-documents"
+    customer_definition["descriptor"]["title"] = "Customer Documents"
     async with get_session_factory()() as session:
-        await build_workbench_service(session).create.execute(
+        created_definition = await build_workbench_service(session).create.execute(
             actor,
-            key="documents",
-            title="Documents",
-            definition=deepcopy(DOCUMENTS_FIXTURE),
+            key="customer-documents",
+            title="Customer Documents",
+            definition=customer_definition,
         )
     frontend_socket = socket.socket()
     frontend_socket.bind(("127.0.0.1", 0))
     frontend_port = frontend_socket.getsockname()[1]
     frontend_socket.close()
     frontend_url = f"http://127.0.0.1:{frontend_port}"
+    frontend_app_base = f"{frontend_url}/workbench/"
     env = {
         **os.environ,
         "NODE_PATH": os.environ.get(
@@ -1350,6 +1356,7 @@ async def test_authenticated_workbench_authoring_with_real_postgres_and_http(pla
         ),
         "WORKBENCH_API_TARGET": p.url,
         "WORKBENCH_BROWSER_URL": frontend_url,
+        "WORKBENCH_APP_BASE": frontend_app_base,
         "WORKBENCH_BROWSER_COOKIE": p.cookie,
         "WORKBENCH_BROWSER_COOKIE_NAME": p.settings.session_cookie_name,
         "WORKBENCH_BROWSER_ORGANIZATION": str(p.org),
@@ -1370,16 +1377,31 @@ async def test_authenticated_workbench_authoring_with_real_postgres_and_http(pla
         stderr=asyncio.subprocess.STDOUT,
     )
     try:
+        readiness_url = f"{frontend_app_base}authoring"
+        readiness_diagnostic = "no response"
         async with httpx.AsyncClient(trust_env=False) as probe:
             for _ in range(100):
                 try:
-                    if (await probe.get(f"{frontend_url}/authoring")).status_code == 200:
+                    response = await probe.get(readiness_url)
+                    readiness_diagnostic = (
+                        f"status={response.status_code} "
+                        f"content-type={response.headers.get('content-type')!r} "
+                        f"body={response.text[:300]!r}"
+                    )
+                    if response.status_code == 200:
                         break
-                except httpx.TransportError:
-                    pass
+                except httpx.TransportError as exc:
+                    readiness_diagnostic = f"transport={type(exc).__name__}: {exc}"
                 await asyncio.sleep(0.05)
             else:
-                raise AssertionError("Workbench Vite server did not start")
+                if frontend.returncode is None:
+                    frontend.terminate()
+                vite_output, _ = await asyncio.wait_for(frontend.communicate(), 5)
+                raise AssertionError(
+                    "Workbench Vite server did not become ready; "
+                    f"url={readiness_url!r}; {readiness_diagnostic}; "
+                    f"vite={vite_output.decode(errors='replace')[-2000:]!r}"
+                )
         process = await asyncio.create_subprocess_exec(
             "node",
             "tests/browser/workbench-authoring-db.cjs",
@@ -1389,8 +1411,42 @@ async def test_authenticated_workbench_authoring_with_real_postgres_and_http(pla
         )
         output, _ = await asyncio.wait_for(process.communicate(), 90)
         assert process.returncode == 0, output.decode()
+        async with get_session_factory()() as session:
+            service = build_workbench_service(session)
+            current = await service.get_definition.execute(
+                actor, created_definition.id, preview=True
+            )
+            await service.archive.execute(
+                actor, created_definition.id, archived=True, expected_revision=current.revision
+            )
+        from app.modules.admin.models import FeatureFlag
+
+        async with p.admin() as session:
+            session.add(
+                FeatureFlag(
+                    key="react-workbench",
+                    is_enabled=True,
+                    description="Disposable Stage 6 browser Workspace",
+                    rules={"workspaceIds": [str(p.workspace)]},
+                )
+            )
+            await session.commit()
+        documents_process = await asyncio.create_subprocess_exec(
+            "node",
+            "tests/browser/workbench-documents-db.cjs",
+            env={
+                **env,
+                "WORKBENCH_BROWSER_URL": p.url,
+                "WORKBENCH_APP_BASE": f"{p.url}/workbench/",
+            },
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        documents_output, _ = await asyncio.wait_for(documents_process.communicate(), 90)
+        assert documents_process.returncode == 0, documents_output.decode()
     finally:
-        frontend.terminate()
+        if frontend.returncode is None:
+            frontend.terminate()
         await frontend.wait()
 
 

@@ -1,5 +1,6 @@
 import type { ThemeProfile } from "@agent-factory/contracts";
 import { validate, ContractValidationError } from "@agent-factory/contracts";
+import { apiPath } from "./api-path.js";
 
 export interface ThemeContext {
   userId: string;
@@ -88,7 +89,7 @@ export class ThemeClient {
     const generation = ++this.generation;
     this.controller?.abort();
     this.controller = new AbortController();
-    const response = await fetch("/api/appearance/theme-profile", {
+    const response = await fetch(apiPath("/api/appearance/theme-profile"), {
       credentials: "same-origin",
       cache: "no-store",
       signal: this.controller.signal,
@@ -103,7 +104,7 @@ export class ThemeClient {
 
   async save(context: ThemeContext, profile: ThemeProfile): Promise<ThemeProfile> {
     const generation = this.generation;
-    const response = await fetch("/api/appearance/theme-profile", {
+    const response = await fetch(apiPath("/api/appearance/theme-profile"), {
       method: "PUT",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json", ...(csrfToken() ? { "X-CSRF-Token": csrfToken()! } : {}) },

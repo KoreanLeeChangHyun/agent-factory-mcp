@@ -1,5 +1,6 @@
 recursive-include static *
 recursive-include template *
+recursive-include apps/web/dist *
 recursive-include config *
 recursive-include docs *.md
 include app/modules/document/preview_runtime.js

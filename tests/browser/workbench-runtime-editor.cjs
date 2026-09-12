@@ -15,6 +15,7 @@ const profile = {
 
 (async () => {
   const base = process.env.WORKBENCH_URL || "http://127.0.0.1:4173";
+  const appBase = `${(process.env.WORKBENCH_APP_BASE || `${base}/workbench/`).replace(/\/+$/, "")}/`;
   const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
   try {
     const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -24,7 +25,7 @@ const profile = {
     const pageErrors = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
 
-    await page.goto(`${base}/workbench`);
+    await page.goto(`${appBase}runtime-preview`);
     const documentRow = page.locator(".af-nav-row", { hasText: "미리보기 문서" });
     await documentRow.waitFor();
     await documentRow.focus();
@@ -77,7 +78,7 @@ const profile = {
     await page.getByLabel("기본 테마").selectOption("high-contrast");
     assert.equal(await page.evaluate(() => document.documentElement.dataset.afTheme), "high-contrast");
 
-    await page.goto(`${base}/authoring`);
+    await page.goto(`${appBase}authoring`);
     await page.getByRole("heading", { name: "Workbench 구성" }).waitFor();
     await page.getByLabel("에셋 검색").fill("button@1");
     const add = page.getByRole("button", { name: "button@1 패널에 추가", exact: true });
@@ -192,7 +193,7 @@ const profile = {
         return response;
       };
     });
-    await switchPage.goto(`${base}/authoring`);
+    await switchPage.goto(`${appBase}authoring`);
     await switchPage.getByRole("heading", { name: "Workbench 구성" }).waitFor();
     const selectWorkspace = (workspace) =>
       switchPage.evaluate((value) => {

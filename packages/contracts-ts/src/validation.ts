@@ -1,6 +1,6 @@
-import type { AnySchema, ErrorObject } from "ajv";
-import { Ajv2020 } from "ajv/dist/2020.js";
-import { contractLimits, schemas } from "./generated/schema-bundle.js";
+import type { ErrorObject } from "ajv";
+import { contractLimits } from "./generated/schema-bundle.js";
+import { validators } from "./generated/validators.js";
 
 export const limits = contractLimits as {
   maxBytes: number;
@@ -22,17 +22,13 @@ function measure(value: unknown, depth = 1): number {
   return 1;
 }
 
-const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true });
-for (const schema of Object.values(schemas)) ajv.addSchema(schema as AnySchema);
-
 export function validate(document: unknown, schemaPath = "schemas/workbench/v1/definition.schema.json"): void {
   if (new TextEncoder().encode(JSON.stringify(document)).byteLength > limits.maxBytes)
     throw new ContractValidationError("document exceeds maximum byte size");
   if (measure(document) > limits.maxNodes) throw new ContractValidationError("document exceeds maximum node count");
-  const schema = schemas[schemaPath];
-  if (!schema) throw new ContractValidationError(`unknown schema: ${schemaPath}`);
+  const validator = validators[schemaPath];
+  if (!validator) throw new ContractValidationError(`unknown schema: ${schemaPath}`);
   const started = performance.now();
-  const validator = ajv.getSchema((schema as { $id: string }).$id) ?? ajv.compile(schema as AnySchema);
   const valid = validator(document);
   if (performance.now() - started > limits.maxValidationMilliseconds)
     throw new ContractValidationError("validation exceeded execution bound");

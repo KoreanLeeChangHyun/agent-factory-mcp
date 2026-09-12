@@ -11,6 +11,7 @@ from .appearance import (
     ThemeValidationError,
 )
 from .workbenches import (
+    RESERVED_STANDARD_WORKBENCH_IDS,
     CreateWorkbenchDefinition,
     GetReferenceWorkbench,
     GetWorkbenchDefinition,
@@ -35,9 +36,11 @@ from .workbenches import (
     WorkbenchRepository,
     WorkbenchValidationError,
     WorkbenchValidator,
+    require_customer_workbench_id,
 )
 
 __all__ = [
+    "RESERVED_STANDARD_WORKBENCH_IDS",
     "CreateWorkbenchDefinition",
     "GetReferenceWorkbench",
     "GetThemeProfile",
@@ -72,4 +75,5 @@ __all__ = [
     "WorkbenchRepository",
     "WorkbenchValidationError",
     "WorkbenchValidator",
+    "require_customer_workbench_id",
 ]

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Annotated, Any, NoReturn, Protocol
 from uuid import UUID
 
 from agent_factory_core import (
+    RESERVED_STANDARD_WORKBENCH_IDS,
     WorkbenchActor,
     WorkbenchConflictError,
     WorkbenchDefinitionAggregate,
@@ -159,6 +160,54 @@ def create_workbench_router(
                 if permission.startswith("workbench.")
             ),
         }
+
+    @router.get("/published")
+    async def published_workbenches(
+        response: Response,
+        context: WorkbenchContext = context_dep,
+        service: WorkbenchService = service_dep,
+    ) -> dict[str, object]:
+        """Project only currently authorized immutable releases for the shared registry."""
+        response.headers["Cache-Control"] = "no-store"
+        actor = _actor(context)
+        try:
+            definitions = await service.list_definitions.execute(actor, include_archived=False)
+            releases = []
+            for definition in definitions:
+                if definition.latest_release_id is None:
+                    continue
+                release = await service.get_release.execute(actor, definition.latest_release_id)
+                descriptor = release.snapshot.get("descriptor")
+                if not isinstance(descriptor, Mapping):
+                    raise TypeError("release descriptor is not an object")
+                descriptor_id = descriptor.get("id")
+                descriptor_title = descriptor.get("title")
+                descriptor_icon = descriptor.get("icon")
+                if not all(
+                    isinstance(value, str)
+                    for value in (descriptor_id, descriptor_title, descriptor_icon)
+                ):
+                    raise TypeError("release descriptor fields are invalid")
+                if descriptor_id in RESERVED_STANDARD_WORKBENCH_IDS:
+                    # Retained pre-policy releases remain immutable but cannot shadow standards.
+                    continue
+                releases.append(
+                    {
+                        "descriptor": {
+                            "id": descriptor_id,
+                            "title": descriptor_title,
+                            "icon": descriptor_icon,
+                        },
+                        "release": present_release(release),
+                    }
+                )
+        except (KeyError, TypeError) as error:
+            raise HTTPException(
+                503, detail={"code": "published_workbench_projection_invalid"}
+            ) from error
+        except WorkbenchError as error:
+            _raise(error)
+        return {"items": releases}
 
     @router.post("", status_code=status.HTTP_201_CREATED, dependencies=[Depends(csrf_dependency)])
     async def create_definition(

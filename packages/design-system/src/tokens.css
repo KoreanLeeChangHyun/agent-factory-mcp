@@ -23,6 +23,8 @@
   --af-control-compact: 28px;
   --af-radius: 3px;
   --af-shell-radius: 7px;
+  --af-shell-gap: 5px;
+  --af-task-list-width: 60px;
   --af-font-ui: Inter, ui-sans-serif, system-ui, sans-serif;
   --af-font-code: ui-monospace, SFMono-Regular, Consolas, monospace;
   color-scheme: dark;

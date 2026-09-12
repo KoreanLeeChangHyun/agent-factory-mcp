@@ -108,6 +108,7 @@ const restoreSidebarState = (activity, forceOpen = false) => {
 };
 const defaultActivityOrder = Array.from(activityButtons, (button) => button.dataset.activity);
 const selectionStorageKey = () => `agentFactorySelection:${activityUserId}:${tenant.organizationId}`;
+const workbenchRollbackKey = (workspaceId) => `agent-factory:workbench-rollback:v1:${activityUserId}:${tenant.organizationId}:${workspaceId}`;
 const savedWorkspaceView = () => {
   try { return JSON.parse(localStorage.getItem(selectionStorageKey())) || null; }
   catch { return null; }
@@ -993,8 +994,26 @@ const enterWorkspace = async (id) => {
   closeWorkspaceRenameMenu();
   const record = workspaceRows.find((row) => row.id === id);
   if (!record) return;
-  resetWorkspaceDocuments();
   tenant.workspaceId = id;
+  const saved = savedWorkspaceView();
+  try {
+    const selection = await api(`/api/organizations/${tenant.organizationId}/workspaces/${id}/workbench/selection`);
+    const rollbackKey = workbenchRollbackKey(id);
+    const legacyOnce = sessionStorage.getItem(rollbackKey) === "legacy-once";
+    if (legacyOnce) sessionStorage.removeItem(rollbackKey);
+    else if (selection.mode === "react") {
+      rememberWorkspaceView();
+      const query = new URLSearchParams();
+      if (typeof saved?.workbenchTaskId === "string") query.set("task", saved.workbenchTaskId);
+      if (typeof saved?.workbenchDocumentId === "string") query.set("document", saved.workbenchDocumentId);
+      const suffix = query.size ? `?${query}` : "";
+      location.assign(`${rootPath}/workspace/${encodeURIComponent(tenant.organizationId)}/${encodeURIComponent(id)}/entry${suffix}`);
+      return;
+    }
+  } catch {
+    // Selection errors retain the fail-safe legacy Workspace.
+  }
+  resetWorkspaceDocuments();
   const documentPreferences = activityState("documents");
   documentEditor?.setPreferences(documentPreferences);
   if (originalSearchInput) {

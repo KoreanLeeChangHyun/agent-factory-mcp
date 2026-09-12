@@ -15,4 +15,10 @@ describe("web routes", () => {
     expect(html).toContain("공통 에셋 카탈로그");
     expect(html).toContain("tree@1");
   });
+
+  it("uses the authenticated shared shell for production Workbench deep links", () => {
+    const html = renderToStaticMarkup(<App path="/factory/workbench/documents/example" />);
+    expect(html).toContain("인증된 계정 테마를 기다리는 중입니다");
+    expect(html).not.toContain("공유 계약 fixture가 유효합니다");
+  });
 });

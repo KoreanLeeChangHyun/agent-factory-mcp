@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { documentsFixture, type AssetParameter, type WorkbenchDefinition } from "@agent-factory/contracts";
+import { documentsFixture, type WorkbenchDefinition } from "@agent-factory/contracts";
 import { WorkbenchEditor } from "@agent-factory/workbench-editor";
 import {
   defaultViewState,
@@ -7,42 +7,14 @@ import {
   WorkbenchRenderer,
   writeViewState,
   type BindingClient,
-  type BindingOperation,
   type RuntimeRecord,
   type RuntimeScope,
   type RuntimeValue,
 } from "@agent-factory/workbench-runtime";
 import { useWorkbenchContext } from "./app/WorkbenchContext.js";
 import { workbenchClient, type DefinitionRecord, type ReleaseRecord } from "./workbench-client.js";
+import { documentOperations } from "./standard/documents/document-operations.js";
 
-const previewRecords: NonNullable<AssetParameter["items"]> = {
-  type: "object",
-  additionalProperties: false,
-  required: ["id", "label"],
-  properties: {
-    id: { type: "string", minLength: 1, maxLength: 64 },
-    label: { type: "string", minLength: 1, maxLength: 80 },
-    meta: { type: "string", maxLength: 80 },
-    parentId: { type: "string", maxLength: 64 },
-  },
-};
-const operationFields = {
-  workspaceId: { name: "workspaceId", type: "string", required: true, maxLength: 64 },
-  documentId: { name: "documentId", type: "string", required: true, maxLength: 64 },
-  records: {
-    name: "records",
-    type: "record-list",
-    required: true,
-    maxItems: 100,
-    items: previewRecords,
-    uniqueBy: "id",
-  },
-  value: { name: "value", type: "string", required: true, maxLength: 2048 },
-} as const;
-const previewOperations: readonly BindingOperation[] = [
-  { id: "documents-list@1", inputs: [operationFields.workspaceId], outputs: [operationFields.records] },
-  { id: "document-read@1", inputs: [operationFields.documentId], outputs: [operationFields.value] },
-];
 let previewDocumentReads = 0;
 const previewClient: BindingClient = {
   async execute({ operationId, input, signal }): Promise<RuntimeRecord> {
@@ -148,7 +120,7 @@ export function RuntimePreview() {
       <WorkbenchRenderer
         definition={documentsFixture}
         client={previewClient}
-        operations={previewOperations}
+        operations={documentOperations}
         scope={scope}
         state={runtimeState}
         actionEnvironment={{
@@ -252,7 +224,7 @@ export function WorkbenchAuthoring() {
       <WorkbenchEditor
         initialDefinition={documentsFixture as WorkbenchDefinition}
         client={previewClient}
-        operations={previewOperations}
+        operations={documentOperations}
         scope={scope}
         state={{ workspace: { id: scope.workspaceId }, selection: { documentId: "overview" } }}
         publicationNote={<p>서버 작업공간을 선택하면 저장 및 게시 동작을 사용할 수 있습니다.</p>}
@@ -344,7 +316,7 @@ export function WorkbenchAuthoring() {
       key={`${record.id}:${record.revision}`}
       initialDefinition={record.definition}
       client={previewClient}
-      operations={previewOperations}
+      operations={documentOperations}
       scope={{ ...scope, workbenchId: record.key, releaseId: `draft-${record.revision}` }}
       state={{ workspace: { id: scope.workspaceId }, selection: { documentId: "overview" } }}
       onDraftChange={(nextDraft) => updateAuthoring({ draft: nextDraft })}
@@ -386,7 +358,7 @@ export function WorkbenchAuthoring() {
             <WorkbenchRenderer
               definition={release.definition}
               client={previewClient}
-              operations={previewOperations}
+              operations={documentOperations}
               scope={{ ...scope, workbenchId: record.key, releaseId: release.id }}
               state={{ workspace: { id: scope.workspaceId }, selection: { documentId: "overview" } }}
             />

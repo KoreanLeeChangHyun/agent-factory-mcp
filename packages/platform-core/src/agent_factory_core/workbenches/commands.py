@@ -13,6 +13,7 @@ from .domain import (
     WorkbenchRelease,
 )
 from .errors import WorkbenchArchivedError, WorkbenchNotFoundError, WorkbenchValidationError
+from .policies import require_customer_workbench_id
 from .ports import WorkbenchRepository, WorkbenchValidator
 from .queries import require
 
@@ -46,6 +47,7 @@ class CreateWorkbenchDefinition:
         require(actor, "workbench.create")
         if not KEY.fullmatch(key):
             raise WorkbenchValidationError(("key must be a lower-case Workbench identifier",))
+        require_customer_workbench_id(key, definition)
         validated = self.validator.validate(definition)
         descriptor = validated.definition.get("descriptor")
         if not isinstance(descriptor, Mapping) or descriptor.get("id") != key:
@@ -74,6 +76,7 @@ class UpdateWorkbenchDefinition:
             raise WorkbenchNotFoundError(str(definition_id))
         if current.state is WorkbenchDefinitionState.ARCHIVED:
             raise WorkbenchArchivedError(str(definition_id))
+        require_customer_workbench_id(current.key, definition)
         validated = self.validator.validate(definition)
         descriptor = validated.definition.get("descriptor")
         if not isinstance(descriptor, Mapping) or descriptor.get("id") != current.key:
@@ -119,6 +122,7 @@ class PublishWorkbenchDefinition:
             raise WorkbenchNotFoundError(str(definition_id))
         if current.state is WorkbenchDefinitionState.ARCHIVED:
             raise WorkbenchArchivedError(str(definition_id))
+        require_customer_workbench_id(current.key, current.draft)
         return await self.repository.publish(
             actor,
             definition_id,

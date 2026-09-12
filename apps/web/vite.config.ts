@@ -6,6 +6,8 @@ const apiTarget = process.env.WORKBENCH_API_TARGET;
 const proxy = apiTarget ? { "/api": { target: apiTarget } } : undefined;
 
 export default defineConfig({
+  base: "/workbench/",
+  build: { manifest: true },
   plugins: [react()],
   server: proxy ? { proxy } : undefined,
   preview: proxy ? { proxy } : undefined,

@@ -2,7 +2,19 @@
 import { act, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
-import { Dialog, Markdown, PanelLayout, SidebarPattern, Tabs, Toggle } from "./components.js";
+import {
+  Dialog,
+  Markdown,
+  PanelLayout,
+  ShellResizeHandle,
+  SidebarPattern,
+  Tabs,
+  Toggle,
+  WorkbenchFrame,
+  WorkbenchPanel,
+  WorkbenchSidebar,
+  WorkbenchTaskList,
+} from "./components.js";
 import { instantiateAsset, type AssetActionEvent } from "./catalog.js";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -41,6 +53,24 @@ function key(target: Element, value: string) {
 }
 
 describe("interactive components", () => {
+  it("owns the shared three-region shell and clamped keyboard resize", () => {
+    const changes: number[] = [];
+    const view = mount(
+      <WorkbenchFrame sidebarOpen sidebarWidth={180}>
+        <WorkbenchTaskList>작업</WorkbenchTaskList>
+        <WorkbenchSidebar>탐색</WorkbenchSidebar>
+        <ShellResizeHandle width={180} onChange={(width) => changes.push(width)} />
+        <WorkbenchPanel>내용</WorkbenchPanel>
+      </WorkbenchFrame>,
+    );
+    expect(view.host.querySelector("main.af-shell")).not.toBeNull();
+    const separator = view.host.querySelector<HTMLElement>("[role='separator']")!;
+    key(separator, "ArrowLeft");
+    key(separator, "ArrowRight");
+    expect(changes).toEqual([180, 196]);
+    view.cleanup();
+  });
+
   it("moves tab focus and selection with arrow keys", () => {
     const view = mount(<Tabs labels={["개요", "세부"]} />);
     const tabs = view.host.querySelectorAll<HTMLElement>("[role='tab']");

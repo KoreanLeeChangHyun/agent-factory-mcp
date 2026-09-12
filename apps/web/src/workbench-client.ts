@@ -1,4 +1,5 @@
 import type { WorkbenchDefinition } from "@agent-factory/contracts";
+import { apiPath } from "./api-path.js";
 
 export interface DefinitionRecord {
   id: string;
@@ -33,7 +34,7 @@ const csrf = () =>
     .join("=") ?? "";
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(url, {
+  const response = await fetch(apiPath(url), {
     ...options,
     credentials: "same-origin",
     cache: "no-store",

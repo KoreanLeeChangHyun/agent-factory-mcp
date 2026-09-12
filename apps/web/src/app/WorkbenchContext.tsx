@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ThemeContext } from "../theme-client.js";
+import { apiPath } from "../api-path.js";
 
 interface Session {
   user: { id: string };
@@ -17,11 +18,18 @@ interface WorkbenchContextValue {
 }
 
 const Context = createContext<WorkbenchContextValue | null>(null);
-const unselected: WorkbenchSelection = { organizationId: "unselected", workspaceId: "unselected" };
+const selectionFromLocation = (): WorkbenchSelection => {
+  if (typeof window === "undefined") return { organizationId: "unselected", workspaceId: "unselected" };
+  const query = new URLSearchParams(window.location.search);
+  return {
+    organizationId: query.get("organization") ?? "unselected",
+    workspaceId: query.get("workspace") ?? "unselected",
+  };
+};
 
 export function WorkbenchContextProvider({
   children,
-  initialSelection = unselected,
+  initialSelection = selectionFromLocation(),
 }: {
   children: ReactNode;
   initialSelection?: WorkbenchSelection;
@@ -37,7 +45,7 @@ export function WorkbenchContextProvider({
     const requestController = new AbortController();
     controller.current = requestController;
     setUserId(null);
-    void fetch("/api/auth/me", {
+    void fetch(apiPath("/api/auth/me"), {
       credentials: "same-origin",
       cache: "no-store",
       signal: requestController.signal,
@@ -64,11 +72,7 @@ export function WorkbenchContextProvider({
 
   useEffect(() => {
     const selectFromLocation = () => {
-      const query = new URLSearchParams(window.location.search);
-      setSelection({
-        organizationId: query.get("organization") ?? "unselected",
-        workspaceId: query.get("workspace") ?? "unselected",
-      });
+      setSelection(selectionFromLocation());
     };
     window.addEventListener("popstate", selectFromLocation);
     return () => window.removeEventListener("popstate", selectFromLocation);

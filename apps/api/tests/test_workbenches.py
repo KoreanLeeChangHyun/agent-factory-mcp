@@ -129,6 +129,7 @@ class Repository:
             datetime.now(UTC),
         )
         self.releases.append(release)
+        self.definition = replace(self.definition, latest_release_id=release.id)
         return release
 
     async def list_releases(self, actor, definition_id):
@@ -182,14 +183,24 @@ def test_http_uses_revision_permissions_and_immutable_snapshot() -> None:
         client.post(
             path,
             headers=write_headers,
+            json={"key": "documents", "title": "문서", "definition": DOCUMENTS_FIXTURE},
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            path,
+            headers=write_headers,
             json={"key": "INVALID", "title": "문서", "definition": DOCUMENTS_FIXTURE},
         ).status_code
         == 422
     )
+    customer_fixture = deepcopy(DOCUMENTS_FIXTURE)
+    customer_fixture["descriptor"]["id"] = "customer-documents"
     created = client.post(
         path,
         headers=write_headers,
-        json={"key": "documents", "title": "문서", "definition": DOCUMENTS_FIXTURE},
+        json={"key": "customer-documents", "title": "문서", "definition": customer_fixture},
     )
     assert created.status_code == 201
     definition_id = created.json()["id"]
@@ -212,6 +223,19 @@ def test_http_uses_revision_permissions_and_immutable_snapshot() -> None:
     snapshot = deepcopy(published.json()["definition"])
     assert dict(repository.releases[0].snapshot) == snapshot
     release_id = published.json()["id"]
+    projection = client.get(f"{path}/published", headers=write_headers)
+    assert projection.status_code == 200
+    assert projection.headers["cache-control"] == "no-store"
+    assert projection.json()["items"] == [
+        {
+            "descriptor": {
+                "id": "customer-documents",
+                "title": "문서",
+                "icon": "documents@1",
+            },
+            "release": published.json(),
+        }
+    ]
     assert (
         client.get(f"{path}/{definition_id}/releases", headers=write_headers).json()["items"][0][
             "id"
@@ -225,7 +249,7 @@ def test_http_uses_revision_permissions_and_immutable_snapshot() -> None:
     conflict = client.put(
         f"{path}/{definition_id}/draft",
         headers=write_headers,
-        json={"title": "문서", "expectedRevision": 2, "definition": DOCUMENTS_FIXTURE},
+        json={"title": "문서", "expectedRevision": 2, "definition": customer_fixture},
     )
     assert conflict.status_code == 409
     archived = client.post(
@@ -235,6 +259,7 @@ def test_http_uses_revision_permissions_and_immutable_snapshot() -> None:
     )
     assert archived.status_code == 200 and archived.json()["state"] == "archived"
     assert client.get(path, headers=write_headers).json()["items"] == []
+    assert client.get(f"{path}/published", headers=write_headers).json()["items"] == []
     assert (
         len(client.get(f"{path}?includeArchived=true", headers=write_headers).json()["items"]) == 1
     )
@@ -244,4 +269,29 @@ def test_http_uses_revision_permissions_and_immutable_snapshot() -> None:
         json={"expectedRevision": 2},
     )
     assert restored.status_code == 200 and restored.json()["state"] == "draft"
+    assert repository.definition is not None
+    repository.definition = replace(
+        repository.definition,
+        key="documents",
+        draft=deepcopy(DOCUMENTS_FIXTURE),
+        latest_release_id=repository.releases[0].id,
+    )
+    repository.releases[0] = replace(repository.releases[0], snapshot=deepcopy(DOCUMENTS_FIXTURE))
+    assert client.get(f"{path}/published", headers=write_headers).json()["items"] == []
+    assert (
+        client.put(
+            f"{path}/{definition_id}/draft",
+            headers=write_headers,
+            json={"title": "문서", "expectedRevision": 3, "definition": DOCUMENTS_FIXTURE},
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            f"{path}/{definition_id}/publish",
+            headers=write_headers,
+            json={"expectedRevision": 3, "requestKey": "retained-reserved"},
+        ).status_code
+        == 422
+    )
     assert client.get(f"{path}/not-a-uuid/draft", headers=write_headers).status_code == 422

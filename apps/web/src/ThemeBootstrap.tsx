@@ -7,6 +7,7 @@ const anonymousProfile = defaultThemeProfile("00000000000000000000000000000000")
 
 export function ThemeBootstrap({ scope, children }: { scope: ThemeContext | null; children: ReactNode }) {
   const client = useRef(new ThemeClient()).current;
+  const editGeneration = useRef(0);
   const [context, setContext] = useState<ThemeContext | null>(null);
   const [server, setServer] = useState<ThemeProfile | null>(null);
   const [draft, setDraft] = useState<ThemeProfile | null>(null);
@@ -16,6 +17,7 @@ export function ThemeBootstrap({ scope, children }: { scope: ThemeContext | null
 
   useLayoutEffect(() => {
     let active = true;
+    const loadEditGeneration = ++editGeneration.current;
     client.cancel();
     applyTheme(document.documentElement, anonymousProfile);
     setContext(scope);
@@ -40,10 +42,14 @@ export function ThemeBootstrap({ scope, children }: { scope: ThemeContext | null
       .load(scope)
       .then((authoritative) => {
         if (!active) return;
-        applyTheme(document.documentElement, authoritative);
         setServer(authoritative);
-        setDraft(authoritative);
-        setStatus("서버 테마를 적용했습니다.");
+        if (editGeneration.current === loadEditGeneration) {
+          applyTheme(document.documentElement, authoritative);
+          setDraft(authoritative);
+          setStatus("서버 테마를 적용했습니다.");
+        } else {
+          setStatus("서버 테마를 불러왔지만 미리보기는 아직 저장되지 않았습니다.");
+        }
       })
       .catch((error: unknown) => {
         if (active && !(error instanceof DOMException && error.name === "AbortError"))
@@ -57,6 +63,7 @@ export function ThemeBootstrap({ scope, children }: { scope: ThemeContext | null
   }, [client, scope?.organizationId, scope?.userId, scope?.workspaceId]);
 
   const preview = (profile: ThemeProfile) => {
+    editGeneration.current += 1;
     applyTheme(document.documentElement, profile);
     setDraft(profile);
     setConflict(false);
@@ -64,6 +71,7 @@ export function ThemeBootstrap({ scope, children }: { scope: ThemeContext | null
   };
   const save = async (profile: ThemeProfile) => {
     if (!context) return;
+    editGeneration.current += 1;
     setBusy(true);
     setConflict(false);
     setStatus("저장 중입니다.");

@@ -1,3 +1,16 @@
+FROM node:22-bookworm-slim AS web-builder
+
+WORKDIR /build
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json eslint.config.js ./
+COPY apps/web ./apps/web
+COPY packages/contracts-ts ./packages/contracts-ts
+COPY packages/design-system ./packages/design-system
+COPY packages/workbench-runtime ./packages/workbench-runtime
+COPY packages/workbench-editor ./packages/workbench-editor
+COPY contracts ./contracts
+RUN pnpm install --frozen-lockfile && pnpm --filter @agent-factory/web build
+
 FROM python:3.12-slim-bookworm AS builder
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
@@ -20,6 +33,7 @@ COPY assets/ui-kit/src ./assets/ui-kit/src
 COPY assets/ui-kit/styles ./assets/ui-kit/styles
 COPY assets/ui-kit/generated ./assets/ui-kit/generated
 COPY assets/ui-kit/vendor ./assets/ui-kit/vendor
+COPY --from=web-builder /build/apps/web/dist ./apps/web/dist
 RUN python -m pip wheel --wheel-dir /wheels \
     ./packages/contracts-py ./packages/platform-core ./packages/platform-adapters ./apps/api \
     && python -m pip wheel --find-links /wheels --wheel-dir /wheels .
@@ -40,6 +54,7 @@ COPY --chown=agent-factory:agent-factory app ./app
 COPY --chown=agent-factory:agent-factory config ./config
 COPY --chown=agent-factory:agent-factory static ./static
 COPY --chown=agent-factory:agent-factory template ./template
+COPY --from=web-builder --chown=agent-factory:agent-factory /build/apps/web/dist ./workbench
 COPY --from=builder --chown=agent-factory:agent-factory /build/assets/ui-kit ./assets/ui-kit
 COPY --chown=agent-factory:agent-factory .codex/skills/spec-platform/references/external-agent-reporting.md ./docs/external-agent-reporting.md
 COPY --chown=agent-factory:agent-factory .codex/skills/spec-platform/references/planning-import.md ./docs/planning-import.md

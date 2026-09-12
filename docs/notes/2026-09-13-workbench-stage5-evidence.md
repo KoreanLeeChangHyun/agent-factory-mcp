@@ -41,3 +41,18 @@ protocol, permission, and authenticated actual-server browser evidence.
 RF-605–607 remain independent substantial existing-domain/adapter/composition ports. Full standard
 feature ports, rollout/rollback observation, legacy removal, and remaining global baseline gates are
 not completed by this slice.
+
+## Final independent Verification
+
+Stage 5 received a final independent pass in Verification run
+`run-20260912T170015039441Z-0c47c5d5`, bound to verified Work run
+`run-20260912T165904566160Z-b2cd44e5` and original request SHA-256
+`3c9c5d5c1add76e9c03830e08c350ba53f69840eba9c0ce701c0e890d59f8f6c`.
+The final matcher-only revision passed three consecutive unmodified runtime/editor Chromium gates
+(21 runtime and 3 editor tests before and after each web build) and `make workbench-check`
+(54 TypeScript and 17 Python tests plus format, lint, types, schema parity, code generation,
+compatibility, and dependency checks). The unaffected preceding independent evidence covered all six
+Python package builds, a fresh PostgreSQL 16.15/pgvector 0.6.0 migration through `0026`, three focused
+PostgreSQL concurrency/RLS/idempotency/immutability/transaction-failure tests, authenticated HTTP/MCP
+parity, and actual database-backed authoring E2E. This proves the Stage 5 implementation boundary; it
+does not prove deployment, production observation, or full legacy feature migration.

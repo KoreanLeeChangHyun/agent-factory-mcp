@@ -39,6 +39,14 @@ class BuildPy(build_py):
                     destination = target / path.relative_to(root)
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     copy2(path, destination)
+        web_dist = root / "apps" / "web" / "dist"
+        if not (web_dist / "index.html").is_file():
+            raise RuntimeError("missing production React build: run pnpm --filter @agent-factory/web build")
+        for path in web_dist.rglob("*"):
+            if path.is_file():
+                destination = target / "workbench" / path.relative_to(web_dist)
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                copy2(path, destination)
         catalog_root = root / "assets" / "ui-kit"
         if not (catalog_root / "index.html").is_file():
             raise RuntimeError("missing private UI catalog")

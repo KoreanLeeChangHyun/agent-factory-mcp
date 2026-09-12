@@ -158,6 +158,90 @@ export function Button({
   );
 }
 
+export function WorkbenchFrame({
+  sidebarOpen,
+  sidebarWidth,
+  children,
+}: {
+  sidebarOpen: boolean;
+  sidebarWidth: number;
+  children: ReactNode;
+}) {
+  return (
+    <main
+      className={`af-shell${sidebarOpen ? "" : " af-shell--sidebar-closed"}`}
+      style={{ "--af-runtime-sidebar-width": `${sidebarWidth}px` } as CSSProperties}
+    >
+      {children}
+    </main>
+  );
+}
+
+export function WorkbenchTaskList({ children }: { children: ReactNode }) {
+  return (
+    <nav className="af-shell-task-list" aria-label="작업 목록">
+      {children}
+    </nav>
+  );
+}
+
+export function WorkbenchSidebar({ children }: { children: ReactNode }) {
+  return (
+    <aside className="af-shell-sidebar" aria-label="사이드바">
+      {children}
+    </aside>
+  );
+}
+
+export function WorkbenchPanel({ children }: { children: ReactNode }) {
+  return (
+    <section className="af-shell-panel" aria-label="패널">
+      {children}
+    </section>
+  );
+}
+
+export function ShellResizeHandle({ width, onChange }: { width: number; onChange: (width: number) => void }) {
+  const stop = useRef<(() => void) | null>(null);
+  useEffect(() => () => stop.current?.(), []);
+  const clamp = (value: number) => onChange(Math.max(180, Math.min(520, Math.round(value))));
+  return (
+    <button
+      type="button"
+      className="af-runtime-resizer"
+      role="separator"
+      aria-label="사이드바 너비 조절"
+      aria-orientation="vertical"
+      aria-valuemin={180}
+      aria-valuemax={520}
+      aria-valuenow={width}
+      onKeyDown={(event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        event.preventDefault();
+        clamp(width + (event.key === "ArrowLeft" ? -16 : 16));
+      }}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        const origin = event.clientX;
+        const initial = width;
+        const move = (pointer: PointerEvent) => clamp(initial + pointer.clientX - origin);
+        const cleanup = () => {
+          window.removeEventListener("pointermove", move);
+          window.removeEventListener("pointerup", cleanup);
+          window.removeEventListener("pointercancel", cleanup);
+          stop.current = null;
+        };
+        stop.current?.();
+        stop.current = cleanup;
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", cleanup);
+        window.addEventListener("pointercancel", cleanup);
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+      }}
+    />
+  );
+}
+
 export function IconButton({
   icon,
   label,

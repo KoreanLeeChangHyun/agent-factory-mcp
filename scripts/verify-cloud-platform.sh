@@ -45,6 +45,7 @@ export CLOUD_TEST_DATABASE_URL="postgresql+asyncpg://cloud_verifier:disposable-v
 export WORKBENCH_TEST_DATABASE_URL="$CLOUD_TEST_DATABASE_URL"
 export AGENT_FACTORY_DATABASE_URL="$CLOUD_TEST_DATABASE_URL"
 export NODE_PATH="${WORKBENCH_PLAYWRIGHT_NODE_PATH:-assets/ui-kit/node_modules}"
+pnpm --filter @agent-factory/web build
 "$cloud_python" -m pytest -q tests/test_cloud_platform_integration.py \
   tests/test_cloud_platform_packaging.py tests/test_workbench_persistence_integration.py
 # Shared registration/auth/transition regressions affected by platform integration.

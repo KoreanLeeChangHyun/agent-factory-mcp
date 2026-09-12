@@ -4,6 +4,132 @@
   gap: var(--af-space-2);
   min-width: 0;
 }
+.af-shell {
+  height: 100vh;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: var(--af-task-list-width) minmax(180px, var(--af-runtime-sidebar-width, 268px)) 4px minmax(
+      0,
+      1fr
+    );
+  gap: var(--af-shell-gap);
+  padding: var(--af-shell-gap);
+  overflow: hidden;
+  background: var(--af-bg);
+  color: var(--af-text);
+}
+.af-shell--sidebar-closed {
+  grid-template-columns: var(--af-task-list-width) minmax(0, 1fr);
+}
+.af-shell--sidebar-closed .af-shell-sidebar,
+.af-shell--sidebar-closed .af-runtime-sidebar,
+.af-shell--sidebar-closed .af-runtime-resizer {
+  display: none;
+}
+.af-shell--sidebar-closed .af-shell-panel,
+.af-shell--sidebar-closed .af-runtime-panel {
+  grid-column: 2;
+}
+.af-shell-task-list,
+.af-shell-sidebar,
+.af-shell-panel,
+.af-shell > .af-runtime-sidebar,
+.af-shell > .af-runtime-panel {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--af-border);
+  border-radius: var(--af-shell-radius);
+  background: var(--af-surface);
+}
+.af-shell-task-list {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--af-space-1);
+  overflow: auto;
+  padding: var(--af-space-1);
+}
+.af-shell-task-list button,
+.af-shell-task-list a {
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--af-radius);
+  background: transparent;
+  color: var(--af-muted);
+  font: 8px/12px var(--af-font-ui);
+  text-align: center;
+  text-decoration: none;
+}
+.af-shell-task-list button[aria-current="page"] {
+  border-color: var(--af-accent);
+  color: var(--af-text);
+}
+.af-shell-sidebar,
+.af-shell > .af-runtime-sidebar {
+  grid-column: 2;
+  overflow: hidden;
+}
+.af-shell > .af-runtime-resizer {
+  grid-column: 3;
+  grid-row: 1;
+}
+.af-shell-panel,
+.af-shell > .af-runtime-panel {
+  grid-column: 4;
+  overflow: hidden;
+}
+.af-runtime-resizer {
+  width: 4px;
+  min-width: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--af-border);
+  cursor: ew-resize;
+}
+.af-runtime-resizer:focus-visible {
+  outline: 2px solid var(--af-focus);
+  outline-offset: 1px;
+}
+.af-workbench-runtime {
+  min-height: 480px;
+  display: grid;
+  grid-template-columns: var(--af-task-list-width) minmax(180px, var(--af-runtime-sidebar-width, 268px)) 4px minmax(
+      0,
+      1fr
+    );
+  gap: var(--af-shell-gap);
+  padding: var(--af-shell-gap);
+  background: var(--af-bg);
+}
+.af-runtime-task-list,
+.af-runtime-sidebar,
+.af-runtime-panel {
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--af-border);
+  border-radius: var(--af-shell-radius);
+  background: var(--af-surface);
+}
+.af-runtime-task-list {
+  padding: var(--af-space-1);
+}
+.af-runtime-panel {
+  grid-column: 4;
+}
+.af-workbench-runtime.af-sidebar-closed {
+  grid-template-columns: var(--af-task-list-width) minmax(0, 1fr);
+}
+.af-workbench-runtime.af-sidebar-closed .af-runtime-panel {
+  grid-column: 2;
+}
+.af-runtime-sidebar-toggle {
+  width: 100%;
+  margin-top: var(--af-space-2);
+  overflow: hidden;
+}
 .af-row {
   display: flex;
   align-items: center;
@@ -361,6 +487,45 @@
   .af-splitter {
     min-height: 8px;
     cursor: row-resize;
+  }
+}
+@media (max-width: 760px) {
+  .af-shell {
+    --af-task-list-width: 52px;
+    grid-template-columns: var(--af-task-list-width) minmax(0, 1fr);
+    grid-template-rows: minmax(180px, 40vh) minmax(0, 1fr);
+  }
+  .af-shell-task-list {
+    grid-column: 1;
+    grid-row: 1 / -1;
+  }
+  .af-shell-sidebar,
+  .af-shell > .af-runtime-sidebar {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .af-shell-panel,
+  .af-shell > .af-runtime-panel {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .af-shell > .af-runtime-resizer {
+    display: none;
+  }
+  .af-shell--sidebar-closed .af-shell-panel,
+  .af-shell--sidebar-closed .af-runtime-panel {
+    grid-column: 2;
+    grid-row: 1 / -1;
+  }
+  .af-workbench-runtime {
+    --af-task-list-width: 52px;
+    grid-template-columns: var(--af-task-list-width) minmax(0, 1fr);
+  }
+  .af-runtime-resizer {
+    display: none;
+  }
+  .af-workbench-runtime > .af-runtime-panel {
+    grid-column: 1 / -1;
   }
 }
 .af-theme-editor {

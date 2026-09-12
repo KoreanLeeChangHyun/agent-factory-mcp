@@ -75,6 +75,11 @@ draft reads hide archived definitions, while an explicitly authorized retained-d
 them. Releases remain readable while their definition is archived. Physical retention and tenant
 deletion follow the platform security retention workflow.
 
+Code-owned standard descriptor IDs are reserved in platform-core and are rejected for customer create,
+update, and publish commands. Retained releases created before a reservation remain immutable and
+readable through retained-data APIs, but authorized task-list projections omit them so they cannot
+replace or make the standard registry entry unavailable.
+
 Publish revalidates the persisted draft and locks its definition revision in one PostgreSQL
 transaction. It appends one immutable `WorkbenchRelease` containing the exact canonical JSON
 snapshot, definition revision, monotonic release number, schema and asset versions, canonical schema

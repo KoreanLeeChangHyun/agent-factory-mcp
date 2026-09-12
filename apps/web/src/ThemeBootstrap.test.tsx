@@ -57,6 +57,30 @@ afterEach(() => {
 });
 
 describe("ThemeBootstrap context lifecycle", () => {
+  it("preserves a local preview when the initial server response arrives late", async () => {
+    const pending = deferred<Response>();
+    vi.spyOn(globalThis, "fetch").mockReturnValue(pending.promise);
+    const view = mount(
+      <ThemeBootstrap scope={scope(userOne, "organization", "workspace")}>
+        <div>surface</div>
+      </ThemeBootstrap>,
+    );
+    const base =
+      view.host.querySelector<HTMLSelectElement>('select[aria-label="기본 테마"]') ??
+      Array.from(view.host.querySelectorAll("select")).find((select) => select.value === "dark");
+    expect(base).toBeTruthy();
+    act(() => {
+      base!.value = "high-contrast";
+      base!.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(document.documentElement.dataset.afTheme).toBe("high-contrast");
+    await act(async () => pending.resolve(response(profile(userOne, "light"))));
+    expect(document.documentElement.dataset.afTheme).toBe("high-contrast");
+    expect(base!.value).toBe("high-contrast");
+    expect(view.host.textContent).toContain("서버 테마를 불러왔지만 미리보기는 아직 저장되지 않았습니다.");
+    view.cleanup();
+  });
+
   it("resets immediately and ignores stale responses across same-document scope switches", async () => {
     const first = deferred<Response>();
     const second = deferred<Response>();

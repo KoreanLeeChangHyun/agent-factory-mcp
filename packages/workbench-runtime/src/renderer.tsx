@@ -1,14 +1,6 @@
-import {
-  Component as ReactComponent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react";
+import { Component as ReactComponent, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import type { Component as DefinitionComponent, WorkbenchDefinition } from "@agent-factory/contracts";
-import { instantiateAsset, type AssetActionEvent } from "@agent-factory/design-system";
+import { instantiateAsset, ShellResizeHandle, type AssetActionEvent } from "@agent-factory/design-system";
 import type { BindingClient, BindingOperation, RuntimeRecord, RuntimeScope } from "./contracts.js";
 import { BindingRuntime, type BindingSnapshot } from "./bindings.js";
 import { diagnoseWorkbench, layoutSlotContracts } from "./validation.js";
@@ -44,46 +36,6 @@ function SafeAsset({ id, path, props = {} }: { id: string; path: string; props?:
   } catch (error) {
     return <Diagnostic path={path}>{error instanceof Error ? error.message : "에셋 오류"}</Diagnostic>;
   }
-}
-function SidebarResizer({ width, onChange }: { width: number; onChange?: (width: number) => void }) {
-  const stop = useRef<(() => void) | null>(null);
-  useEffect(() => () => stop.current?.(), []);
-  const update = (value: number) => onChange?.(Math.max(180, Math.min(520, Math.round(value))));
-  return (
-    <button
-      type="button"
-      className="af-runtime-resizer"
-      role="separator"
-      aria-label="사이드바 너비 조절"
-      aria-orientation="vertical"
-      aria-valuemin={180}
-      aria-valuemax={520}
-      aria-valuenow={width}
-      onKeyDown={(event) => {
-        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-        event.preventDefault();
-        update(width + (event.key === "ArrowLeft" ? -16 : 16));
-      }}
-      onPointerDown={(event) => {
-        if (event.button !== 0) return;
-        const origin = event.clientX;
-        const initial = width;
-        const move = (pointer: PointerEvent) => update(initial + pointer.clientX - origin);
-        const cleanup = () => {
-          window.removeEventListener("pointermove", move);
-          window.removeEventListener("pointerup", cleanup);
-          window.removeEventListener("pointercancel", cleanup);
-          stop.current = null;
-        };
-        stop.current?.();
-        stop.current = cleanup;
-        window.addEventListener("pointermove", move);
-        window.addEventListener("pointerup", cleanup);
-        window.addEventListener("pointercancel", cleanup);
-        event.currentTarget.setPointerCapture(event.pointerId);
-      }}
-    />
-  );
 }
 function ComponentNode({
   component,
@@ -202,6 +154,7 @@ export function WorkbenchRenderer({
   expanded = [],
   onExpandedChange,
   actionEnvironment,
+  embedded = false,
 }: {
   definition: unknown;
   client: BindingClient;
@@ -217,6 +170,7 @@ export function WorkbenchRenderer({
   expanded?: string[];
   onExpandedChange?: (ids: string[]) => void;
   actionEnvironment?: RendererActionEnvironment;
+  embedded?: boolean;
 }) {
   const diagnostics = diagnoseWorkbench(definition);
   const valid = definition as WorkbenchDefinition;
@@ -314,6 +268,17 @@ export function WorkbenchRenderer({
       </section>
     );
   };
+  const regions = (
+    <>
+      {sidebarOpen && renderRegion("sidebar")}
+      {sidebarOpen && onSidebarWidthChange && (
+        <ShellResizeHandle width={sidebarWidth} onChange={onSidebarWidthChange} />
+      )}
+      {renderRegion("panel")}
+      {actionError && <Diagnostic path="$.actions">{actionError}</Diagnostic>}
+    </>
+  );
+  if (embedded) return regions;
   return (
     <main
       className={`af-workbench-runtime${sidebarOpen ? "" : " af-sidebar-closed"}`}
@@ -334,10 +299,7 @@ export function WorkbenchRenderer({
           사이드바
         </button>
       </nav>
-      {sidebarOpen && renderRegion("sidebar")}
-      {sidebarOpen && <SidebarResizer width={sidebarWidth} onChange={onSidebarWidthChange} />}
-      {renderRegion("panel")}
-      {actionError && <Diagnostic path="$.actions">{actionError}</Diagnostic>}
+      {regions}
     </main>
   );
 }

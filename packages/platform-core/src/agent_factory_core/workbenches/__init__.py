@@ -20,6 +20,7 @@ from .errors import (
     WorkbenchPermissionError,
     WorkbenchValidationError,
 )
+from .policies import RESERVED_STANDARD_WORKBENCH_IDS, require_customer_workbench_id
 from .ports import WorkbenchDefinitionRepository, WorkbenchRepository, WorkbenchValidator
 from .queries import (
     GetReferenceWorkbench,
@@ -30,6 +31,7 @@ from .queries import (
 )
 
 __all__ = [
+    "RESERVED_STANDARD_WORKBENCH_IDS",
     "CreateWorkbenchDefinition",
     "GetReferenceWorkbench",
     "GetWorkbenchDefinition",
@@ -54,4 +56,5 @@ __all__ = [
     "WorkbenchRepository",
     "WorkbenchValidationError",
     "WorkbenchValidator",
+    "require_customer_workbench_id",
 ]
