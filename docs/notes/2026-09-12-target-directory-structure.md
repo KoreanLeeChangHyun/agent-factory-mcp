@@ -19,6 +19,8 @@ docs       제품 계약·ADR·운영 문서
 - 작업 목록, 사이드바, 패널은 `apps/web`의 단일 shell이 소유한다.
 - 고객 정의 해석은 `packages/workbench-runtime`만 담당한다.
 - 색상·간격·타이포그래피·아이콘·공통 상호작용은 `packages/design-system`만 소유한다.
+- `packages/design-system`은 작업 목록 SVG, 사이드바 구성 요소, 패널 레이아웃을 각각 여러 개 제공하며 고객도 같은 카탈로그를 조합해 작업을 만든다.
+- 모든 공통 에셋은 의미 기반 테마 토큰만 사용하고 사용자별 색상·명암·밀도 설정을 일관되게 적용한다.
 - HTTP, MCP, worker는 동일한 Python use case를 호출한다.
 - 외부 고객 코드는 `packages/mcp-app-host`의 sandbox 밖으로 나오지 않는다.
 
@@ -109,9 +111,12 @@ apps/web/
 │   │   ├── WorkbenchListPage.tsx
 │   │   ├── WorkbenchEditorPage.tsx
 │   │   ├── WorkbenchPreview.tsx
+│   │   ├── AssetCatalog.tsx
 │   │   ├── ComponentPalette.tsx
+│   │   ├── LayoutPalette.tsx
 │   │   ├── PropertyEditor.tsx
 │   │   ├── BindingEditor.tsx
+│   │   ├── ThemeEditor.tsx
 │   │   ├── SchemaDiagnostics.tsx
 │   │   └── PublicationDialog.tsx
 │   ├── api/
@@ -262,7 +267,9 @@ packages/design-system/
 │   │   ├── themes/
 │   │   │   ├── dark.css
 │   │   │   ├── light.css
-│   │   │   └── high-contrast.css
+│   │   │   ├── high-contrast.css
+│   │   │   ├── theme-contract.ts
+│   │   │   └── apply-theme.ts
 │   │   ├── reset.css
 │   │   └── global.css
 │   ├── assets/
@@ -273,7 +280,8 @@ packages/design-system/
 │   │   ├── icons/
 │   │   │   ├── source/
 │   │   │   ├── manifest.json
-│   │   │   └── Icon.tsx
+│   │   │   ├── Icon.tsx
+│   │   │   └── TaskIcon.tsx
 │   │   └── illustrations/
 │   ├── primitives/
 │   │   ├── Button/
@@ -289,6 +297,8 @@ packages/design-system/
 │   │   ├── Tabs/
 │   │   ├── Tree/
 │   │   ├── ResourceList/
+│   │   ├── SearchList/
+│   │   ├── FilterBar/
 │   │   └── Pagination/
 │   ├── data-display/
 │   │   ├── Table/
@@ -302,7 +312,15 @@ packages/design-system/
 │   │   ├── Inline/
 │   │   ├── Grid/
 │   │   ├── SplitPane/
-│   │   └── WorkbenchSurface/
+│   │   ├── WorkbenchSurface/
+│   │   ├── PageLayout/
+│   │   ├── ListDetailLayout/
+│   │   ├── CollectionLayout/
+│   │   ├── SettingsLayout/
+│   │   ├── DashboardLayout/
+│   │   ├── DocumentLayout/
+│   │   ├── TimelineLayout/
+│   │   └── KanbanLayout/
 │   ├── patterns/
 │   │   ├── ResourceCollection/
 │   │   ├── ResourceDetails/
@@ -324,9 +342,13 @@ packages/design-system/
 │       └── live-region.ts
 ├── catalog/
 │   ├── foundations/
+│   ├── task-icons/
+│   ├── sidebars/
+│   ├── panel-layouts/
 │   ├── components/
 │   ├── patterns/
-│   └── states/
+│   ├── states/
+│   └── themes/
 ├── scripts/
 │   ├── build-tokens.mjs
 │   ├── build-icons.mjs
@@ -346,8 +368,15 @@ packages/design-system/
 - primitives: 버튼, 입력, 상태, 대화상자
 - patterns: 목록, 상세, 설정, 빈 화면, 오류와 권한 거부
 - shell surfaces: 작업 목록, 사이드바, 패널
+- task icons: 작업 목록에서 선택할 수 있는 검토된 SVG와 상태 표현
+- sidebar assets: 평면 목록, 그룹, 트리, 검색·필터, 상세 행, 상태와 보조 동작
+- panel layouts: 상세, 목록-상세, 컬렉션, 설정, 대시보드, 문서, 분할, 타임라인과 칸반
 - content: 동일한 의미에 사용하는 한국어 용어와 동작 라벨
 - accessibility: 포커스, 키보드, live region 계약
+
+카탈로그는 내부 표준 작업뿐 아니라 고객 작업 작성기가 사용하는 제품 기능이다. 각 항목은 안정적인 버전 ID, 허용 영역, 속성 schema, binding 입출력, 지원 상태와 action, 접근성 계약, 예제와 미리보기를 제공한다. 고객 정의는 SVG 본문, React import 경로나 임의 CSS 대신 `documents@1`, `resource-tree@1`, `list-detail@1` 같은 등록 ID를 참조한다.
+
+사용자 테마는 `ThemeProfile`로 관리한다. dark, light, high-contrast 기본 테마 위에서 허용된 의미 토큰의 색상과 밀도를 조정하며, 저장 전에 대비와 포커스 가시성을 검증한다. 임의 CSS와 컴포넌트별 색상 덮어쓰기는 허용하지 않는다. 서버에 저장한 사용자 선호가 기기 간 권위 상태이며 브라우저 캐시는 최초 렌더링을 보조하는 용도로만 사용한다. 외부 MCP App에는 계산된 읽기 전용 테마 context만 전달한다.
 
 각 컴포넌트 디렉터리는 기본적으로 다음 단위를 가진다.
 
@@ -360,7 +389,7 @@ Button/
 └── index.ts
 ```
 
-기능 화면은 raw 색상, 임의 SVG, 자체 버튼, 자체 오류 UI를 만들지 않는다. 필요한 변형이 두 곳 이상에서 재사용되고 의미가 같을 때 디자인 시스템에 승격한다. 한 기능에만 필요한 차트 좌표나 문서 미리보기 표현은 기능 소유로 남긴다.
+기능 화면은 raw 색상, 임의 SVG, 자체 버튼, 자체 오류 UI를 만들지 않는다. 일반적인 SaaS 작업을 코드 없이 구성할 수 있도록 작업 목록, 사이드바와 패널에 충분히 넓은 공통 에셋 카탈로그를 계획해서 제공한다. 의미가 겹치는 변형은 추가하지 않으며 한 기능에만 필요한 차트 좌표나 문서 미리보기 표현은 기능 소유로 남긴다.
 
 ## `packages/workbench-runtime` — 고객 정의 렌더러
 
@@ -468,10 +497,12 @@ contracts/
 │   │   ├── binding.schema.json
 │   │   ├── action.schema.json
 │   │   └── view-state.schema.json
+│   ├── appearance/v1/
+│   │   └── theme-profile.schema.json
 │   ├── events/v1/
 │   └── mcp/v1/
 ├── examples/
-│   ├── stocks/
+│   ├── workbenches/reference/
 │   │   ├── valid.json
 │   │   └── expected-render.json
 │   ├── knowledge-search/
@@ -627,7 +658,7 @@ tests/
 │   └── providers/
 ├── e2e/
 │   ├── author-publish-render.spec.ts
-│   ├── stocks-workbench.spec.ts
+│   ├── representative-workbench.spec.ts
 │   ├── tenant-isolation.spec.ts
 │   ├── mcp-app-sandbox.spec.ts
 │   └── responsive-keyboard.spec.ts
@@ -668,6 +699,8 @@ deploy/
 4. 언어: 동일한 객체명, 동작 라벨, 오류 문장
 
 따라서 `packages/design-system`은 단순 asset directory가 아니라 코드, 사용 규칙, 접근성 계약, visual regression을 함께 소유하는 제품 기반으로 취급한다.
+
+테마도 같은 기반에 포함한다. 모든 공통 에셋은 semantic token만 소비하고 사용자별 `ThemeProfile` 하나가 작업 목록, 사이드바, 패널, 작성기 미리보기와 고객 선언형 작업에 동일하게 적용되어야 한다. 기본 테마, 사용자 조정값, 고대비·접근성 보정의 우선순위를 계약과 테스트로 고정한다.
 
 ## 의존 방향
 
@@ -710,12 +743,13 @@ packages/contracts-py
 packages/platform-core/workbenches
 packages/platform-adapters/postgres
 contracts/schemas/workbench/v1
-contracts/examples/stocks
+contracts/schemas/appearance/v1
+contracts/examples/workbenches
 tests/contracts
 tests/e2e
 ```
 
-첫 vertical slice의 완료 조건은 `주식` 작업 정의가 검증되고, 작업 목록에 나타나며, 사이드바에서 종목을 선택하고, 패널에 schema-validated fixture가 디자인 시스템 컴포넌트로 렌더링되는 것이다. 실제 외부 시세 연결은 그 다음 단계로 둔다.
+첫 scaffold에는 한두 개의 임시 컴포넌트만 두지 않는다. 작업 목록 SVG, 사이드바 구성 요소, 패널 레이아웃과 상태·입력 컴포넌트의 초기 카탈로그를 함께 정의하고 각 항목의 schema와 미리보기를 검증한다. 첫 vertical slice의 완료 조건은 선정한 대표 작업 정의가 검증되고, 카탈로그의 작업 아이콘·사이드바·패널 레이아웃을 조합해 렌더링되며, 동일 화면에서 사용자 테마 변경과 복원이 검증되는 것이다. 특정 `주식` 기능은 필수 범위가 아니라 가능한 fixture 예시다.
 
 ## Sources
 
@@ -723,4 +757,3 @@ tests/e2e
 2. GOV.UK Design System. “[Upcoming components and patterns](https://design-system.service.gov.uk/community/upcoming-components-patterns/).” Accessed September 2026.
 3. Atlassian Design System. “[Foundations](https://atlassian.design/foundations).” Accessed September 2026.
 4. Atlassian Design System. “[Use tokens in code](https://atlassian.design/foundations/tokens/use-tokens-in-code/).” Accessed September 2026.
-

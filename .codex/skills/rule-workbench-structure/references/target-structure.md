@@ -83,9 +83,12 @@ apps/web/
 │   │   ├── WorkbenchListPage.tsx
 │   │   ├── WorkbenchEditorPage.tsx
 │   │   ├── WorkbenchPreview.tsx
+│   │   ├── AssetCatalog.tsx
 │   │   ├── ComponentPalette.tsx
+│   │   ├── LayoutPalette.tsx
 │   │   ├── PropertyEditor.tsx
 │   │   ├── BindingEditor.tsx
+│   │   ├── ThemeEditor.tsx
 │   │   └── SchemaDiagnostics.tsx
 │   ├── api/
 │   ├── auth/
@@ -191,12 +194,17 @@ packages/design-system/
 ```
 
 - Foundations own color, spacing, typography, geometry, elevation, motion, and z-index tokens.
-- Assets own reviewed brand marks, icons, provenance, and only necessary illustrations.
+- Assets own reviewed brand marks, a broad task-list SVG catalog, provenance, and only necessary illustrations.
 - Primitives own controls and state semantics.
-- Patterns own repeated resource, form, empty, error, and permission presentations.
+- Navigation and patterns provide multiple sidebar compositions for flat lists, groups, trees, search, filters, detailed rows, states, and supporting actions.
+- Layout provides multiple panel compositions for details, list-detail, collections, settings, dashboards, documents, splits, timelines, and boards.
 - Shell owns reusable surfaces for 작업 목록, 사이드바, and 패널, not product navigation state.
 - Content owns canonical Korean nouns, actions, and status labels.
 - Accessibility owns shared focus, keyboard, and live-region behavior.
+
+The catalog is also a customer-authoring surface. Every public asset has a stable versioned ID, allowed region, property schema, binding inputs and outputs, supported states and actions, accessibility contract, example, and preview. The initial catalog must be broad enough to compose common SaaS Workbenches; it is not limited to one or two components needed by the first fixture. Avoid overlapping aliases and keep feature-only visualization rules with their feature.
+
+All shared assets consume semantic tokens. A server-backed per-user `ThemeProfile` selects dark, light, or high-contrast foundations and may override only approved color and density tokens. Validate contrast and focus visibility before saving. Do not accept arbitrary CSS or per-component color overrides. Apply the resolved theme to the shell, native Workbenches, and authoring previews; give sandboxed MCP Apps only read-only resolved theme context.
 
 Native customer Workbenches must use registered design-system components. They cannot supply raw CSS, arbitrary SVG, or React import paths. MCP Apps may receive host theme context and read-only token CSS, but remain visually and technically isolated.
 
@@ -256,10 +264,12 @@ contracts/
 │   │   ├── binding.schema.json
 │   │   ├── action.schema.json
 │   │   └── view-state.schema.json
+│   ├── appearance/v1/
+│   │   └── theme-profile.schema.json
 │   ├── events/v1/
 │   └── mcp/v1/
 ├── examples/
-│   ├── stocks/
+│   ├── workbenches/reference/
 │   ├── knowledge-search/
 │   └── invalid/
 ├── compatibility/
@@ -323,7 +333,7 @@ tests/
 │   └── providers/
 ├── e2e/
 │   ├── author-publish-render.spec.ts
-│   ├── stocks-workbench.spec.ts
+│   ├── representative-workbench.spec.ts
 │   ├── tenant-isolation.spec.ts
 │   ├── mcp-app-sandbox.spec.ts
 │   └── responsive-keyboard.spec.ts
@@ -391,10 +401,10 @@ packages/contracts-py
 packages/platform-core/workbenches
 packages/platform-adapters/postgres
 contracts/schemas/workbench/v1
-contracts/examples/stocks
+contracts/schemas/appearance/v1
+contracts/examples/workbenches
 tests/contracts
 tests/e2e
 ```
 
-The first completion proof is a schema-validated `주식` Workbench fixture that appears in 작업 목록, selects a symbol in the 사이드바, and renders validated fixture data in the 패널 using design-system components. A real market-data provider is a later connection slice.
-
+The scaffold includes an initial multi-asset catalog for task-list SVGs, sidebar compositions, panel layouts, controls, and states, with schemas and previews. The first completion proof is a schema-validated representative Workbench that combines those registered assets across 작업 목록, 사이드바, and 패널 and restores a validated per-user theme. A stocks fixture may be used as an example but is not a required product feature.

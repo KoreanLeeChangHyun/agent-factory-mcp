@@ -14,6 +14,8 @@
 - Python 워커 기반의 수집·색인·장시간 실행
 - 언어 중립 JSON Schema를 단일 계약 원본으로 사용
 - 표준 작업과 고객 작업이 동일한 등록·선택·상태 복원 계약을 사용
+- 작업 목록 SVG, 사이드바 구성 요소, 패널 레이아웃을 각각 다수 제공하는 조합형 공통 에셋 카탈로그
+- 모든 공통 에셋에 일관되게 적용되는 사용자별 의미 기반 테마
 - 외부 HTML·JavaScript는 동일 DOM에서 실행하지 않고 MCP Apps 호환 샌드박스로 격리
 - PostgreSQL과 pgvector를 권위 데이터 및 검색 저장소로 사용
 
@@ -31,7 +33,7 @@ Node.js는 React 개발·빌드와 MCP Apps 호스트 SDK 실행에 사용한다
 | 사이드바 | 선택한 작업의 탐색 대상, 목록, 필터와 보조 동작을 표시한다. |
 | 패널 | 선택한 대상의 상세 화면, 표, 차트, 폼, 문서, 실행 결과를 표시한다. |
 
-예를 들어 고객이 `주식` 작업을 게시하면 작업 목록에는 `주식`이 추가되고, 사이드바에는 관심 종목이, 패널에는 시세·차트·뉴스가 나타난다. 데이터는 고객이 연결한 MCP 서버 또는 승인된 외부 API에서 가져오며 플랫폼은 데이터의 진실성을 만들어내지 않는다.
+예를 들어 고객이 `주식` 작업을 게시하면 작업 목록에는 `주식`이 추가되고, 사이드바에는 관심 종목이, 패널에는 시세·차트·뉴스가 나타날 수 있다. 이는 계약을 설명하는 가상 예시이며 필수 제품 기능이 아니다. 데이터는 고객이 연결한 MCP 서버 또는 승인된 외부 API에서 가져오며 플랫폼은 데이터의 진실성을 만들어내지 않는다.
 
 ### 내부 모델
 
@@ -45,6 +47,7 @@ Node.js는 React 개발·빌드와 MCP Apps 호스트 SDK 실행에 사용한다
 | 데이터 호출 정의 | `Binding` | 화면 입력을 도구·리소스 호출로 연결 |
 | 장시간 서버 실행 | `Job` | 수집, 재색인, 대량 처리의 durable 실행 |
 | 개인 화면 상태 | `ViewPreference` | 순서, 표시 여부, 선택, 접힘과 너비 |
+| 개인 표시 테마 | `ThemeProfile` | 기본 테마와 허용된 색상·밀도 토큰 조정값 |
 
 `WorkbenchDefinition`은 Workspace 소유의 aggregate root다. 초안, 게시, 보관 상태를 가지며 게시된 `WorkbenchRelease`는 수정하지 않는다. 수정은 새 revision과 새 release를 생성한다.
 
@@ -259,11 +262,13 @@ workbenches/
 
 도메인 객체가 SQLAlchemy session, Redis client, MCP SDK 타입을 직접 노출하지 않는다. 프로세스 분리가 필요해질 때도 core use case 계약을 유지할 수 있어야 한다.
 
-### `packages/ui/`
+### `packages/design-system/`
 
-제품의 시각·접근성 primitive만 둔다. 데이터 호출, Workspace 권한, 작업별 비즈니스 로직은 넣지 않는다.
+제품의 시각·접근성 primitive와 사용자가 작업을 조합하는 공통 에셋 카탈로그를 둔다. 데이터 호출, Workspace 권한, 작업별 비즈니스 로직은 넣지 않는다.
 
-권장 primitive는 Button, Field, Status, Tabs, Tree, Table, ChartFrame, FormLayout, SplitPane, Dialog, Toast와 세 영역의 shell surface다. `workbench-runtime`은 이 컴포넌트만 registry에 등록한다.
+작업 목록에는 여러 검토된 SVG 아이콘을, 사이드바에는 평면 목록·그룹·트리·검색·필터·상태·보조 동작 조합을, 패널에는 상세·목록-상세·컬렉션·설정·대시보드·문서·분할·타임라인·칸반 등 여러 레이아웃을 제공한다. Button, Field, Status, Tabs, Table, ChartFrame, Dialog, Toast와 공통 상태도 같은 카탈로그에 포함한다. 각 에셋은 버전 ID, 속성 schema, binding 계약, 허용 영역, 접근성, 예제와 미리보기를 가지며 `workbench-runtime`은 등록된 에셋만 해석한다.
+
+모든 에셋은 raw 색상 대신 semantic token을 사용한다. 사용자별 `ThemeProfile`은 dark, light, high-contrast 기반과 허용된 색상·밀도 조정값을 저장하며 대비와 포커스 가시성을 검증한다. 임의 CSS와 컴포넌트별 색상 덮어쓰기는 허용하지 않는다. 계산된 테마는 작업 목록, 사이드바, 패널, 작성기 미리보기와 고객 선언형 작업에 함께 적용한다.
 
 ### `packages/workbench-runtime/`
 
@@ -296,7 +301,7 @@ React Host
 
 ## Workbench 계약
 
-### 정의 예시
+### 정의 예시 — 제품 기능 요구사항이 아닌 가상 fixture
 
 ```json
 {
@@ -470,7 +475,7 @@ Tenant-owned row에는 Workspace 식별자를 두고 애플리케이션 권한 �
 ### E2E 테스트
 
 - 고객 작업 초안 작성 → 미리보기 → 게시 → 작업 목록 표시
-- 주식 작업 선택 → 관심 종목 → 패널 데이터 갱신
+- 대표 작업 선택 → 사이드바 대상 선택 → 패널 데이터 갱신
 - loading, empty, stale, error, permission-denied 상태
 - 작업 순서·표시·사이드바 너비 복원
 - narrow viewport와 keyboard navigation
@@ -497,7 +502,8 @@ Tenant-owned row에는 Workspace 식별자를 두고 애플리케이션 권한 �
 ### 2단계 — 계약 우선
 
 - Workbench JSON Schema v1 작성
-- stock 예제와 failure fixture 작성
+- 공통 에셋 descriptor와 사용자 ThemeProfile schema 작성
+- 대표 작업 예제와 failure fixture 작성
 - Python·TypeScript 타입 및 validator 생성
 - schema compatibility CI 추가
 
@@ -508,6 +514,8 @@ UI나 DB 구현 전에 정의가 “무엇을 표현할 수 있고 무엇을 금
 - 기존 서비스와 충돌하지 않는 shadow route에 React Workbench를 배포
 - API는 compatibility adapter를 통해 기존 기능을 읽음
 - 작업 목록 | 사이드바 | 패널과 상태 복원만 먼저 검증
+- 작업 목록 SVG, 사이드바 구성 요소와 패널 레이아웃의 초기 다중 에셋 카탈로그 및 작성기 미리보기 제공
+- 사용자 테마 편집, 검증, 서버 저장, 초기 렌더링과 기기 간 복원 검증
 - Vite manifest를 통해 production asset을 서빙
 
 ### 4단계 — Workbench 도메인 도입
@@ -519,16 +527,17 @@ UI나 DB 구현 전에 정의가 “무엇을 표현할 수 있고 무엇을 금
 
 ### 5단계 — 선언형 renderer와 첫 vertical slice
 
-`주식` 같은 하나의 실제 예제를 선택해 끝까지 구현한다.
+기존 제품 도메인에서 대표 작업 하나를 선택해 끝까지 구현한다. `주식`은 가능한 fixture 예시일 뿐 필수 제품 기능이 아니다.
 
 - 작업 정의
-- 관심 종목 사이드바
-- quote/history/news binding
-- 패널 컴포넌트
+- 등록된 작업 목록 SVG
+- 대표 사이드바 구성과 대상 선택
+- 입력·출력 schema가 있는 binding
+- 등록된 패널 레이아웃과 컴포넌트
 - 데이터 출처와 stale 상태
 - 권한·실패·rate limit
 
-이 단계 전에는 범용 컴포넌트 수를 늘리지 않는다. 실제 두 번째 작업이 필요할 때 공통화를 검증한다.
+첫 작업만 겨우 표현하는 한두 개 컴포넌트에 범위를 제한하지 않는다. 일반적인 SaaS 작업을 사용자가 코드 없이 조합할 수 있도록 여러 작업 목록 아이콘, 사이드바 구성과 패널 레이아웃을 계획해서 제공하고, 의미가 겹치는 변형은 카탈로그 검토에서 제거한다.
 
 ### 6단계 — 표준 작업 포팅
 
@@ -568,6 +577,7 @@ MCP Apps는 UI를 도구의 progressive enhancement로 취급한다.^13 Agent Fa
 | ADR-007 | draft/publish와 immutable WorkbenchRelease |
 | ADR-008 | connection reference만 허용하고 credential은 서버 보관 |
 | ADR-009 | 포팅 feature flag, compatibility adapter, rollback 기준 |
+| ADR-010 | 다중 공통 에셋 카탈로그, 버전 ID와 사용자별 semantic-token 테마 |
 
 ## 피해야 할 구조
 
@@ -591,7 +601,7 @@ MCP Apps는 UI를 도구의 progressive enhancement로 취급한다.^13 Agent Fa
 3. `mcp-app-host`: 신뢰하지 않는 외부 UI 격리
 4. `platform-core`: tenant, 권한, 지식, 실행의 서버 권위
 
-따라서 먼저 이 목표 구조와 ADR을 승인하고, stock vertical slice로 계약을 검증한 뒤 현행 기능을 하나씩 포팅하는 것이 맞다. 목표 디렉터리만 먼저 대규모로 만들거나 파일을 일괄 이동하는 것은 구조를 만든 것이 아니라 이름을 바꾼 것에 불과하다.
+따라서 먼저 이 목표 구조와 ADR을 승인하고, 기존 제품 도메인에서 선정한 대표 vertical slice로 계약을 검증한 뒤 현행 기능을 하나씩 포팅하는 것이 맞다. 목표 디렉터리만 먼저 대규모로 만들거나 파일을 일괄 이동하는 것은 구조를 만든 것이 아니라 이름을 바꾼 것에 불과하다.
 
 ## Sources
 
