@@ -8,33 +8,86 @@ interface PublishedProjection {
     release: { id: string; definition: WorkbenchDefinition };
   }[];
 }
-
-export interface RegisteredWorkbench extends WorkbenchRegistration {
+export type NativeStandard = "organization" | "workspaces" | "documents" | "account" | "administration";
+export interface RegisteredWorkbench extends Partial<WorkbenchRegistration> {
   id: string;
   title: string;
   icon: string;
+  origin: "standard" | "customer";
+  releaseId: string;
+  native?: NativeStandard;
+  definition?: WorkbenchDefinition;
 }
+export const nativeStandards: readonly RegisteredWorkbench[] = [
+  {
+    id: "organization",
+    title: "조직",
+    icon: "database@1",
+    origin: "standard",
+    releaseId: "standard:organization@1",
+    native: "organization",
+  },
+  {
+    id: "workspaces",
+    title: "작업공간",
+    icon: "workspace@1",
+    origin: "standard",
+    releaseId: "standard:workspaces@1",
+    native: "workspaces",
+  },
+  {
+    id: "documents",
+    title: "문서",
+    icon: "documents@1",
+    origin: "standard",
+    releaseId: "standard:documents@1",
+    native: "documents",
+    definition: documentsFixture,
+  },
+  {
+    id: "account",
+    title: "계정",
+    icon: "account@1",
+    origin: "standard",
+    releaseId: "standard:account@1",
+    native: "account",
+  },
+  {
+    id: "administration",
+    title: "관리자",
+    icon: "admin@1",
+    origin: "standard",
+    releaseId: "standard:administration@1",
+    native: "administration",
+  },
+];
+export const reservedStandardIds = new Set(nativeStandards.map((item) => item.id));
 
 export async function loadAuthorizedRegistry(
   organizationId: string,
   workspaceId: string,
   signal: AbortSignal,
+  platformAdmin = false,
 ): Promise<RegisteredWorkbench[]> {
   const registry = new RuntimeRegistry();
   registry.registerStandard(documentsFixture, "standard:documents@1");
-  const standardIds = new Set(registry.list().map((entry) => entry.definition.descriptor.id));
   const projection = await apiRequest<PublishedProjection>(
     `/api/workspaces/${encodeURIComponent(workspaceId)}/workbenches/published`,
     { headers: { "X-Organization-ID": organizationId }, signal },
   );
   for (const item of projection.items) {
-    if (standardIds.has(item.descriptor.id) || standardIds.has(item.release.definition.descriptor.id)) continue;
+    if (reservedStandardIds.has(item.descriptor.id) || reservedStandardIds.has(item.release.definition.descriptor.id))
+      continue;
     registry.registerCustomer(item.release.definition, item.release.id);
   }
-  return registry.list().map((entry) => ({
-    ...entry,
-    id: entry.definition.descriptor.id,
-    title: entry.definition.descriptor.title,
-    icon: entry.definition.descriptor.icon,
-  }));
+  const customers: RegisteredWorkbench[] = registry
+    .list()
+    .filter((entry) => entry.origin === "customer")
+    .map((entry) => ({
+      ...entry,
+      id: entry.definition.descriptor.id,
+      title: entry.definition.descriptor.title,
+      icon: entry.definition.descriptor.icon,
+    }));
+  return [...nativeStandards.filter((item) => item.native !== "administration" || platformAdmin), ...customers];
 }

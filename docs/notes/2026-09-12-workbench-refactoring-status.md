@@ -31,7 +31,7 @@
 | 영역                  | 현재 상태 | 현재 근거                                                                                                        | 다음 완료 지점                                              |
 | --------------------- | --------- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | 목표 아키텍처         | 부분 완료 | 모노레포·Workbench·포팅 방향과 [ADR-001~010](../adr/) 적용 결정 존재                                             | 신규 apps/packages 의존성 규칙 자동 검사                    |
-| 현행 서비스 경계      | 부분 완료 | Stage 7 identity/authorization 및 Stage 8 organization/Workspace/account backend·B101 closure 독립 pass; Stage 9 administrator backend 작성     | Stage 9 독립 검증 후 이후 도메인 경계를 순차 포팅    |
+| 현행 서비스 경계      | 부분 완료 | Stage 7 identity/authorization, Stage 8 organization/Workspace/account backend·B101 closure, Stage 9 administrator backend 독립 pass | 이후 도메인 경계를 순차 포팅 |
 | 모노레포 골격         | 완료      | Stage 1 독립 Verification에서 frozen install, 공통 gate, worker smoke, web/Python build와 no-cleanup 재실행 통과 | 후속 slice에서 같은 gate 유지                               |
 | 공통 UI 기반          | 완료      | Stage 2 독립 Verification에서 17 design-system tests, Chromium matrix와 10 screenshots 통과                      | 후속 소비자 전환 동안 같은 catalog gate 유지                |
 | 작업 목록 에셋        | 완료      | 16개 versioned React SVG와 상태·provenance가 Stage 2 독립 catalog/Chromium gate 통과                             | 후속 registry/runtime 소비에서 호환성 유지                  |
@@ -128,9 +128,9 @@
 | RF-602 | Workbench repository port와 PostgreSQL adapter | 완료      | RF-600~601     | Stage 5 독립 0026 migration·forced RLS·동시성 PostgreSQL 검증 통과       |
 | RF-603 | Workbench command/query use case               | 완료      | RF-602         | Stage 5 독립 권한·CAS·idempotency·transaction failure 검증 통과          |
 | RF-604 | 얇은 HTTP·MCP adapter                          | 완료      | RF-603         | Stage 5 독립 인증 HTTP/MCP 결과·오류 parity 검증 통과                    |
-| RF-605 | 기존 도메인의 `platform-core` 포팅             | 부분 완료 | RF-201, RF-004 | Stage 8 독립 pass; Stage 9 administration core 작성·독립 검증 대기, 나머지 도메인 필요 |
-| RF-606 | 기존 외부 구현의 `platform-adapters` 포팅      | 부분 완료 | RF-201, RF-004 | Stage 8 독립 pass; Stage 9 administration PostgreSQL adapter 작성·독립 검증 대기 |
-| RF-607 | API/worker composition 분리                    | 부분 완료 | RF-605~606     | Stage 8 독립 pass; Stage 9 admin API composition 작성·독립 검증과 worker/나머지 도메인 필요 |
+| RF-605 | 기존 도메인의 `platform-core` 포팅             | 부분 완료 | RF-201, RF-004 | Stage 8·9 독립 pass; 나머지 도메인 필요 |
+| RF-606 | 기존 외부 구현의 `platform-adapters` 포팅      | 부분 완료 | RF-201, RF-004 | Stage 8·9 독립 pass; 나머지 provider/도메인 adapter 필요 |
+| RF-607 | API/worker composition 분리                    | 부분 완료 | RF-605~606     | Stage 8·9 독립 pass; worker/나머지 도메인 필요 |
 
 ### 7. React shell과 첫 vertical slice
 
@@ -147,7 +147,7 @@
 
 | ID     | 작업                       | 상태   | 선행       | 완료 조건                                                          |
 | ------ | -------------------------- | ------ | ---------- | ------------------------------------------------------------------ |
-| RF-800 | 작업공간·조직·계정·관리자  | 부분 완료 | RF-704~705 | Stage 8 독립 pass; Stage 9 관리자 backend 작성·독립 검증 대기, 표준 UI 포팅 필요 |
+| RF-800 | 작업공간·조직·계정·관리자  | 부분 완료 | RF-704~705 | Stage 8·9 backend와 Stage 10 native production/forced-RLS/browser·aggregate 독립 pass; Stage 10 packaging·legacy closure 근거 대기 |
 | RF-801 | 문서·검색·지식             | 미착수 | RF-704~705 | tree/editor/preview/revision/provenance와 전달 흐름 회귀           |
 | RF-802 | 일정                       | 미착수 | RF-704~705 | tree/timeline/today/kanban, 생성·수정·복원 회귀                    |
 | RF-803 | 에이전트·보고·로그·테스트  | 미착수 | RF-704~705 | 계층·실행 상태·증거 표시와 장시간 갱신 회귀                        |
@@ -217,11 +217,127 @@ MCP Apps host(RF-900~903)는 대표 native Workbench가 완성되고 실제 외�
 
 ## 현 시점의 다음 작업
 
-1. Stage 9 administrator backend의 독립 검증을 완료한 뒤 RF-605~607의 나머지
-   도메인·PostgreSQL/provider adapter와 API composition을 vertical slice로 순차 포팅한다.
-2. RF-003: 전체 legacy [기준선 matrix](2026-09-12-workbench-baseline.md)의 fixture/API,
-   browser와 disposable infrastructure 범위를 별도 실행하고 전역 제한을 해소한다.
-3. RF-801 전체 Documents parity와 RF-800/802~805 표준 기능 포팅은 후속 slice로 유지한다.
+### Stage 9 독립 검증 근거
+
+Verification `rf-stage9-verification/run-20260912T235201721498Z-246bfca2`가 Work
+`rf-stage9-work/run-20260912T234949674533Z-b60e000e` (원 요청 SHA-256
+`165e3ee196e9ce9bd19967f72b1648ed35ae0322e3549ebd846563e2b24ed3d8`)를 통과시켰다.
+`make workbench-check` 61 TypeScript/75 Python, 관련 회귀 51 통과/기존 skip 1,
+관리자 45 tests, PostgreSQL 16/pgvector의 NOSUPERUSER·NOBYPASSRLS 실제 세션 HTTP,
+scoped Bandit 무발견, legacy mypy 173, private 관리자 catalog의 1440/390 browser와
+offline wheel/installed-resource 근거를 포함한다. 이 근거는 Stage 9 slice의 독립 통과이며
+전역 리팩터링·배포 완료 근거로 승격하지 않는다.
+
+### Stage 10 독립 통과와 폐쇄 상태
+
+최종 native loop의 Work `rf-stage10-work/run-20260913T063735636121Z-496ee188`와
+Verification `rf-stage10-verification/run-20260913T064055646404Z-84f786b9`는 원 요청
+SHA-256 `3e74148930c0b2d06e44d533bca923b20c4a553bc970b6feea33f9ab40a53860`에
+묶여 있다. Verification은 다음 현재 입력 근거를 실제로 만들었다.
+
+- `scripts/verify-native-management.sh`: PostgreSQL 16/pgvector를 migration `0026`까지 올리고
+  NOSUPERUSER·NOBYPASSRLS app role을 사용한 production React/FastAPI `/factory` browser가
+  `1 passed in 47.58s`였다. 같은 실행에서 `auth-assets`가 통과했고
+  `/tmp/af-native-stage10-1440.png`, `/tmp/af-native-stage10-390.png`를 검사했다.
+- `make workbench-check`: formatting, Ruff/ESLint, Python/TypeScript type, schema 생성·parity,
+  dependency guard, 86 TypeScript tests와 80 Python tests가 통과했다.
+- 같은 session의 앞선 반복은 desktop sidebar 180/268/520px, 390px, 제공 theme, 긴 한국어
+  group label, mobile tab과 MCP 영역을 실제로 검사했다. 최종 browser는 조직·작업공간·구성원·
+  역할·팀·초대·group·MCP ZIP/provenance/evidence·계정·theme/CAS·customer authoring·관리자·
+  session revocation·rollback 동작을 포함한다.
+
+위 근거는 native production slice와 aggregate gate의 독립 통과이다. 이 closure 문서만
+변경되므로 해당 전체 browser와 aggregate를 다시 실행할 이유는 없다. 다만 bare `pass` 결과를
+원 요구사항 5 전체의 근거로 확대하지 않는다. `pnpm -r build` 성공은 이전
+`rf-stage10-verification/run-20260913T032019391644Z-e41c5f3f`, `policies.py` scoped Bandit
+성공은 `rf-stage10-verification/run-20260913T013608659927Z-6563d760`에 존재하지만, 각각 이후
+누적 입력 전체나 packaging/legacy 범위를 증명하지 않는다.
+
+#### 요구사항→구현·test·evidence map
+
+| 원 acceptance | 주요 구현 | 작성된 test/evidence | 폐쇄 판정 |
+| --- | --- | --- | --- |
+| 1. 네 native 소비자, registry, selection/theme/state 격리 | `apps/web/src/standard/{workspace,organization,account,admin}`, `app/WorkbenchContext.tsx`, `registry/WorkbenchRegistry.ts`, `ThemeBootstrap.tsx`, design-system catalog/components | `NativeManagement.test.tsx`, `WorkbenchContext.test.tsx`, `WorkbenchRegistry.test.ts`, theme/App/design-system tests; 최종 `make workbench-check` 86 TS/80 Python | 현재 입력 근거 있음 |
+| 2. production `/factory`, 실제 session/API, fresh forced-RLS DB | `scripts/verify-native-management.sh`, `tests/test_cloud_platform_integration.py`, `tests/browser/native-management.cjs` | 최종 Verification `1 passed in 47.58s`; migration 0001~0026, 두 tenant/user, admin/nonadmin, CAS·revocation·rollback 포함 | 현재 입력 근거 있음 |
+| 3. exhaustive native browser와 legacy rollback | `native-management.cjs`, legacy `static/js/{workspace,mcp-connection,mcp-handoff}.js`와 기존 browser suites | native/MCP ZIP·credential/state assertion은 최종 pass; Stage 10에서 바뀐 legacy JS와 `mcp-handoff.cjs`에 대한 이후 독립 rollback 실행 기록은 없음 | legacy rollback 근거 필요 |
+| 4. responsive/theme/keyboard visual inspection | shared shell/design-system/app CSS와 native 네 소비자 | 최종 1440/390 artifact 및 앞선 180/268/520/theme/긴 한국어 검사 | 현재 입력 근거 있음; artifact는 runtime-only |
+| 5. build/type/security/package/deploy slice | web build, generated contracts, `MANIFEST.in`, packaged runtime paths, shadow route/security middleware | 최종 web production build와 aggregate type/lint/tests는 있음. 이전 `pnpm -r build`와 단일-file Bandit은 baseline만 제공 | offline wheel·installed web dist/manifest, root_path/cache/CSP, legacy mypy, current changed-scope Bandit 필요 |
+
+#### 남은 Stage 10 Verification handoff
+
+Verification은 서로 독립적인 아래 묶음을 별도 output path로 실행한다. 현재 native 전체 browser와
+`make workbench-check`는 관련 source가 이 문서 closure로 바뀌지 않았으므로 위 최종 run을
+재사용한다.
+
+```sh
+pnpm --filter @agent-factory/web build
+STAGE10_PACKAGE_PYTHON=/tmp/organization-build-env/bin/python
+STAGE10_PACKAGE_PYTHONPATH=/home/deus/.cache/uv/archive-v0/AkgFl_dbkmT4zDjN:/home/deus/.cache/uv/archive-v0/H6wpYZ3q5wzmMW69xwsab:/home/deus/.cache/uv/archive-v0/vNviCP3LdL58pAW2:/home/deus/.cache/uv/archive-v0/tSSQuf3EI2AWvD4l9ORSo
+PYTHONPATH="$STAGE10_PACKAGE_PYTHONPATH" "$STAGE10_PACKAGE_PYTHON" -c \
+  'import hatchling.build, pytest'
+AGENT_FACTORY_ENV_FILE='' AGENT_FACTORY_ENVIRONMENT=test \
+  PYTHONPATH="$STAGE10_PACKAGE_PYTHONPATH" \
+  "$STAGE10_PACKAGE_PYTHON" -m pytest -q \
+  tests/test_cloud_platform_packaging.py tests/test_workbench_shadow_route.py \
+  tests/test_security.py tests/test_admin.py tests/test_deployment.py
+
+uv run mypy app
+.venv/bin/bandit -q \
+  packages/platform-core/src/agent_factory_core/workbenches/policies.py \
+  scripts/generate_workbench_contracts.py
+
+export NODE_PATH=/tmp/af-pw/node_modules
+export PLAYWRIGHT_BROWSERS_PATH=/home/deus/.cache/ms-playwright
+node tests/browser/workspace-start.cjs
+node tests/browser/organizations.cjs
+node tests/browser/mcp-handoff.cjs
+node tests/browser/admin-assets.cjs
+node tests/browser/ui-boundaries.cjs
+node tests/browser/ui-components.cjs
+node tests/browser/ui-screens.cjs
+
+# THEME_*_DATABASE_URL은 같은 Verification이 소유한 disposable PostgreSQL의
+# 각각 NOSUPERUSER·NOBYPASSRLS app URL과 migration-admin URL이다.
+: "${THEME_APP_DATABASE_URL:?set the disposable app-role URL}"
+: "${THEME_ADMIN_DATABASE_URL:?set the disposable migration-admin URL}"
+AGENT_FACTORY_TEST_DATABASE_URL="$THEME_APP_DATABASE_URL" \
+AGENT_FACTORY_TEST_ADMIN_DATABASE_URL="$THEME_ADMIN_DATABASE_URL" \
+PYTHONPATH="$STAGE10_PACKAGE_PYTHONPATH" \
+THEME_VERIFY_PYTHON=/tmp/organization-build-env/bin/python \
+THEME_PLAYWRIGHT_NODE_PATH=/tmp/af-pw/node_modules \
+PLAYWRIGHT_BROWSERS_PATH=/home/deus/.cache/ms-playwright \
+  scripts/verify-theme-profiles.sh
+```
+
+첫 묶음은 Node 22/pnpm 10.15.1의 현재 production dist를 먼저 만들고, offline/no-index wheel과
+설치 layout의 `WORKBENCH_WEB_ROOT`, `.vite/manifest.json`, byte-equivalent resources를 확인한다.
+현재 host에서는 Hatchling과 project dependency가 함께 해석되는 위 execution-only Python/PYTHONPATH
+조합을 먼저 import probe로 확인한다. 이 `/tmp`·uv archive 조합은 저장소의 일반 개발 명령이 아니라
+해당 Verification 환경에만 적용되는 근거이며, 다른 host에서는 같은 import probe를 만족하는 기존
+호환 interpreter를 절대 경로로 정한다. dependency를 설치하거나 network build isolation으로
+보완하지 않는다.
+같은 묶음의 shadow/security/deployment tests가 `/factory`, deep link, index `no-store`, hashed
+asset immutable cache, CSP와 catalog no-store를 맡는다. theme profile은 직접 browser 파일을
+호출하지 않고 `scripts/verify-theme-profiles.sh`가 build·preview server·browser cleanup을 소유한다.
+두 database URL은 같은 실행이 만든 명시적 disposable PostgreSQL에만 연결한다. browser 묶음은
+fixture이며 실제 DB native 근거와 구분한다. 어느 묶음이 실패해도 아직 RF-800 Stage 10 폐쇄
+완료로 올리지 않는다.
+
+### 통합 이후 순서와 단일 writer 경계
+
+1. 위 Stage 10 closure를 먼저 마친다. Main만 이 누적 Stage 10 변경을 commit한다.
+2. 준비만 된 `/tmp/af-refactor-loop-jBb77E/parallel-migration`의 세 lane을 그 뒤 시작한다:
+   RF-801 knowledge/documents, RF-802 planning/durable scheduling, RF-803/804
+   agents/reporting/providers/MCP. 각 lane은 disjoint allowlist만 쓴다.
+3. registry, shell, context, `app.css`, design-system, schema/generated, `__init__`, global
+   registration, integration tests, browser harness와 status evidence는 lane writer에서 제외하고
+   마지막 단일 integration writer가 소유한다.
+4. SaaS 기반 완성 → Workbench별 공통 asset 적용 → 종합 UI 조정 순서를 유지한다. logs/tests/
+   database 제품 기능은 정의될 때까지 placeholder이며, 12~20시간은 목표 추정치일 뿐 범위나
+   품질 조건을 줄이지 않는다.
+5. RF-801 전체 Documents parity와 RF-802~805의 남은 기능, 전역 baseline·배포·관측은 후속
+   slice다. parity, 독립 검증과 live reference 부재를 모두 확인하기 전에는 legacy를 삭제하지
+   않으며 실제 rollback/compatibility 경로는 유지한다.
 
 단순 디렉터리 생성만으로 상태를 완료로 바꾸지 않는다. 각 행의 완료 조건과 해당 검증이
 함께 충족된 경우에만 완료로 갱신한다.

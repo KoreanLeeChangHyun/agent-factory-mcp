@@ -22,7 +22,7 @@ export class ThemeConflict extends Error {
 
 const profileSchema = "schemas/appearance/v1/theme-profile.schema.json";
 const key = ({ userId, organizationId, workspaceId }: ThemeContext) =>
-  `agent-factory:theme:v1:${userId}:${organizationId}:${workspaceId}`;
+  `agent-factory:theme:v1:${userId}:${organizationId ?? "account"}:${workspaceId ?? "none"}`;
 
 function validProfile(value: unknown, userId: string): ThemeProfile | null {
   try {

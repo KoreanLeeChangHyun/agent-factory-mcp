@@ -53,7 +53,7 @@ test, deploy, script와 configuration 소유자를 목표 구조에 빠짐없이
 | `app/modules/auth/*`, `identity/*`; routers `auth`, `account` | `platform-core/identity` | API session dependencies + PostgreSQL/OAuth/crypto adapters | Stage 7에서 core lifecycle·PostgreSQL/crypto/OAuth adapter·API composition과 legacy bridge 작성; auth/DB/browser 독립 gate 후 기존 schema·cookie 호환 확정 |
 | `app/modules/organization/*`; routers `organizations`, `workspace_management`, `account` | `platform-core/organizations` 및 `workspaces` | API routes + PostgreSQL/email | Stage 8 core·adapter·target composition 독립 pass; B101 closure 작성·독립 재검증 후에도 read presenter/dependency bridge는 최종 제거 gate까지 유지 |
 | `app/modules/workspace/*`; routers `workspace`, `workspace_management` | `platform-core/workspaces` | API routes/repositories; `apps/web/standard/workspace` | Stage 8 lifecycle/recent/group/repository/account use case·PostgreSQL adapter의 RLS/API/browser evidence 확보; legacy service는 construction/translation bridge로 최종 제거 gate까지 유지 |
-| `app/modules/admin/*`; router `admin` | `platform-core/administration,identity,organizations,workspaces,executions,connections,audit`의 admin use cases | `apps/api/composition/admin` + 기존 thin HTTP presenter; `apps/web/standard/admin`은 후속 | Stage 9에서 active platform-admin/RLS, safe config/flags, Job/connection/audit authority와 bridge 작성; 독립 DB/API/security gate 후 제거 후보 판단 |
+| `app/modules/admin/*`; router `admin` | `platform-core/administration,identity,organizations,workspaces,executions,connections,audit`의 admin use cases | `apps/api/composition/admin` + 기존 thin HTTP presenter; `apps/web/standard/admin` native consumer | Stage 9 backend와 Stage 10 native production/forced-RLS/browser·aggregate 독립 pass; packaging·legacy closure 뒤에도 rollback/live-ref 제거 gate까지 기존 presenter 유지 |
 | `app/modules/document/*`; routers `documents`, `cloud_documents`, `search` | `platform-core/knowledge` | PostgreSQL/pgvector/object storage adapters, API/MCP document tools, `apps/web/standard/documents` | Original/Processed/Specification, revisions, package pair, preview sandbox, lexical/vector search 모두 Documents slice로 비교; 첫 slice 완료 전 제거 금지 |
 | `app/modules/schedule/*`; router `scheduling`; `app/scheduler/*` | `platform-core/executions` schedule use cases | `apps/worker/scheduler.py`, API routes | cron/timezone/actor/authorization/Job authority 유지; Beat/disposable DB/browser 통과 |
 | `app/modules/planning/*`; router `planning`; `app/mcp/planning.py` | `platform-core/executions`의 planning vertical slice | API/MCP adapter + `apps/web/standard/jobs` 또는 planning feature | domain→feature→issue, preview/apply/idempotency/date provenance 보존; fixture+DB+browser 후 제거 |
@@ -179,3 +179,30 @@ image 호환이 통과하기 전에는 migration runtime 위치를 전환하지 
 
 RF-004는 이 ownership map 작성으로 완료 처리한다. 이는 파일이 이동되었거나 새 architecture가
 구동된다는 뜻이 아니다. 각 실제 이동 상태는 해당 RF 단계와 독립 Verification evidence가 소유한다.
+
+## Stage 10 통합 handoff와 legacy inventory
+
+Stage 10 native management의 현재 독립 근거는 Work
+`rf-stage10-work/run-20260913T063735636121Z-496ee188`와 Verification
+`rf-stage10-verification/run-20260913T064055646404Z-84f786b9`이다. production `/factory`,
+fresh PostgreSQL 16/pgvector forced RLS, native browser, 1440/390 visual과
+`make workbench-check`는 이 입력에 대해 통과했다. offline wheel/installed web resources,
+legacy mypy, current changed-scope Bandit과 Stage 10에서 수정된 legacy rollback assets는
+[현황 문서의 closure handoff](2026-09-12-workbench-refactoring-status.md#남은-stage-10-verification-handoff)에
+따라 별도 확인한다. 이 근거가 생기기 전에는 RF-800을 완료나 제거 가능 상태로 올리지 않는다.
+
+| 후보/호환 자산 | 현재 판정 | 마지막 integration writer의 처리 조건 |
+| --- | --- | --- |
+| `template/workspace/index.html`, `static/css/ui.css`, `static/js/workspace.js` | rollback 필수 보존 | RF-801~804의 모든 standard가 native registry를 사용하고 feature flag rollback·관측·live reference 부재가 독립 검증된 뒤에만 삭제 후보화 |
+| `static/js/mcp-connection.js`, `static/js/mcp-handoff.js` | MCP token/ZIP compatibility 필수 보존 | native/legacy ZIP·instructions·selected-token evidence parity, later connections lane 통합, credential-safe rollback과 live reference 부재 후에만 삭제 후보화 |
+| `static/js/organizations.js`, `static/js/admin.js`와 관련 feature CSS | 조직/관리자 rollback 필수 보존 | Stage 10 closure와 후속 global rollout 관측 뒤 route/template/static 소비자 부재 확인 시 삭제 후보화 |
+| `tests/browser/{workspace-start,organizations,mcp-handoff,admin-assets,theme-profile,ui-boundaries,ui-components,ui-screens}.cjs` | characterization/rollback gate로 보존 | 새 E2E가 같은 legacy rollback 의미를 소유하고 gate owner가 한 곳으로 전환될 때까지 삭제하지 않음 |
+| legacy read presenter/dependency bridge | Stage 8~9 호환 경계로 보존 | 목표 API composition이 모든 현행 호출과 권한/failure semantics를 대체하고 forced-RLS·rollback·live-import 부재가 확인된 뒤 제거 |
+| 완전히 포팅된 중복 descriptor/static asset | 잠재 삭제 후보 | byte/provenance/license, registry consumer와 package manifest를 비교하고 독립 Verification 및 `git grep` 무참조 후 단일 integration change에서 제거 |
+
+후속 세 lane은 `/tmp/af-refactor-loop-jBb77E/parallel-migration`에 준비만 되어 있으며 Stage 10
+closure 전에 시작하지 않는다. RF-801, RF-802, RF-803/804 writer는 각 disjoint allowlist만
+수정한다. registry/shell/context/`app.css`, design-system, schema/generated, package markers,
+global registration, integration tests, browser harness와 이 status evidence는 마지막 단일
+integration writer가 소유한다. Main만 commit하며, SaaS 기반 → Workbench별 공통 asset → 종합
+UI 조정 순서와 logs/tests/database placeholder 상태를 유지한다.

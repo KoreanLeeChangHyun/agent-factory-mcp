@@ -94,7 +94,9 @@
     document.querySelector("[data-admin-view].is-selected")?.classList.remove("is-selected");
     document.querySelector(`[data-admin-view="${view}"]`)?.classList.add("is-selected");
     history.replaceState(null, "", "#admin");
-    preferences?.write({view});
+    // The catalog is a protected auxiliary surface, not a restorable management view.
+    // Retain the last record view so returning from account restores useful admin content.
+    if (view !== "assets") preferences?.write({view});
     load(view);
   };
 

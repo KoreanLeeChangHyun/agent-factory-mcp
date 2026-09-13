@@ -27,7 +27,7 @@ export interface ThemeOverrides { accent?: string; focus?: string; surface?: str
 export interface ThemeProfile { schemaVersion: "1.0"; userId: string; revision: number; base: ThemeBase; density: Density; overrides: ThemeOverrides; reducedMotion: boolean }
 export interface WorkbenchRelease { releaseId: string; definitionId: string; revision: number; schemaDigest: string; definition: WorkbenchDefinition }
 export interface ViewState { version: 1; selectedWorkbench: string; sidebarOpen: boolean; sidebarWidth: number; selection: string | null; expanded: string[] }
-export interface RecordField { type: "string" | "number" | "integer" | "boolean"; minLength?: number; maxLength?: number }
+export interface RecordField { type: "string" | "number" | "integer" | "boolean"; minLength?: number; maxLength?: number; enum?: string[] }
 export interface RecordItem { type: "object"; additionalProperties: false; required: string[]; properties: Record<string, RecordField> }
 export interface AssetParameter { name: string; type: AssetParameterType; required: boolean; maxLength?: number; maxItems?: number; items?: RecordItem; uniqueBy?: string; enum?: string[] }
 export interface Accessibility { role: AccessibilityRole; keyboard: string; live?: LiveMode }

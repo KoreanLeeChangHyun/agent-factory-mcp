@@ -60,7 +60,19 @@ describe("production Workbench context composition", () => {
     let resolveTheme: ((response: Response) => void) | undefined;
     vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const url = String(input);
-      if (url.endsWith("/api/auth/me")) return Promise.resolve(json({ user: { id: userId } }));
+      if (url.endsWith("/api/auth/me"))
+        return Promise.resolve(
+          json({ user: { id: userId, email: "user@example.test", display_name: "User", is_platform_admin: false } }),
+        );
+      if (url.endsWith("/api/account/organizations"))
+        return Promise.resolve(
+          json([
+            { id: "organization-one", name: "One", slug: "one", is_personal: false },
+            { id: "organization-two", name: "Two", slug: "two", is_personal: false },
+          ]),
+        );
+      if (url.includes("/api/organizations/") && url.endsWith("/workspaces"))
+        return Promise.resolve(json([{ id: "workspace-one" }, { id: "workspace-two" }]));
       if (delayTheme)
         return new Promise<Response>((resolve) => {
           resolveTheme = resolve;
@@ -90,6 +102,42 @@ describe("production Workbench context composition", () => {
     await act(async () => undefined);
     await act(async () => resolveTheme?.(json(profile(secondUser, "high-contrast"))));
     expect(document.documentElement.dataset.afTheme).toBe("high-contrast");
+    view.cleanup();
+  });
+
+  it("clears an undiscovered Workspace deep link before publishing the authenticated context", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+      if (url.endsWith("/api/auth/me"))
+        return Promise.resolve(
+          json({ user: { id: firstUser, email: "user@example.com", display_name: "User", is_platform_admin: false } }),
+        );
+      if (url.endsWith("/api/account/organizations"))
+        return Promise.resolve(json([{ id: "organization-one", name: "One", slug: "one", is_personal: false }]));
+      if (url.endsWith("/workspaces")) return Promise.resolve(json([{ id: "workspace-visible" }]));
+      return Promise.resolve(json(profile(firstUser, "dark")));
+    });
+    function Selection() {
+      const { selection, loading } = useWorkbenchContext();
+      return <output>{loading ? "loading" : `${selection.organizationId}:${selection.workspaceId}`}</output>;
+    }
+    const view = mount(
+      <WorkbenchContextProvider
+        initialSelection={{ organizationId: "organization-one", workspaceId: "workspace-not-authorized" }}
+      >
+        <Selection />
+      </WorkbenchContextProvider>,
+    );
+    await act(async () => undefined);
+    await act(async () => undefined);
+    expect(view.host.textContent).toContain("organization-one:null");
+    const historyUrl = new URL(window.location.href);
+    historyUrl.searchParams.set("organization", "organization-one");
+    historyUrl.searchParams.set("workspace", "workspace-stale-history");
+    history.pushState({}, "", historyUrl);
+    act(() => window.dispatchEvent(new PopStateEvent("popstate")));
+    await act(async () => undefined);
+    expect(view.host.textContent).toContain("organization-one:null");
     view.cleanup();
   });
 });

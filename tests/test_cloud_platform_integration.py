@@ -68,7 +68,13 @@ async def platform(monkeypatch, tmp_path):
     from app.modules.auth.models import ApiToken, AuthSession, UserCredential
     from app.modules.identity.models import User
     from app.modules.mcp_connection.models import MCPConnection
-    from app.modules.organization.models import Organization, OrganizationMembership
+    from app.modules.organization.models import (
+        Organization,
+        OrganizationMembership,
+        Role,
+        RolePermission,
+        RoleScope,
+    )
     from app.modules.organization.system_roles import (
         ORGANIZATION_MEMBER_ROLE_ID,
         ORGANIZATION_OWNER_ROLE_ID,
@@ -79,7 +85,14 @@ async def platform(monkeypatch, tmp_path):
 
     admin = create_async_engine(admin_url)
     sessions = async_sessionmaker(admin, expire_on_commit=False)
-    user, reader_user, org, workspace, other = uuid4(), uuid4(), uuid4(), uuid4(), uuid4()
+    user, reader_user, restricted_user = uuid4(), uuid4(), uuid4()
+    org, personal_org, restricted_role, workspace, other = (
+        uuid4(),
+        uuid4(),
+        uuid4(),
+        uuid4(),
+        uuid4(),
+    )
     now = datetime.now(UTC)
     tokens = {
         name: "afm_" + uuid4().hex
@@ -87,6 +100,7 @@ async def platform(monkeypatch, tmp_path):
     }
     browser_cookie = uuid4().hex
     reader_cookie = uuid4().hex
+    restricted_cookie = uuid4().hex
     browser_email = f"{user}@example.com"
     browser_password = "disposable-stage7-password"
     async with sessions() as session:
@@ -98,8 +112,34 @@ async def platform(monkeypatch, tmp_path):
                 display_name="Workbench reader",
             )
         )
-        session.add(Organization(id=org, name="Cloud Test", slug=str(org), is_personal=True))
+        session.add(
+            User(
+                id=restricted_user,
+                email=f"{restricted_user}@example.com",
+                display_name="Workbench restricted",
+            )
+        )
+        session.add(Organization(id=org, name="Cloud Test", slug=str(org), is_personal=False))
+        session.add(
+            Organization(
+                id=personal_org,
+                name="Personal Cloud Test",
+                slug=str(personal_org),
+                is_personal=True,
+            )
+        )
         await session.flush()
+        session.add(
+            Role(
+                id=restricted_role,
+                organization_id=org,
+                scope=RoleScope.ORGANIZATION,
+                name="browser_restricted",
+                is_system=False,
+            )
+        )
+        await session.flush()
+        session.add(RolePermission(role_id=restricted_role, permission_key="organization.read"))
         session.add(
             OrganizationMembership(
                 organization_id=org, user_id=user, role_id=ORGANIZATION_OWNER_ROLE_ID
@@ -107,9 +147,23 @@ async def platform(monkeypatch, tmp_path):
         )
         session.add(
             OrganizationMembership(
+                organization_id=personal_org,
+                user_id=user,
+                role_id=ORGANIZATION_OWNER_ROLE_ID,
+            )
+        )
+        session.add(
+            OrganizationMembership(
                 organization_id=org,
                 user_id=reader_user,
                 role_id=ORGANIZATION_MEMBER_ROLE_ID,
+            )
+        )
+        session.add(
+            OrganizationMembership(
+                organization_id=org,
+                user_id=restricted_user,
+                role_id=restricted_role,
             )
         )
         session.add_all(
@@ -194,6 +248,15 @@ async def platform(monkeypatch, tmp_path):
                 user_id=reader_user,
                 token_digest=token_digest(
                     reader_cookie, settings.auth_token_secret.get_secret_value()
+                ),
+                expires_at=now + timedelta(days=1),
+            )
+        )
+        session.add(
+            AuthSession(
+                user_id=restricted_user,
+                token_digest=token_digest(
+                    restricted_cookie, settings.auth_token_secret.get_secret_value()
                 ),
                 expires_at=now + timedelta(days=1),
             )
@@ -294,6 +357,7 @@ async def platform(monkeypatch, tmp_path):
                 admin=sessions,
                 user=user,
                 reader_user=reader_user,
+                restricted_user=restricted_user,
                 org=org,
                 workspace=workspace,
                 other=other,
@@ -306,6 +370,7 @@ async def platform(monkeypatch, tmp_path):
                 email=browser_email,
                 password=browser_password,
                 reader_cookie=reader_cookie,
+                restricted_cookie=restricted_cookie,
                 settings=settings,
                 invitation_messages=invitation_messages,
             )
@@ -369,6 +434,137 @@ async def call(p, name, arguments, *, error=False, **kwargs):
     if result.get("structuredContent") is not None:
         return result["structuredContent"]
     return json.loads(result["content"][0]["text"])
+
+
+async def test_stage10_production_native_management_browser(platform):
+    """Run the production React management fixture with real forced-RLS HTTP sessions."""
+    p = platform
+    from app.modules.admin.models import FeatureFlag
+    from app.modules.auth.crypto import token_digest
+    from app.modules.auth.models import AuthSession
+    from app.modules.identity.models import User
+    from app.modules.integration.models import IntegrationConnection, IntegrationProvider
+    from app.modules.schedule.models import Job
+
+    admin_id, admin_cookie = uuid4(), uuid4().hex
+    secondary_cookie = uuid4().hex
+    provider_id, connection_id = uuid4(), uuid4()
+    now = datetime.now(UTC)
+    async with p.admin() as session:
+        session.add(
+            User(
+                id=admin_id,
+                email=f"{admin_id}@example.com",
+                display_name="Native admin",
+                is_platform_admin=True,
+            )
+        )
+        await session.flush()
+        session.add(
+            AuthSession(
+                user_id=admin_id,
+                token_digest=token_digest(
+                    admin_cookie, p.settings.auth_token_secret.get_secret_value()
+                ),
+                expires_at=now + timedelta(hours=1),
+            )
+        )
+        session.add(
+            AuthSession(
+                user_id=p.user,
+                token_digest=token_digest(
+                    secondary_cookie, p.settings.auth_token_secret.get_secret_value()
+                ),
+                expires_at=now + timedelta(hours=1),
+                user_agent="Stage10 secondary session",
+            )
+        )
+        session.add(
+            IntegrationProvider(
+                id=provider_id,
+                key=f"stage10-{provider_id}",
+                display_name="Stage 10 provider",
+                auth_type="api_key",
+                capabilities=["read"],
+                configuration_schema={"secret": "must-not-serialize"},
+            )
+        )
+        await session.flush()
+        session.add(
+            IntegrationConnection(
+                id=connection_id,
+                workspace_id=p.workspace,
+                provider_id=provider_id,
+                name="Stage 10 connection",
+                status="active",
+                encrypted_credentials=b"stage10-disposable-ciphertext",
+                encryption_key_version=1,
+                sync_cursor={"opaque": "must-not-serialize"},
+            )
+        )
+        for status in ("running", "failed"):
+            session.add(
+                Job(
+                    id=uuid4(),
+                    organization_id=p.org,
+                    workspace_id=p.workspace,
+                    requested_by_user_id=p.user,
+                    task_type=f"stage10.{status}",
+                    queue="documents",
+                    status=status,
+                    idempotency_key=f"stage10-{status}-{uuid4()}",
+                    attempt_count=1,
+                    next_attempt_at=now + timedelta(minutes=1),
+                    celery_task_id=f"stage10-{status}",
+                    started_at=now,
+                    finished_at=now if status == "failed" else None,
+                    dead_lettered_at=None,
+                    error_code="fixture_error" if status == "failed" else None,
+                    error_message="safe fixture error" if status == "failed" else None,
+                )
+            )
+        flag = await session.get(FeatureFlag, "react-workbench")
+        if flag is None:
+            session.add(
+                FeatureFlag(
+                    key="react-workbench",
+                    is_enabled=True,
+                    description="Stage 10 browser",
+                    rules={"workspaceIds": [str(p.workspace)]},
+                )
+            )
+        else:
+            flag.is_enabled = True
+            flag.rules = {"workspaceIds": [str(p.workspace)]}
+        await session.commit()
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "AF_NATIVE_BASE_URL": p.url + "/",
+            "AF_NATIVE_USER_COOKIE": p.cookie,
+            "AF_NATIVE_READER_COOKIE": p.reader_cookie,
+            "AF_NATIVE_RESTRICTED_COOKIE": p.restricted_cookie,
+            "AF_NATIVE_ADMIN_COOKIE": admin_cookie,
+            "AF_NATIVE_COOKIE_NAME": p.settings.session_cookie_name,
+            "AF_NATIVE_ORGANIZATION_ID": str(p.org),
+            "AF_NATIVE_WORKSPACE_ID": str(p.workspace),
+            "AF_NATIVE_USER_EMAIL": p.email,
+            "AF_NATIVE_USER_PASSWORD": p.password,
+            "AF_NATIVE_READER_EMAIL": f"{p.reader_user}@example.com",
+            "AF_NATIVE_READER_USER_ID": str(p.reader_user),
+        }
+    )
+    process = await asyncio.create_subprocess_exec(
+        "node",
+        "tests/browser/native-management.cjs",
+        cwd=Path(__file__).resolve().parents[1],
+        env=environment,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=180)
+    assert process.returncode == 0, (stdout + stderr).decode(errors="replace")
 
 
 async def test_stage9_real_http_platform_administration(platform):

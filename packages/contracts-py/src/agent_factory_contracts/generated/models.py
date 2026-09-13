@@ -138,6 +138,7 @@ class RecordField(TypedDict):
     type: Literal["string", "number", "integer", "boolean"]
     minLength: NotRequired[int]
     maxLength: NotRequired[int]
+    enum: NotRequired[list[str]]
 
 
 class RecordItem(TypedDict):

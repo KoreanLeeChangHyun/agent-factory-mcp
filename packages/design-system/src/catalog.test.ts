@@ -36,6 +36,30 @@ describe("asset catalog", () => {
       outputs: [],
     });
     expect(assetCatalog.find((asset) => asset.id === "chart-frame@1")?.actions).toEqual([]);
+    expect(assetCatalog.find((asset) => asset.id === "resource-table@1")?.inputs.map((item) => item.name)).toEqual([
+      "records",
+      "columns",
+    ]);
+  });
+
+  it("exposes closed authorable resource-table columns", () => {
+    const table = instantiateAsset(
+      "resource-table@1",
+      {},
+      {
+        inputs: {
+          records: [{ id: "one", title: "리소스", status: "준비", meta: "소유자" }],
+          columns: [
+            { id: "title", label: "이름" },
+            { id: "meta", label: "메타데이터" },
+          ],
+        },
+      },
+    );
+    expect(table).toBeTruthy();
+    expect(() =>
+      instantiateAsset("resource-table@1", {}, { inputs: { columns: [{ id: "secret", label: "비밀" }] } }),
+    ).toThrow(/Invalid input item/);
   });
   it("keeps the checked-in split descriptor equal to the registry contract", () => {
     const checkedIn = JSON.parse(

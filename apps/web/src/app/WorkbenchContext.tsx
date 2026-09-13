@@ -1,32 +1,60 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ThemeContext } from "../theme-client.js";
-import { apiPath } from "../api-path.js";
+import { apiRequest } from "../api-client.js";
 
-interface Session {
-  user: { id: string };
+export interface SessionUser {
+  id: string;
+  email: string;
+  display_name: string;
+  is_platform_admin: boolean;
 }
-
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  slug: string;
+  is_personal: boolean;
+}
 export interface WorkbenchSelection {
-  organizationId: string;
-  workspaceId: string;
+  organizationId: string | null;
+  workspaceId: string | null;
 }
-
 interface WorkbenchContextValue {
+  user: SessionUser | null;
+  organizations: OrganizationSummary[];
+  selection: WorkbenchSelection;
   themeScope: ThemeContext | null;
-  selectContext(selection: WorkbenchSelection): void;
+  loading: boolean;
+  error: string | null;
+  selectContext(selection: WorkbenchSelection, options?: { replace?: boolean }): void;
   refreshIdentity(): void;
+  refreshOrganizations(): void;
 }
 
 const Context = createContext<WorkbenchContextValue | null>(null);
 const selectionFromLocation = (): WorkbenchSelection => {
-  if (typeof window === "undefined") return { organizationId: "unselected", workspaceId: "unselected" };
+  if (typeof window === "undefined") return { organizationId: null, workspaceId: null };
   const query = new URLSearchParams(window.location.search);
-  return {
-    organizationId: query.get("organization") ?? "unselected",
-    workspaceId: query.get("workspace") ?? "unselected",
-  };
+  return { organizationId: query.get("organization"), workspaceId: query.get("workspace") };
+};
+const authorizedSelection = async (
+  candidate: WorkbenchSelection,
+  organizations: OrganizationSummary[],
+  signal: AbortSignal,
+): Promise<WorkbenchSelection> => {
+  if (!candidate.organizationId || !organizations.some((item) => item.id === candidate.organizationId)) {
+    return { organizationId: null, workspaceId: null };
+  }
+  if (!candidate.workspaceId) return { organizationId: candidate.organizationId, workspaceId: null };
+  const workspaces = await apiRequest<{ id: string }[]>(
+    `/api/organizations/${encodeURIComponent(candidate.organizationId)}/workspaces`,
+    { signal },
+  );
+  return workspaces.some((item) => item.id === candidate.workspaceId)
+    ? candidate
+    : { organizationId: candidate.organizationId, workspaceId: null };
 };
 
+/** Authenticated discovery is intentionally independent of a selected Workspace. */
 export function WorkbenchContextProvider({
   children,
   initialSelection = selectionFromLocation(),
@@ -34,31 +62,47 @@ export function WorkbenchContextProvider({
   children: ReactNode;
   initialSelection?: WorkbenchSelection;
 }) {
-  const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [selection, setSelection] = useState(initialSelection);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const selectionRef = useRef(selection);
   const generation = useRef(0);
+  const historyGeneration = useRef(0);
   const controller = useRef<AbortController | null>(null);
 
   const refreshIdentity = useCallback(() => {
-    const requestGeneration = ++generation.current;
+    const current = ++generation.current;
     controller.current?.abort();
-    const requestController = new AbortController();
-    controller.current = requestController;
-    setUserId(null);
-    void fetch(apiPath("/api/auth/me"), {
-      credentials: "same-origin",
-      cache: "no-store",
-      signal: requestController.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("authenticated account unavailable");
-        return response.json() as Promise<Session>;
+    const request = new AbortController();
+    controller.current = request;
+    setLoading(true);
+    setError(null);
+    setUser(null);
+    setOrganizations([]);
+    void Promise.all([
+      apiRequest<{ user: SessionUser }>("/api/auth/me", { signal: request.signal }),
+      apiRequest<OrganizationSummary[]>("/api/account/organizations", { signal: request.signal }),
+    ])
+      .then(async ([session, discovered]) => {
+        if (current !== generation.current || request.signal.aborted) return;
+        const restored = await authorizedSelection(selectionRef.current, discovered, request.signal);
+        if (current !== generation.current || request.signal.aborted) return;
+        setUser(session.user);
+        setOrganizations(discovered);
+        selectionRef.current = restored;
+        setSelection(restored);
       })
-      .then((session) => {
-        if (requestGeneration === generation.current) setUserId(session.user.id);
+      .catch((reason: unknown) => {
+        if (request.signal.aborted || current !== generation.current) return;
+        setUser(null);
+        setOrganizations([]);
+        setSelection({ organizationId: null, workspaceId: null });
+        setError(reason instanceof Error ? reason.message : "로그인 정보를 불러오지 못했습니다.");
       })
-      .catch((error: unknown) => {
-        if (!(error instanceof DOMException && error.name === "AbortError")) setUserId(null);
+      .finally(() => {
+        if (current === generation.current) setLoading(false);
       });
   }, []);
 
@@ -69,22 +113,63 @@ export function WorkbenchContextProvider({
       controller.current?.abort();
     };
   }, [refreshIdentity]);
-
   useEffect(() => {
-    const selectFromLocation = () => {
-      setSelection(selectionFromLocation());
+    const restore = () => {
+      const current = ++historyGeneration.current;
+      const request = new AbortController();
+      void authorizedSelection(selectionFromLocation(), organizations, request.signal)
+        .then((restored) => {
+          if (current !== historyGeneration.current) return;
+          selectionRef.current = restored;
+          setSelection(restored);
+        })
+        .catch((reason: unknown) => {
+          if (current !== historyGeneration.current) return;
+          if (!(reason instanceof DOMException && reason.name === "AbortError")) {
+            setError(reason instanceof Error ? reason.message : "작업공간을 확인하지 못했습니다.");
+          }
+        });
     };
-    window.addEventListener("popstate", selectFromLocation);
-    return () => window.removeEventListener("popstate", selectFromLocation);
-  }, []);
+    window.addEventListener("popstate", restore);
+    return () => {
+      historyGeneration.current += 1;
+      window.removeEventListener("popstate", restore);
+    };
+  }, [organizations]);
 
+  const selectContext = useCallback((next: WorkbenchSelection, options?: { replace?: boolean }) => {
+    selectionRef.current = next;
+    setSelection(next);
+    const url = new URL(window.location.href);
+    if (next.organizationId) url.searchParams.set("organization", next.organizationId);
+    else url.searchParams.delete("organization");
+    if (next.workspaceId) url.searchParams.set("workspace", next.workspaceId);
+    else url.searchParams.delete("workspace");
+    window.history[options?.replace ? "replaceState" : "pushState"]({}, "", url);
+  }, []);
+  const refreshOrganizations = useCallback(() => {
+    const current = generation.current;
+    const request = controller.current;
+    if (!user || !request) return;
+    void apiRequest<OrganizationSummary[]>("/api/account/organizations", { signal: request.signal }).then((items) => {
+      if (current === generation.current && !request.signal.aborted) setOrganizations(items);
+    });
+  }, [user]);
   const value = useMemo<WorkbenchContextValue>(
     () => ({
-      themeScope: userId ? { userId, ...selection } : null,
-      selectContext: setSelection,
+      user,
+      organizations,
+      selection,
+      loading,
+      error,
+      themeScope: user
+        ? { userId: user.id, organizationId: selection.organizationId ?? "", workspaceId: selection.workspaceId ?? "" }
+        : null,
+      selectContext,
       refreshIdentity,
+      refreshOrganizations,
     }),
-    [refreshIdentity, selection, userId],
+    [error, loading, organizations, refreshIdentity, refreshOrganizations, selectContext, selection, user],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

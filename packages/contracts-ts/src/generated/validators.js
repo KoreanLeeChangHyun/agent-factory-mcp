@@ -365,13 +365,13 @@ return errors === 0;
 validate20.evaluated = {"props":true,"dynamicProps":false,"dynamicItems":false};
 
 export const validateContract1 = validate21;
-const schema32 = {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"asset-descriptor.schema.json","title":"Catalog asset descriptor v1","type":"object","additionalProperties":false,"required":["id","kind","allowedRegions","properties","inputs","outputs","slots","states","actions","accessibility","provenance","example"],"properties":{"id":{"type":"string","pattern":"^[a-z][a-z0-9-]{0,63}@1$"},"kind":{"enum":["icon","sidebar","panel","control","display","feedback"]},"allowedRegions":{"type":"array","minItems":1,"maxItems":3,"items":{"enum":["task-list","sidebar","panel"]},"uniqueItems":true},"properties":{"$ref":"#/$defs/parameters"},"inputs":{"$ref":"#/$defs/parameters"},"outputs":{"$ref":"#/$defs/parameters"},"slots":{"type":"array","maxItems":9,"items":{"enum":["content","header","actions","list","detail","primary","secondary","sidebar","control"]},"uniqueItems":true},"states":{"type":"array","maxItems":10,"items":{"enum":["loading","empty","ready","stale","error","permission-denied","disabled","busy","success","progress"]},"uniqueItems":true},"actions":{"type":"array","maxItems":8,"items":{"enum":["select","refresh","submit","navigate-internal","toggle","dismiss"]},"uniqueItems":true},"accessibility":{"type":"object","additionalProperties":false,"required":["role","keyboard"],"properties":{"role":{"type":"string","enum":["img","navigation","tree","list","region","form","table","status","alert","dialog"]},"keyboard":{"type":"string","minLength":1,"maxLength":300},"live":{"enum":["off","polite","assertive"]}}},"provenance":{"type":"object","additionalProperties":false,"required":["source","license"],"properties":{"source":{"type":"string","minLength":1,"maxLength":200},"license":{"type":"string","minLength":1,"maxLength":80}}},"example":{"type":"object","additionalProperties":{"type":["string","number","integer","boolean","null"]},"maxProperties":16}},"$defs":{"recordField":{"type":"object","additionalProperties":false,"required":["type"],"properties":{"type":{"enum":["string","number","integer","boolean"]},"minLength":{"type":"integer","minimum":1,"maximum":4096},"maxLength":{"type":"integer","minimum":1,"maximum":4096}}},"recordItem":{"type":"object","additionalProperties":false,"required":["type","additionalProperties","required","properties"],"properties":{"type":{"const":"object"},"additionalProperties":{"const":false},"required":{"type":"array","maxItems":16,"items":{"type":"string","pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"uniqueItems":true},"properties":{"type":"object","minProperties":1,"maxProperties":16,"propertyNames":{"pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"additionalProperties":{"$ref":"#/$defs/recordField"}}}},"parameters":{"type":"array","maxItems":24,"items":{"type":"object","additionalProperties":false,"required":["name","type","required"],"properties":{"name":{"type":"string","pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"type":{"enum":["string","number","integer","boolean","string-list","record-list"]},"required":{"type":"boolean"},"maxLength":{"type":"integer","minimum":1,"maximum":2048},"maxItems":{"type":"integer","minimum":1,"maximum":1000},"items":{"$ref":"#/$defs/recordItem"},"uniqueBy":{"type":"string","pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"enum":{"type":"array","minItems":1,"maxItems":32,"items":{"type":"string","maxLength":80},"uniqueItems":true}}}}}};
+const schema32 = {"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"asset-descriptor.schema.json","title":"Catalog asset descriptor v1","type":"object","additionalProperties":false,"required":["id","kind","allowedRegions","properties","inputs","outputs","slots","states","actions","accessibility","provenance","example"],"properties":{"id":{"type":"string","pattern":"^[a-z][a-z0-9-]{0,63}@1$"},"kind":{"enum":["icon","sidebar","panel","control","display","feedback"]},"allowedRegions":{"type":"array","minItems":1,"maxItems":3,"items":{"enum":["task-list","sidebar","panel"]},"uniqueItems":true},"properties":{"$ref":"#/$defs/parameters"},"inputs":{"$ref":"#/$defs/parameters"},"outputs":{"$ref":"#/$defs/parameters"},"slots":{"type":"array","maxItems":9,"items":{"enum":["content","header","actions","list","detail","primary","secondary","sidebar","control"]},"uniqueItems":true},"states":{"type":"array","maxItems":10,"items":{"enum":["loading","empty","ready","stale","error","permission-denied","disabled","busy","success","progress"]},"uniqueItems":true},"actions":{"type":"array","maxItems":8,"items":{"enum":["select","refresh","submit","navigate-internal","toggle","dismiss"]},"uniqueItems":true},"accessibility":{"type":"object","additionalProperties":false,"required":["role","keyboard"],"properties":{"role":{"type":"string","enum":["img","navigation","tree","list","region","form","table","status","alert","dialog"]},"keyboard":{"type":"string","minLength":1,"maxLength":300},"live":{"enum":["off","polite","assertive"]}}},"provenance":{"type":"object","additionalProperties":false,"required":["source","license"],"properties":{"source":{"type":"string","minLength":1,"maxLength":200},"license":{"type":"string","minLength":1,"maxLength":80}}},"example":{"type":"object","additionalProperties":{"type":["string","number","integer","boolean","null"]},"maxProperties":16}},"$defs":{"recordField":{"type":"object","additionalProperties":false,"required":["type"],"properties":{"type":{"enum":["string","number","integer","boolean"]},"minLength":{"type":"integer","minimum":1,"maximum":4096},"maxLength":{"type":"integer","minimum":1,"maximum":4096},"enum":{"type":"array","minItems":1,"maxItems":32,"items":{"type":"string","maxLength":80},"uniqueItems":true}}},"recordItem":{"type":"object","additionalProperties":false,"required":["type","additionalProperties","required","properties"],"properties":{"type":{"const":"object"},"additionalProperties":{"const":false},"required":{"type":"array","maxItems":16,"items":{"type":"string","pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"uniqueItems":true},"properties":{"type":"object","minProperties":1,"maxProperties":16,"propertyNames":{"pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"additionalProperties":{"$ref":"#/$defs/recordField"}}}},"parameters":{"type":"array","maxItems":24,"items":{"type":"object","additionalProperties":false,"required":["name","type","required"],"properties":{"name":{"type":"string","pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"type":{"enum":["string","number","integer","boolean","string-list","record-list"]},"required":{"type":"boolean"},"maxLength":{"type":"integer","minimum":1,"maximum":2048},"maxItems":{"type":"integer","minimum":1,"maximum":1000},"items":{"$ref":"#/$defs/recordItem"},"uniqueBy":{"type":"string","pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"enum":{"type":"array","minItems":1,"maxItems":32,"items":{"type":"string","maxLength":80},"uniqueItems":true}}}}}};
 const func1 = Object.prototype.hasOwnProperty;
 const pattern9 = new RegExp("^[a-z][a-z0-9-]{0,63}@1$", "u");
 const schema33 = {"type":"array","maxItems":24,"items":{"type":"object","additionalProperties":false,"required":["name","type","required"],"properties":{"name":{"type":"string","pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"type":{"enum":["string","number","integer","boolean","string-list","record-list"]},"required":{"type":"boolean"},"maxLength":{"type":"integer","minimum":1,"maximum":2048},"maxItems":{"type":"integer","minimum":1,"maximum":1000},"items":{"$ref":"#/$defs/recordItem"},"uniqueBy":{"type":"string","pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"enum":{"type":"array","minItems":1,"maxItems":32,"items":{"type":"string","maxLength":80},"uniqueItems":true}}}};
 const pattern10 = new RegExp("^[a-z][a-zA-Z0-9]{0,63}$", "u");
 const schema34 = {"type":"object","additionalProperties":false,"required":["type","additionalProperties","required","properties"],"properties":{"type":{"const":"object"},"additionalProperties":{"const":false},"required":{"type":"array","maxItems":16,"items":{"type":"string","pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"uniqueItems":true},"properties":{"type":"object","minProperties":1,"maxProperties":16,"propertyNames":{"pattern":"^[a-z][a-zA-Z0-9]{0,63}$"},"additionalProperties":{"$ref":"#/$defs/recordField"}}}};
-const schema35 = {"type":"object","additionalProperties":false,"required":["type"],"properties":{"type":{"enum":["string","number","integer","boolean"]},"minLength":{"type":"integer","minimum":1,"maximum":4096},"maxLength":{"type":"integer","minimum":1,"maximum":4096}}};
+const schema35 = {"type":"object","additionalProperties":false,"required":["type"],"properties":{"type":{"enum":["string","number","integer","boolean"]},"minLength":{"type":"integer","minimum":1,"maximum":4096},"maxLength":{"type":"integer","minimum":1,"maximum":4096},"enum":{"type":"array","minItems":1,"maxItems":32,"items":{"type":"string","maxLength":80},"uniqueItems":true}}};
 
 function validate23(data, {instancePath="", parentData, parentDataProperty, rootData=data, dynamicAnchors={}}={}){
 let vErrors = null;
@@ -598,7 +598,7 @@ vErrors.push(err16);
 errors++;
 }
 for(const key3 in data5){
-if(!(((key3 === "type") || (key3 === "minLength")) || (key3 === "maxLength"))){
+if(!((((key3 === "type") || (key3 === "minLength")) || (key3 === "maxLength")) || (key3 === "enum"))){
 const err17 = {instancePath:instancePath+"/properties/" + key2.replace(/~/g, "~0").replace(/\//g, "~1"),schemaPath:"#/$defs/recordField/additionalProperties",keyword:"additionalProperties",params:{additionalProperty: key3},message:"must NOT have additional properties"};
 if(vErrors === null){
 vErrors = [err17];
@@ -692,9 +692,11 @@ errors++;
 }
 }
 }
-}
-else {
-const err25 = {instancePath:instancePath+"/properties/" + key2.replace(/~/g, "~0").replace(/\//g, "~1"),schemaPath:"#/$defs/recordField/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(data5.enum !== undefined){
+let data9 = data5.enum;
+if(Array.isArray(data9)){
+if(data9.length > 32){
+const err25 = {instancePath:instancePath+"/properties/" + key2.replace(/~/g, "~0").replace(/\//g, "~1")+"/enum",schemaPath:"#/$defs/recordField/properties/enum/maxItems",keyword:"maxItems",params:{limit: 32},message:"must NOT have more than 32 items"};
 if(vErrors === null){
 vErrors = [err25];
 }
@@ -703,10 +705,8 @@ vErrors.push(err25);
 }
 errors++;
 }
-}
-}
-else {
-const err26 = {instancePath:instancePath+"/properties",schemaPath:"#/properties/properties/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(data9.length < 1){
+const err26 = {instancePath:instancePath+"/properties/" + key2.replace(/~/g, "~0").replace(/\//g, "~1")+"/enum",schemaPath:"#/$defs/recordField/properties/enum/minItems",keyword:"minItems",params:{limit: 1},message:"must NOT have fewer than 1 items"};
 if(vErrors === null){
 vErrors = [err26];
 }
@@ -715,15 +715,100 @@ vErrors.push(err26);
 }
 errors++;
 }
-}
-}
-else {
-const err27 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"};
+const len1 = data9.length;
+for(let i2=0; i2<len1; i2++){
+let data10 = data9[i2];
+if(typeof data10 === "string"){
+if(func3(data10) > 80){
+const err27 = {instancePath:instancePath+"/properties/" + key2.replace(/~/g, "~0").replace(/\//g, "~1")+"/enum/" + i2,schemaPath:"#/$defs/recordField/properties/enum/items/maxLength",keyword:"maxLength",params:{limit: 80},message:"must NOT have more than 80 characters"};
 if(vErrors === null){
 vErrors = [err27];
 }
 else {
 vErrors.push(err27);
+}
+errors++;
+}
+}
+else {
+const err28 = {instancePath:instancePath+"/properties/" + key2.replace(/~/g, "~0").replace(/\//g, "~1")+"/enum/" + i2,schemaPath:"#/$defs/recordField/properties/enum/items/type",keyword:"type",params:{type: "string"},message:"must be string"};
+if(vErrors === null){
+vErrors = [err28];
+}
+else {
+vErrors.push(err28);
+}
+errors++;
+}
+}
+let i3 = data9.length;
+let j1;
+if(i3 > 1){
+const indices1 = {};
+for(;i3--;){
+let item1 = data9[i3];
+if(typeof item1 !== "string"){
+continue;
+}
+if(typeof indices1[item1] == "number"){
+j1 = indices1[item1];
+const err29 = {instancePath:instancePath+"/properties/" + key2.replace(/~/g, "~0").replace(/\//g, "~1")+"/enum",schemaPath:"#/$defs/recordField/properties/enum/uniqueItems",keyword:"uniqueItems",params:{i: i3, j: j1},message:"must NOT have duplicate items (items ## "+j1+" and "+i3+" are identical)"};
+if(vErrors === null){
+vErrors = [err29];
+}
+else {
+vErrors.push(err29);
+}
+errors++;
+break;
+}
+indices1[item1] = i3;
+}
+}
+}
+else {
+const err30 = {instancePath:instancePath+"/properties/" + key2.replace(/~/g, "~0").replace(/\//g, "~1")+"/enum",schemaPath:"#/$defs/recordField/properties/enum/type",keyword:"type",params:{type: "array"},message:"must be array"};
+if(vErrors === null){
+vErrors = [err30];
+}
+else {
+vErrors.push(err30);
+}
+errors++;
+}
+}
+}
+else {
+const err31 = {instancePath:instancePath+"/properties/" + key2.replace(/~/g, "~0").replace(/\//g, "~1"),schemaPath:"#/$defs/recordField/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err31];
+}
+else {
+vErrors.push(err31);
+}
+errors++;
+}
+}
+}
+else {
+const err32 = {instancePath:instancePath+"/properties",schemaPath:"#/properties/properties/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err32];
+}
+else {
+vErrors.push(err32);
+}
+errors++;
+}
+}
+}
+else {
+const err33 = {instancePath,schemaPath:"#/type",keyword:"type",params:{type: "object"},message:"must be object"};
+if(vErrors === null){
+vErrors = [err33];
+}
+else {
+vErrors.push(err33);
 }
 errors++;
 }

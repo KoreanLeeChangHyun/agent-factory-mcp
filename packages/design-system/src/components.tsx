@@ -791,21 +791,53 @@ export function PanelLayout({
   );
 }
 
-export function DataTable({ rows = [] }: { rows?: { id: string; title: string; status?: string }[] }) {
+export interface DataTableColumn<Row extends { id: string }> {
+  id: keyof Row & string;
+  label: string;
+  width?: string;
+  render?: (value: Row[keyof Row], row: Row) => ReactNode;
+}
+export function DataTable<Row extends { id: string; title: string; status?: string }>({
+  rows = [],
+  columns,
+  caption = "리소스",
+  empty = "표시할 항목이 없습니다.",
+}: {
+  rows?: Row[];
+  columns?: DataTableColumn<Row>[];
+  caption?: string;
+  empty?: string;
+}) {
+  const resolved =
+    columns ??
+    ([
+      { id: "title", label: "이름" },
+      { id: "status", label: "상태" },
+    ] as DataTableColumn<Row>[]);
   return (
     <table className="af-table">
-      <caption className="af-meta">리소스</caption>
+      <caption className="af-meta">{caption}</caption>
       <thead>
         <tr>
-          <th>이름</th>
-          <th>상태</th>
+          {resolved.map((column) => (
+            <th key={column.id} style={{ width: column.width }}>
+              {column.label}
+            </th>
+          ))}
         </tr>
       </thead>
       <tbody>
+        {!rows.length && (
+          <tr>
+            <td colSpan={resolved.length}>{empty}</td>
+          </tr>
+        )}
         {rows.map((row) => (
           <tr key={row.id}>
-            <td>{row.title}</td>
-            <td>{row.status ?? "—"}</td>
+            {resolved.map((column) => {
+              const value = row[column.id];
+              return <td key={column.id}>{column.render ? column.render(value, row) : String(value ?? "—")}</td>;
+            })}
           </tr>
         ))}
       </tbody>

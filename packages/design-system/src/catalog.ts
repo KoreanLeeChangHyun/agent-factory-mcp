@@ -86,6 +86,16 @@ const tableItems: NonNullable<AssetParameter["items"]> = {
     id: { type: "string", minLength: 1, maxLength: 64 },
     title: { type: "string", minLength: 1, maxLength: 120 },
     status: { type: "string", maxLength: 80 },
+    meta: { type: "string", maxLength: 240 },
+  },
+};
+const tableColumnItems: NonNullable<AssetParameter["items"]> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["id", "label"],
+  properties: {
+    id: { type: "string", enum: ["title", "status", "meta"] },
+    label: { type: "string", minLength: 1, maxLength: 80 },
   },
 };
 const tabItems: NonNullable<AssetParameter["items"]> = {
@@ -357,7 +367,14 @@ export const assetCatalog: readonly AssetDescriptor[] = [
         : id === "resource-tree"
           ? [parameter("records", "record-list", false, { maxItems: 100, items: navigationItems, uniqueBy: "id" })]
           : id === "resource-table"
-            ? [parameter("records", "record-list", false, { maxItems: 100, items: tableItems, uniqueBy: "id" })]
+            ? [
+                parameter("records", "record-list", false, { maxItems: 100, items: tableItems, uniqueBy: "id" }),
+                parameter("columns", "record-list", false, {
+                  maxItems: 3,
+                  items: tableColumnItems,
+                  uniqueBy: "id",
+                }),
+              ]
             : id === "resource-header"
               ? [
                   parameter("title", "string", false, { maxLength: 80 }),
@@ -456,6 +473,8 @@ const validateValues = (id: string, values: Record<string, unknown>, parameters:
             throw new Error(`${subject} item is shorter than minLength for ${id}: ${name}`);
           if (typeof fieldValue === "string" && field.maxLength !== undefined && fieldValue.length > field.maxLength)
             throw new Error(`${subject} item exceeds maxLength for ${id}: ${name}`);
+          if (typeof fieldValue === "string" && field.enum !== undefined && !field.enum.includes(fieldValue))
+            throw new Error(`Invalid ${subject} item field for ${id}: ${name} at ${index}`);
         }
       }
       if (parameter.uniqueBy) {
@@ -701,8 +720,15 @@ register("resource-tree", (props) => {
 });
 register("resource-table", (props) => {
   const runtime = runtimeOf(props);
+  const columns = Array.isArray(runtime.inputs?.columns)
+    ? runtime.inputs.columns.map((column) => ({
+        id: String((column as Record<string, unknown>).id) as "title" | "status" | "meta",
+        label: String((column as Record<string, unknown>).label),
+      }))
+    : undefined;
   return createElement(DataTable, {
     rows: Array.isArray(runtime.inputs?.records) ? (runtime.inputs.records as never) : [],
+    columns: columns as never,
   });
 });
 register(

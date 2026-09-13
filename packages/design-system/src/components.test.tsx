@@ -3,6 +3,7 @@ import { act, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 import {
+  DataTable,
   Dialog,
   Markdown,
   PanelLayout,
@@ -53,6 +54,20 @@ function key(target: Element, value: string) {
 }
 
 describe("interactive components", () => {
+  it("composes reusable table columns and semantic cell slots", () => {
+    const view = mount(
+      <DataTable
+        rows={[{ id: "1", title: "긴 이름", status: "active", owner: "Kim" }]}
+        columns={[
+          { id: "title", label: "이름" },
+          { id: "owner", label: "소유자", render: (value) => <strong>{String(value)}</strong> },
+        ]}
+      />,
+    );
+    expect(Array.from(view.host.querySelectorAll("th")).map((cell) => cell.textContent)).toEqual(["이름", "소유자"]);
+    expect(view.host.querySelector("tbody strong")?.textContent).toBe("Kim");
+    view.cleanup();
+  });
   it("owns the shared three-region shell and clamped keyboard resize", () => {
     const changes: number[] = [];
     const view = mount(

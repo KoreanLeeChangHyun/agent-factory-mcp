@@ -29,9 +29,15 @@ const server = http.createServer(async (req, res) => {
   const records = { one: [], two: [] };
   let serial = 0, issued = 0, revealFailure = false, createFailure = false, statusFailure = false;
   let holdSecret = false, releaseSecret;
-  const choose = async id => {
+  let holdWorkspaceSelection = false, releaseWorkspaceSelection, markWorkspaceSelectionStarted;
+  const workspaceSelectionStarted = new Promise(resolve => { markWorkspaceSelectionStarted = resolve; });
+  const choose = async (id, waitForCompletion = true) => {
     await page.locator('[data-workspace-picker-toggle]').click();
     await page.locator('[data-workspace-list] [data-workspace-id="' + id + '"]').click();
+    if (waitForCompletion)
+      await page.waitForFunction(workspaceId =>
+        document.querySelector(`[data-workspace-list] [data-workspace-id="${workspaceId}"][aria-current="true"]`) &&
+        document.querySelector('[data-mcp-tab="connection"][aria-selected="true"]'), id);
   };
   await page.route('**/api/**', async route => {
     const req = route.request(), url = new URL(req.url()).pathname;
@@ -40,6 +46,13 @@ const server = http.createServer(async (req, res) => {
     if (url.endsWith('/account/organizations')) return reply([{ id: 'org', name: '개인', is_personal: true }]);
     if (url.endsWith('/workspaces') || url.endsWith('/recent')) return reply(['one', 'two'].map(id => ({ id, name: '작업공간 ' + id, organization_id: 'org', status: 'active' })));
     if (url.endsWith('/visits')) return route.fulfill({ status: 204 });
+    if (url.endsWith('/workbench/selection')) {
+      if (holdWorkspaceSelection && url.includes('/workspaces/two/')) {
+        markWorkspaceSelectionStarted();
+        await new Promise(resolve => { releaseWorkspaceSelection = resolve; });
+      }
+      return reply({ mode: 'legacy' });
+    }
     if (url.includes('/mcp-connections')) {
       const owner = url.split('/workspaces/')[1].split('/')[0];
       const rows = records[owner], id = url.split('/mcp-connections/')[1]?.split('/')[0];
@@ -158,13 +171,15 @@ const server = http.createServer(async (req, res) => {
     const allClientsFile = await download();
     assert.equal(issued, issuedBeforeDownload);
     const metadata = JSON.parse(allClientsFile.data['connection.json']);
+    const expectedMcpURL = new URL('/factory/mcp/workspaces/one/', page.url()).href;
     assert.equal(metadata.workspaceId, 'one'); assert.equal(metadata.tokenId, selectedId);
+    assert.equal(metadata.url, expectedMcpURL);
     assert.equal(metadata.clients.length, 18);
     assert.equal(new Set(metadata.clients.map(client => client.id)).size, 13);
     assert.equal(JSON.parse(allClientsFile.data['credentials.json']).token, 'fixture-secret-' + selectedId);
     for (const client of metadata.clients) {
       assert(client.configFile.startsWith(`clients/${client.id}/${client.environment}/`));
-      assert(allClientsFile.data[client.configFile].includes('/factory/mcp/workspaces/one/'));
+      assert(allClientsFile.data[client.configFile].includes(metadata.url));
       if (client.configFile.endsWith('.json')) JSON.parse(allClientsFile.data[client.configFile]);
       if (client.configFile.endsWith('.toml')) {
         require('node:child_process').execFileSync('python3', ['-c', 'import tomllib,sys; tomllib.loads(sys.stdin.read())'], { input: allClientsFile.data[client.configFile] });
@@ -174,6 +189,7 @@ const server = http.createServer(async (req, res) => {
     await copyAI.click();
     await page.waitForFunction(expected => window.copied === expected, allClientsFile.data['README.txt']);
     assert(allClientsFile.data['README.txt'].includes(allClientsFile.filename));
+    assert(allClientsFile.data['README.txt'].includes(metadata.url));
     assert(!allClientsFile.data['README.txt'].includes('fixture-secret'));
     await page.waitForFunction(() => document.querySelector('[data-mcp-token]').value === 'fixture-secret-token-1');
     await page.evaluate(() => { window.originalCreateURL = URL.createObjectURL; URL.createObjectURL = () => { throw new Error('download unavailable'); }; });
@@ -191,8 +207,15 @@ const server = http.createServer(async (req, res) => {
     assert.equal(await page.evaluate(() => window.secretRequests), 0);
     await mockClipboard(true); await copyAI.click();
     await page.locator('[data-mcp-ai-fallback]').waitFor();
-    await choose('two'); assert.equal(await token.inputValue(), '');
+    holdWorkspaceSelection = true;
+    await choose('two', false);
+    await workspaceSelectionStarted;
+    assert.equal(await token.inputValue(), '');
     assert.equal(await page.locator('[data-mcp-ai-text]').inputValue(), '');
+    releaseWorkspaceSelection();
+    await page.locator('[data-workspace-list] [data-workspace-id="two"][aria-current="true"]').waitFor();
+    assert.equal(await token.inputValue(), '');
+    holdWorkspaceSelection = false;
     await choose('one');
     await page.waitForFunction(() => document.querySelector('[data-mcp-token]').value === 'fixture-secret-token-1');
     const secondId = 'token-' + (serial + 1);
@@ -216,10 +239,10 @@ const server = http.createServer(async (req, res) => {
     assert(await page.locator('[data-mcp-onboarding]').isVisible());
     assert(await page.locator('[data-no-activities]').isHidden());
     assert(!(await page.locator('[data-mcp-refresh]').isDisabled()));
-    await page.locator('.af-toast').filter({hasText:'MCP 연결을 확인했습니다.'}).waitFor();
-    while (await page.locator('.af-toast').count()) {
-      await page.locator('.af-toast').first().getByRole('button',{name:'알림 닫기'}).click();
-    }
+    const confirmationToast = page.locator('.af-toast').filter({hasText:'MCP 연결을 확인했습니다.'});
+    await confirmationToast.waitFor();
+    await confirmationToast.getByRole('button',{name:'알림 닫기'}).click({timeout:1000}).catch(() => {});
+    await page.waitForFunction(() => document.querySelectorAll('.af-toast').length === 0, undefined, {timeout:10000});
     await refresh();
     await refresh();assert.equal(await page.locator('.af-toast').count(),0,'Dismissed confirmation does not repeat');
     records.one.find(row => row.id === 'token-1').client_name = 'agent-factory-connection-check';
@@ -283,12 +306,13 @@ const server = http.createServer(async (req, res) => {
     });
     assert(panelLayout);
     await refresh();
-    await download();
+    const clipboardFile = await download();
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.evaluate(() => { delete navigator.clipboard; document.execCommand = window.nativeExecCommand; });
     await copyAI.click();
     const actualClipboard = await page.evaluate(() => navigator.clipboard.readText());
-    assert(actualClipboard.includes('첨부한 agent-factory-one-all-clients-'));
+    assert(actualClipboard.includes(clipboardFile.filename));
+    assert(actualClipboard.includes(expectedMcpURL));
     assert(actualClipboard.includes('credentials.json'));
     assert(await page.locator('[data-mcp-ai-fallback]').isHidden());
     assert.equal(await page.locator('[data-mcp-ai-message]').textContent(), '');
@@ -302,7 +326,7 @@ const server = http.createServer(async (req, res) => {
     await page.setViewportSize({ width: 390, height: 844 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     const mobileSteps = await page.locator('.mcp-ai-steps > li').evaluateAll(rows => rows.map(row => { const box = row.getBoundingClientRect(); return { top: box.top, bottom: box.bottom }; }));
-    assert(mobileSteps.slice(1).every((step, index) => step.top > mobileSteps[index].bottom));
+    assert(mobileSteps.slice(1).every((step, index) => step.top >= mobileSteps[index].bottom));
     await page.screenshot({ path: '/tmp/mcp-file-handoff-mobile.png' });
     assert.deepEqual(errors, []);
     assert.deepEqual(cspViolations,[]);

@@ -91,6 +91,275 @@ dd {
   background: var(--af-bg);
   color: var(--af-text);
 }
+.af-native-logo {
+  display: grid;
+  place-items: center;
+  min-height: 35px;
+  color: var(--af-accent);
+  font-weight: 700;
+}
+.af-native-task-spacer {
+  flex: 1;
+}
+.af-native-header,
+.af-native-panel-header {
+  min-height: 35px;
+  display: flex;
+  align-items: center;
+  gap: var(--af-space-2);
+  padding: var(--af-space-1) var(--af-space-3);
+  border-bottom: 1px solid var(--af-border);
+}
+.af-native-header > b,
+.af-native-panel-header > h1 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 20px;
+}
+.af-native-panel-header [role="tablist"] {
+  display: flex;
+  align-self: stretch;
+}
+.af-native-panel-header [role="tab"] {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--af-muted);
+}
+.af-native-panel-header [role="tab"][aria-selected="true"] {
+  border-color: var(--af-accent);
+  color: var(--af-text);
+}
+.af-native-filter {
+  display: grid;
+  gap: var(--af-space-2);
+  padding: var(--af-space-2);
+  border-bottom: 1px solid var(--af-border);
+}
+.af-native-scroll,
+.af-native-panel-body {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--af-space-3);
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
+}
+.af-shell:not(.af-shell--sidebar-closed) .af-shell-sidebar:has(.af-native-scroll) {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+.af-shell-panel:has(.af-native-panel-body) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.af-native-group {
+  margin-bottom: var(--af-space-2);
+}
+.af-native-group > header {
+  display: flex;
+  align-items: center;
+  gap: var(--af-space-1);
+}
+.af-native-group > header > button:first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.af-native-group > header > button:last-child:not(:first-child) {
+  width: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.af-native-group header button,
+.af-native-workspace-row,
+.af-native-subnav button,
+.af-native-link {
+  width: 100%;
+  min-height: var(--af-control-compact);
+  padding: 2px var(--af-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--af-radius);
+  background: transparent;
+  color: var(--af-text);
+  text-align: left;
+}
+.af-native-workspace-row {
+  padding-left: var(--af-space-4);
+}
+.af-native-workspace-row[aria-current="page"],
+.af-native-subnav button[aria-current="page"],
+.af-native-link[aria-pressed="true"] {
+  border-color: var(--af-accent);
+  background: var(--af-surface-hover);
+}
+.af-native-subnav {
+  display: grid;
+  gap: var(--af-space-1);
+  margin-top: var(--af-space-3);
+}
+.af-native-select-label {
+  display: grid;
+  gap: var(--af-space-1);
+}
+.af-native-panel-body h2 {
+  margin: var(--af-space-4) 0 var(--af-space-2);
+  font-size: 13px;
+  line-height: 20px;
+}
+.af-native-panel-body h3 {
+  margin: var(--af-space-3) 0 var(--af-space-1);
+  font-size: 12px;
+}
+.af-native-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--af-space-3);
+  margin: 0;
+}
+.af-native-summary > div {
+  min-width: 0;
+  padding: var(--af-space-2);
+  border-top: 1px solid var(--af-border);
+}
+.af-native-summary dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.af-native-actions,
+.af-native-section > header,
+.af-native-row,
+.af-native-token-list > header {
+  display: flex;
+  align-items: center;
+  gap: var(--af-space-2);
+}
+.af-native-actions,
+.af-native-resources {
+  margin-top: var(--af-space-4);
+}
+.af-native-inline-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: var(--af-space-2);
+}
+.af-native-section > header > h2,
+.af-native-row > span,
+.af-native-token-list > header > b {
+  flex: 1;
+}
+.af-native-row,
+.af-native-token-list article {
+  padding: var(--af-space-2) 0;
+  border-bottom: 1px solid var(--af-border);
+}
+.af-native-mcp {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--af-space-3);
+}
+.af-native-mcp-steps {
+  display: grid;
+  grid-template-rows: repeat(4, minmax(120px, 1fr));
+}
+.af-native-mcp-steps > section {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--af-space-1);
+  padding: var(--af-space-3);
+  border-bottom: 1px solid var(--af-border);
+}
+.af-native-mcp-steps p {
+  margin: 0;
+}
+.af-native-mcp textarea {
+  width: 100%;
+  min-height: 96px;
+  margin-top: var(--af-space-2);
+  background: var(--af-surface-raised);
+  color: var(--af-text);
+}
+.af-native-token-list {
+  min-width: 0;
+  overflow: auto;
+  border-left: 1px solid var(--af-border);
+  padding-left: var(--af-space-3);
+}
+.af-native-token-list > header {
+  position: sticky;
+  top: 0;
+  min-height: 35px;
+  background: var(--af-surface);
+}
+.af-native-assets {
+  width: 100%;
+  height: 100%;
+  min-height: 560px;
+  border: 1px solid var(--af-border);
+}
+.af-native-empty {
+  padding: var(--af-space-4);
+}
+.theme-settings {
+  position: static;
+  width: auto;
+  max-width: 720px;
+  border: 0;
+  box-shadow: none;
+}
+@media (max-width: 760px) {
+  .af-native-panel-header:has([role="tablist"]) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .af-native-panel-header [role="tablist"] {
+    width: 100%;
+  }
+  .af-native-panel-header [role="tab"] {
+    min-width: 0;
+    flex: 1 1 50%;
+    white-space: nowrap;
+  }
+  .af-native-summary {
+    grid-template-columns: 1fr;
+  }
+  .af-native-mcp {
+    height: auto;
+    min-height: 100%;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+  .af-native-mcp-steps {
+    grid-template-rows: repeat(4, minmax(120px, auto));
+  }
+  .af-native-token-list {
+    overflow: visible;
+    border-top: 1px solid var(--af-border);
+    border-left: 0;
+    padding: var(--af-space-3) 0 0;
+  }
+  .af-native-token-list > header {
+    position: static;
+  }
+  .af-native-actions,
+  .af-native-row,
+  .af-native-section > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .af-native-inline-form {
+    grid-template-columns: 1fr;
+  }
+}
 .af-document-header {
   min-height: 35px;
   display: flex;

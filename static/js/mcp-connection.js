@@ -232,6 +232,7 @@
   };
   const configure = context => {
     const url = `${location.origin}${context.rootPath}/mcp/workspaces/${context.workspaceId}/`;
+    context.url = url;
     el('url').value = url;
     el('url').title = url;
   };

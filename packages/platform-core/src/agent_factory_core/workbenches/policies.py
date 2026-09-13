@@ -2,7 +2,11 @@ from collections.abc import Mapping
 
 from .errors import WorkbenchValidationError
 
-RESERVED_STANDARD_WORKBENCH_IDS = frozenset({"documents"})
+# Native standards and customer releases share one registry. Historical releases with
+# these descriptors remain immutable but are omitted from authorized projections.
+RESERVED_STANDARD_WORKBENCH_IDS = frozenset(
+    {"organization", "workspaces", "documents", "account", "administration"}
+)
 
 
 def require_customer_workbench_id(key: str, definition: Mapping[str, object]) -> None:

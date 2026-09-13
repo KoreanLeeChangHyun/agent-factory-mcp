@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadAuthorizedRegistry } from "./WorkbenchRegistry.js";
+import { loadAuthorizedRegistry, nativeStandards, reservedStandardIds } from "./WorkbenchRegistry.js";
 
 describe("authorized Workbench registry", () => {
   it("retains the code-owned Documents entry when no customer release is published", async () => {
@@ -8,7 +8,7 @@ describe("authorized Workbench registry", () => {
       vi.fn(async () => new Response(JSON.stringify({ items: [] }), { status: 200 })),
     );
     const entries = await loadAuthorizedRegistry("organization-a", "workspace-a", new AbortController().signal);
-    expect(entries.map((entry) => [entry.id, entry.origin])).toEqual([["documents", "standard"]]);
+    expect(entries.map((entry) => entry.id)).toEqual(["organization", "workspaces", "documents", "account"]);
     vi.unstubAllGlobals();
   });
 
@@ -41,7 +41,29 @@ describe("authorized Workbench registry", () => {
       ),
     );
     const entries = await loadAuthorizedRegistry("organization-a", "workspace-a", new AbortController().signal);
-    expect(entries.map((entry) => [entry.id, entry.origin])).toEqual([["documents", "standard"]]);
+    expect(entries.map((entry) => entry.id)).toEqual(["organization", "workspaces", "documents", "account"]);
+    vi.unstubAllGlobals();
+  });
+
+  it("uses one stable reserved-ID set for every native management consumer", () => {
+    expect([...reservedStandardIds]).toEqual(nativeStandards.map((entry) => entry.id));
+    expect([...reservedStandardIds]).toEqual(["organization", "workspaces", "documents", "account", "administration"]);
+  });
+
+  it("projects administration only for the authenticated platform administrator", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ items: [] }), { status: 200 })),
+    );
+    const ordinary = await loadAuthorizedRegistry("organization-a", "workspace-a", new AbortController().signal);
+    const administrator = await loadAuthorizedRegistry(
+      "organization-a",
+      "workspace-a",
+      new AbortController().signal,
+      true,
+    );
+    expect(ordinary.some((entry) => entry.id === "administration")).toBe(false);
+    expect(administrator.at(-1)?.id).toBe("administration");
     vi.unstubAllGlobals();
   });
 });

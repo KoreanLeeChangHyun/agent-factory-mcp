@@ -2,7 +2,7 @@
 import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ThemeBootstrap } from "./ThemeBootstrap.js";
+import { ThemeBootstrap, ThemeSettingsPanel } from "./ThemeBootstrap.js";
 import type { ThemeContext } from "./theme-client.js";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -63,6 +63,7 @@ describe("ThemeBootstrap context lifecycle", () => {
     const view = mount(
       <ThemeBootstrap scope={scope(userOne, "organization", "workspace")}>
         <div>surface</div>
+        <ThemeSettingsPanel />
       </ThemeBootstrap>,
     );
     const base =
@@ -90,6 +91,7 @@ describe("ThemeBootstrap context lifecycle", () => {
     const view = mount(
       <ThemeBootstrap scope={firstScope}>
         <div>surface</div>
+        <ThemeSettingsPanel />
       </ThemeBootstrap>,
     );
     view.render(
@@ -116,6 +118,7 @@ describe("ThemeBootstrap context lifecycle", () => {
     const view = mount(
       <ThemeBootstrap scope={scope(userOne, "organization", "workspace")}>
         <div>surface</div>
+        <ThemeSettingsPanel />
       </ThemeBootstrap>,
     );
     await act(async () => undefined);

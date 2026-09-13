@@ -14,7 +14,19 @@ const profile = (userId, revision, base = "dark", reducedMotion = false) => ({
 
 async function installApi(context, identity, profiles) {
   let conflict = false;
-  await context.route("**/api/auth/me", (route) => route.fulfill({ json: { user: { id: identity.userId } } }));
+  await context.route("**/api/auth/me", (route) =>
+    route.fulfill({
+      json: {
+        user: {
+          id: identity.userId,
+          display_name: "Theme profile user",
+          email: `${identity.userId}@example.test`,
+          is_platform_admin: false,
+        },
+      },
+    }),
+  );
+  await context.route("**/api/account/organizations", (route) => route.fulfill({ json: [] }));
   await context.route("**/api/appearance/theme-profile", async (route) => {
     const authoritative = profiles.get(identity.userId);
     if (route.request().method() === "GET") return route.fulfill({ json: authoritative });
@@ -37,6 +49,12 @@ async function installApi(context, identity, profiles) {
   };
 }
 
+async function openThemeSettings(page, base, navigate = true) {
+  if (navigate) await page.goto(new URL("./workbench/?task=account", base).href);
+  await page.getByRole("button", { name: "테마", exact: true }).click();
+  await page.getByText("서버 테마를 적용했습니다.").waitFor();
+}
+
 (async () => {
   const base = process.env.THEME_URL || "http://127.0.0.1:4173";
   const browser = await chromium.launch({ headless: true, args: ["--no-sandbox"] });
@@ -51,8 +69,7 @@ async function installApi(context, identity, profiles) {
     ]);
     const firstApi = await installApi(first, identity, profiles);
     const page = await first.newPage();
-    await page.goto(base);
-    await page.getByText("서버 테마를 적용했습니다.").waitFor();
+    await openThemeSettings(page, base);
     const baseSelect = page.getByLabel("기본 테마");
     await baseSelect.focus();
     assert(await baseSelect.evaluate((element) => element === document.activeElement));
@@ -69,14 +86,13 @@ async function installApi(context, identity, profiles) {
     await page.getByText("서버에 저장했습니다.").waitFor();
     assert.equal(firstApi.current().revision, 1);
     await page.reload();
-    await page.getByText("서버 테마를 적용했습니다.").waitFor();
+    await openThemeSettings(page, base, false);
     assert.equal(await page.evaluate(() => document.documentElement.dataset.afReducedMotion), "true");
 
     const sameUserDevice = await browser.newContext();
     await installApi(sameUserDevice, { userId: firstId }, profiles);
     const restoredPage = await sameUserDevice.newPage();
-    await restoredPage.goto(base);
-    await restoredPage.getByText("서버 테마를 적용했습니다.").waitFor();
+    await openThemeSettings(restoredPage, base);
     assert.equal(await restoredPage.evaluate(() => document.documentElement.dataset.afTheme), "light");
     assert.equal(await restoredPage.evaluate(() => document.documentElement.dataset.afReducedMotion), "true");
 
@@ -92,8 +108,7 @@ async function installApi(context, identity, profiles) {
     const separateUser = await browser.newContext();
     await installApi(separateUser, { userId: secondId }, profiles);
     const otherPage = await separateUser.newPage();
-    await otherPage.goto(base);
-    await otherPage.getByText("서버 테마를 적용했습니다.").waitFor();
+    await openThemeSettings(otherPage, base);
     assert.equal(await otherPage.evaluate(() => document.documentElement.dataset.afTheme), "high-contrast");
     await first.close();
     await sameUserDevice.close();

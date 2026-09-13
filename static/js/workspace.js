@@ -994,6 +994,7 @@ const enterWorkspace = async (id) => {
   closeWorkspaceRenameMenu();
   const record = workspaceRows.find((row) => row.id === id);
   if (!record) return;
+  window.agentFactoryMCPConnection.reset();
   tenant.workspaceId = id;
   applyActivityOrder();
   applyActivityVisibility();

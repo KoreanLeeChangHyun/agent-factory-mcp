@@ -3028,6 +3028,40 @@
             "status": {
               "type": "string",
               "maxLength": 80
+            },
+            "meta": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        },
+        "uniqueBy": "id"
+      },
+      {
+        "name": "columns",
+        "type": "record-list",
+        "required": false,
+        "maxItems": 3,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "label"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "enum": [
+                "title",
+                "status",
+                "meta"
+              ]
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
             }
           }
         },

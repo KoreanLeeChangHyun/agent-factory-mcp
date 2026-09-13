@@ -1,9 +1,38 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import type { ThemeProfile } from "@agent-factory/contracts";
 import { applyTheme, defaultThemeProfile, ThemeEditor } from "@agent-factory/design-system";
 import { ThemeClient, ThemeConflict, readCachedTheme, type ThemeContext } from "./theme-client.js";
 
 const anonymousProfile = defaultThemeProfile("00000000000000000000000000000000");
+interface ThemeSettingsValue {
+  draft: ThemeProfile;
+  status: string;
+  busy: boolean;
+  conflict: boolean;
+  preview(profile: ThemeProfile): void;
+  save(profile: ThemeProfile): Promise<void>;
+  reload(): void;
+}
+const ThemeSettingsContext = createContext<ThemeSettingsValue | null>(null);
+
+export function ThemeSettingsPanel() {
+  const settings = useContext(ThemeSettingsContext);
+  if (!settings) return <p role="status">개인 테마를 불러오는 중입니다.</p>;
+  return (
+    <section className="theme-settings" aria-labelledby="theme-settings-title">
+      <h2 id="theme-settings-title">개인 테마</h2>
+      <p role="status">{settings.status}</p>
+      <ThemeEditor
+        draft={settings.draft}
+        busy={settings.busy}
+        conflict={settings.conflict}
+        onPreview={settings.preview}
+        onSave={settings.save}
+        onReload={settings.reload}
+      />
+    </section>
+  );
+}
 
 export function ThemeBootstrap({ scope, children }: { scope: ThemeContext | null; children: ReactNode }) {
   const client = useRef(new ThemeClient()).current;
@@ -98,6 +127,7 @@ export function ThemeBootstrap({ scope, children }: { scope: ThemeContext | null
     }
   };
 
+  if (!draft && !scope) return <>{children}</>;
   if (!draft)
     return (
       <main className="theme-loading" role="status">
@@ -112,23 +142,6 @@ export function ThemeBootstrap({ scope, children }: { scope: ThemeContext | null
     setConflict(false);
     setStatus("서버 버전을 적용했습니다.");
   };
-  return (
-    <>
-      <div className="theme-status" role="status">
-        {status}
-      </div>
-      {children}
-      <section className="theme-settings" aria-labelledby="theme-settings-title">
-        <h2 id="theme-settings-title">개인 테마</h2>
-        <ThemeEditor
-          draft={draft}
-          busy={busy}
-          conflict={conflict}
-          onPreview={preview}
-          onSave={save}
-          onReload={reloadServer}
-        />
-      </section>
-    </>
-  );
+  const settings = { draft, status, busy, conflict, preview, save, reload: reloadServer };
+  return <ThemeSettingsContext.Provider value={settings}>{children}</ThemeSettingsContext.Provider>;
 }
