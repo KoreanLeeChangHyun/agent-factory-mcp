@@ -1,410 +1,181 @@
-# Target Workbench Repository Structure
+# Accepted Repository Structure
 
-This is the maintained file-placement and dependency contract for the Agent Factory MCP cloud Workbench target architecture.
+This is the Human-approved target and ownership contract, not a claim that the
+working tree has finished migrating. Its Human counterpart is
+[the structure specification](../../../../docs/specification/rule-workbench-structure/index.html).
 
-## Top-level map
+## Fixed root boundary
+
+The managed root directories are `apps/`, `packages/`, `contracts/`, `tests/`,
+`scripts/`, `deploy/`, `migrations/`, and `docs/`. No further root directory
+addition, removal, or rename is planned or implicitly authorized. Do not invent
+another root for a feature, framework convention, or packaging convenience.
+If a future requirement cannot fit this structure, explain the reason and
+affected paths and obtain an explicit Human decision before changing it.
+An explicit instruction already given in the session is sufficient authority;
+do not ask again for the same accepted change.
+
+Preserve existing repository metadata and tool directories such as `.git/`,
+`.github/`, `.codex/`, `.vscode/`, `.venv/`, `node_modules/`, and caches.
+They are not application architecture. Preserve existing local configuration
+and ignored data, including `env/`, until an explicitly scoped migration covers
+them. Absence from the diagram does not authorize deletion.
+
+## Accepted tree
 
 ```text
-agent-factory/
+mcp/
 ├── apps/
-│   ├── web/
 │   ├── api/
+│   │   ├── main.py
+│   │   ├── routes/
+│   │   └── services/
+│   ├── web/
+│   │   ├── main.tsx
+│   │   ├── pages/
+│   │   ├── components/
+│   │   └── api/
+│   ├── mcp/
+│   │   ├── main.py
+│   │   ├── tools/
+│   │   ├── resources/
+│   │   └── services/
 │   └── worker/
+│       ├── main.py
+│       ├── scheduler.py
+│       └── jobs/
 ├── packages/
+│   ├── core/
+│   ├── adapters/
+│   ├── contracts-py/
+│   ├── contracts-ts/
 │   ├── design-system/
 │   ├── workbench-runtime/
-│   ├── mcp-app-host/
-│   ├── contracts-ts/
-│   ├── contracts-py/
-│   ├── platform-core/
-│   └── platform-adapters/
+│   └── workbench-editor/
 ├── contracts/
-├── migrations/
+│   ├── schemas/
+│   ├── examples/
+│   └── compatibility/
 ├── tests/
-├── deploy/
-├── docs/
-├── scripts/
-├── package.json
-├── pnpm-workspace.yaml
-├── pnpm-lock.yaml
-├── pyproject.toml
-├── uv.lock
-└── Makefile
-```
-
-| Path | Owner |
-| --- | --- |
-| `apps/web` | React browser application and product composition |
-| `apps/api` | FastAPI HTTP and MCP composition roots |
-| `apps/worker` | Worker and scheduler process entrypoints |
-| `packages/design-system` | Shared UI foundations, assets, components, patterns, and language |
-| `packages/workbench-runtime` | Declarative Workbench validation, registry, rendering, bindings, actions, and view state |
-| `packages/mcp-app-host` | Sandboxed external MCP App lifecycle and policy |
-| `packages/contracts-ts` | Generated TypeScript contract types and validators |
-| `packages/contracts-py` | Generated Python contract types and validators |
-| `packages/platform-core` | Framework-independent domains and application use cases |
-| `packages/platform-adapters` | PostgreSQL, pgvector, Redis, object storage, MCP, HTTP, embedding, and secret adapters |
-| `contracts` | Language-neutral schema source and compatibility fixtures |
-| `migrations` | Append-only PostgreSQL schema history |
-| `tests` | Cross-boundary tests only |
-| `deploy` | Containers, local stacks, proxy, deployment, smoke, backup, and restore |
-| `docs` | Product specifications, ADRs, and runbooks |
-
-## Web application
-
-```text
-apps/web/
-├── src/
-│   ├── main.tsx
-│   ├── app/
-│   │   ├── App.tsx
-│   │   ├── router.tsx
-│   │   ├── providers.tsx
-│   │   └── error-boundary.tsx
-│   ├── shell/
-│   │   ├── WorkbenchShell.tsx
-│   │   ├── TaskList.tsx
-│   │   ├── SidebarHost.tsx
-│   │   ├── PanelHost.tsx
-│   │   ├── shell-state.ts
-│   │   └── shell-storage.ts
-│   ├── registry/
-│   │   ├── WorkbenchRegistry.ts
-│   │   ├── standard-workbenches.ts
-│   │   └── customer-workbenches.ts
-│   ├── standard/
-│   │   ├── workspace/
-│   │   ├── documents/
-│   │   ├── knowledge/
-│   │   ├── connections/
-│   │   ├── jobs/
-│   │   └── audit/
-│   ├── authoring/
-│   │   ├── WorkbenchListPage.tsx
-│   │   ├── WorkbenchEditorPage.tsx
-│   │   ├── WorkbenchPreview.tsx
-│   │   ├── AssetCatalog.tsx
-│   │   ├── ComponentPalette.tsx
-│   │   ├── LayoutPalette.tsx
-│   │   ├── PropertyEditor.tsx
-│   │   ├── BindingEditor.tsx
-│   │   ├── ThemeEditor.tsx
-│   │   └── SchemaDiagnostics.tsx
 │   ├── api/
-│   ├── auth/
-│   ├── state/
-│   ├── telemetry/
-│   ├── styles/
-│   └── test/
-├── public/
-├── index.html
-├── package.json
-├── tsconfig.json
-├── vite.config.ts
-└── vitest.config.ts
-```
-
-The shell owns three-region layout, navigation, selection, and responsive behavior. It does not interpret customer JSON. Standard features own product-specific projections, not shared primitives.
-
-## API and worker applications
-
-```text
-apps/api/
-├── src/agent_factory_api/
-│   ├── main.py
-│   ├── lifespan.py
-│   ├── settings.py
-│   ├── composition/
-│   ├── http/
-│   │   ├── router.py
-│   │   ├── dependencies/
-│   │   ├── routes/
-│   │   │   ├── sessions.py
-│   │   │   ├── organizations.py
-│   │   │   ├── workspaces.py
-│   │   │   ├── workbenches.py
-│   │   │   ├── workbench_releases.py
-│   │   │   ├── connections.py
-│   │   │   ├── knowledge.py
-│   │   │   ├── jobs.py
-│   │   │   └── audit.py
-│   │   ├── presenters/
-│   │   └── middleware/
+│   ├── web/
 │   ├── mcp/
-│   │   ├── server.py
-│   │   ├── transport.py
-│   │   ├── context.py
-│   │   ├── resources/
-│   │   └── tools/
-│   └── health/
-├── tests/
-├── pyproject.toml
-└── Dockerfile
-
-apps/worker/
-├── src/agent_factory_worker/
-│   ├── main.py
-│   ├── scheduler.py
-│   ├── settings.py
-│   ├── composition.py
-│   ├── claim.py
-│   ├── cancellation.py
-│   └── handlers/
-│       ├── source_sync.py
-│       ├── document_parse.py
-│       ├── chunk_documents.py
-│       ├── create_embeddings.py
-│       ├── rebuild_index.py
-│       ├── refresh_binding.py
-│       └── retention.py
-├── tests/
-├── pyproject.toml
-└── Dockerfile
-```
-
-Routes, tools, and resources translate transport inputs and outputs. They do not own SQL, transactions, authorization policy, or domain state transitions. Worker handlers resolve authoritative Job and tenant state before calling `platform-core`; they do not trust tenant identity from queue payloads.
-
-## Design system
-
-```text
-packages/design-system/
-├── src/
-│   ├── foundations/
-│   │   ├── tokens/
-│   │   ├── themes/
-│   │   ├── reset.css
-│   │   └── global.css
-│   ├── assets/
-│   │   ├── brand/
-│   │   ├── icons/
-│   │   └── illustrations/
-│   ├── primitives/
-│   ├── navigation/
-│   ├── data-display/
-│   ├── layout/
-│   ├── patterns/
-│   ├── shell/
-│   ├── content/
-│   └── accessibility/
-├── catalog/
+│   ├── worker/
+│   ├── packages/
+│   ├── contracts/
+│   ├── integration/
+│   └── support/
 ├── scripts/
-├── tests/
-├── package.json
-└── tsconfig.json
+│   ├── contracts/
+│   └── quality/
+├── deploy/
+│   └── local/
+│       ├── config/
+│       ├── env.example
+│       ├── deploy.sh
+│       ├── rollback.sh
+│       └── OPERATIONS.md
+├── migrations/
+├── docs/
+│   ├── original/
+│   ├── processed/
+│   └── specification/
+├── feedback/                 # Human-owned, Git-ignored
+├── uploads/                  # Human-owned, Git-ignored
+├── .github/workflows/
+├── .codex/skills/
+└── README.md
 ```
 
-- Foundations own color, spacing, typography, geometry, elevation, motion, and z-index tokens.
-- Assets own reviewed brand marks, a broad task-list SVG catalog, provenance, and only necessary illustrations.
-- Primitives own controls and state semantics.
-- Navigation and patterns provide multiple sidebar compositions for flat lists, groups, trees, search, filters, detailed rows, states, and supporting actions.
-- Layout provides multiple panel compositions for details, list-detail, collections, settings, dashboards, documents, splits, timelines, and boards.
-- Shell owns reusable surfaces for 작업 목록, 사이드바, and 패널, not product navigation state.
-- Content owns canonical Korean nouns, actions, and status labels.
-- Accessibility owns shared focus, keyboard, and live-region behavior.
+Root manifests, lockfiles, language configuration, and `.gitignore` stay at the
+root. The diagram describes ownership, not every configuration file.
+Create directories only when actual files need them. Do not add redundant
+`src/<application-or-package-name>/` wrappers. A single router does not require
+a `<domain>/router.py` directory. Do not add or rename structural groups beyond
+the accepted tree without first explaining the reason and scope to the Human.
+Ordinary files and necessary domain groupings within an accepted owner do not
+constitute a new root design.
 
-The catalog is also a customer-authoring surface. Every public asset has a stable versioned ID, allowed region, property schema, binding inputs and outputs, supported states and actions, accessibility contract, example, and preview. The initial catalog must be broad enough to compose common SaaS Workbenches; it is not limited to one or two components needed by the first fixture. Avoid overlapping aliases and keep feature-only visualization rules with their feature.
+## Application and package ownership
 
-All shared assets consume semantic tokens. A server-backed per-user `ThemeProfile` selects dark, light, or high-contrast foundations and may override only approved color and density tokens. Validate contrast and focus visibility before saving. Do not accept arbitrary CSS or per-component color overrides. Apply the resolved theme to the shell, native Workbenches, and authoring previews; give sandboxed MCP Apps only read-only resolved theme context.
+| Owner | Responsibility |
+| --- | --- |
+| `apps/api` | HTTP inputs, outputs, and API-specific service orchestration |
+| `apps/web/pages` | Page-level screens |
+| `apps/web/components` | Reusable application UI |
+| `apps/web/api` | Browser HTTP request functions, not a server entrypoint |
+| `apps/mcp` | MCP tools, resources, transport, and MCP-specific service orchestration |
+| `apps/worker` | Asynchronous jobs, scheduler, batches, and periodic work |
+| `packages/core` | Shared domain rules, application use cases, and ports |
+| `packages/adapters` | Database, storage, queue, secret, and external-service implementations |
+| `packages/contracts-py`, `packages/contracts-ts` | Generated language-specific contract code |
+| `packages/design-system` | Shared visual foundations, assets, components, and UI language |
+| `packages/workbench-runtime` | Shared Workbench interpretation and rendering |
+| `packages/workbench-editor` | Shared Workbench editing functionality |
 
-Native customer Workbenches must use registered design-system components. They cannot supply raw CSS, arbitrary SVG, or React import paths. MCP Apps may receive host theme context and read-only token CSS, but remain visually and technically isolated.
+App services coordinate transport-specific workflows. Shared authorization,
+validation, state transitions, and business decisions belong to package use
+cases; do not duplicate them in API and MCP services. Apps do not import other
+apps. Core must not import apps, adapters, frameworks, database libraries,
+queues, or provider SDKs. Adapters implement core ports. Preserve tenant
+isolation, immutable history, idempotency, runtime authority checks, and external
+UI sandbox boundaries when changing wiring.
 
-## Workbench runtime and MCP App host
+Choose Python namespaces and build mappings that preserve this physical layout
+without shadowing third-party modules such as the official `mcp` SDK.
+Do not introduce physical wrapper directories to solve import-name collisions.
 
-```text
-packages/workbench-runtime/
-├── src/
-│   ├── registry/
-│   │   ├── ComponentRegistry.ts
-│   │   ├── ActionRegistry.ts
-│   │   └── BindingRegistry.ts
-│   ├── renderer/
-│   │   ├── WorkbenchRenderer.tsx
-│   │   ├── SidebarRenderer.tsx
-│   │   ├── PanelRenderer.tsx
-│   │   ├── ComponentNode.tsx
-│   │   └── RenderBoundary.tsx
-│   ├── bindings/
-│   ├── actions/
-│   ├── state/
-│   ├── validation/
-│   ├── security/
-│   └── telemetry/
-├── tests/
-├── package.json
-└── tsconfig.json
+## Contracts and tests
 
-packages/mcp-app-host/
-├── src/
-│   ├── host/
-│   ├── sandbox/
-│   ├── messaging/
-│   └── policy/
-├── tests/
-├── package.json
-└── tsconfig.json
-```
+`contracts/` owns language-neutral sources. Version actual coexisting contracts,
+for example `contracts/schemas/<subject>/v1/`; do not create empty version
+scaffolding. Modify source schemas or generators, not generated outputs by hand.
 
-The runtime accepts a `BindingClient` port instead of choosing HTTP or MCP transport. Public component identifiers are stable and versioned, such as `resource-table@1`; definitions never contain implementation imports.
+All test code and test-only helpers belong under root `tests/`. Classify by
+tested owner first: `api`, `web`, `mcp`, `worker`, or `packages`. Add domain
+groupings inside an owner only as needed. `tests/contracts` owns schema,
+code-generation, language parity, and compatibility checks.
+`tests/integration` owns checks spanning multiple apps; `tests/support` owns
+shared fixtures and helpers. Package unit tests belong in `tests/packages`.
+This supersedes the former domain-first tree and package-local test placement.
 
-The MCP App host alone owns iframe sandbox attributes, CSP intersection, capability negotiation, origin/source/message validation, bridge lifecycle, downloads, external links, and teardown.
+## Scripts and deployment
 
-## Contracts
+`scripts/` contains development, code-generation, and verification launchers.
+Keep assertions in `tests/`, business logic in `packages/`, and recurring
+business work in `apps/worker`. Do not create a folder for one trivial script.
 
-```text
-contracts/
-├── schemas/
-│   ├── common/v1/
-│   ├── workbench/v1/
-│   │   ├── definition.schema.json
-│   │   ├── release.schema.json
-│   │   ├── descriptor.schema.json
-│   │   ├── sidebar.schema.json
-│   │   ├── panel.schema.json
-│   │   ├── component.schema.json
-│   │   ├── binding.schema.json
-│   │   ├── action.schema.json
-│   │   └── view-state.schema.json
-│   ├── appearance/v1/
-│   │   └── theme-profile.schema.json
-│   ├── events/v1/
-│   └── mcp/v1/
-├── examples/
-│   ├── workbenches/reference/
-│   ├── knowledge-search/
-│   └── invalid/
-├── compatibility/
-└── codegen/
+Deploy to the Human's local server now. `deploy/local` owns server configuration
+and installation, startup, restart, update, and rollback procedures. Do not
+duplicate deployment procedures in `scripts/operations`. Include configuration
+only for the deployment mechanism actually selected. Docker and Makefile
+execution were retired; this structure does not reintroduce them.
+`.github/workflows` connects CI/CD steps. `migrations` owns append-only database
+schema history; never rewrite it as part of directory reorganization.
 
-packages/contracts-ts/
-└── src/generated/
+AWS is a future target. Add `deploy/aws` when that migration is undertaken;
+no new root is needed. Do not create empty `aws` or `shared` directories now.
+Extract shared deployment configuration only when both targets consume it and
+the Human accepts the change. Deployment target (`local`, later `aws`) and
+operating environment (`dev`, `stg`, `prod`) are independent: a local server
+can run production. Keep secrets out of Git; `env.example` contains no secrets.
 
-packages/contracts-py/
-└── src/agent_factory_contracts/generated/
-```
+## Human-owned directories
 
-JSON Schema is authoritative. Each object is closed unless extensibility is explicitly designed. Bound depth, size, component count, string length, and validation time. Forbid external references, executable expressions, credentials, raw headers, and arbitrary URLs in Workbench definitions.
+Root `feedback/` and `uploads/` belong to the Human, not to application code,
+deployment output, temporary build storage, or this restructuring task.
+Preserve their existing `.gitignore` entries: `/feedback/` and `/uploads/`.
+Do not move, rename, delete, clean, repurpose, automatically manage, or force-add
+their contents to Git. They remain where the Human uses them. Access or changes
+require a separate explicit Human instruction concerning those directories;
+general cleanup, deployment, or restructuring authorization does not include them.
 
-## Python core and adapters
+Preserve Original, Processed, and Specification ownership under `docs/`.
+Historical diagrams do not authorize restoring the old architecture.
 
-```text
-packages/platform-core/
-└── src/agent_factory_core/
-    ├── shared/
-    ├── identity/
-    ├── organizations/
-    ├── workspaces/
-    ├── workbenches/
-    │   ├── domain.py
-    │   ├── commands.py
-    │   ├── queries.py
-    │   ├── policies.py
-    │   ├── ports.py
-    │   ├── events.py
-    │   └── errors.py
-    ├── connections/
-    ├── knowledge/
-    ├── executions/
-    └── audit/
+## Migration acceptance
 
-packages/platform-adapters/
-└── src/agent_factory_adapters/
-    ├── postgres/
-    ├── pgvector/
-    ├── redis/
-    ├── object_storage/
-    ├── mcp_client/
-    ├── http_connectors/
-    ├── embeddings/
-    └── secrets/
-```
-
-Use vertical slices inside `platform-core`. Avoid global `models/`, `services/`, and `repositories/` folders that mix domain ownership. `platform-adapters` implements core ports; the core never imports adapters.
-
-## Tests, deployment, and documentation
-
-```text
-tests/
-├── contracts/
-├── integration/
-│   ├── postgres/
-│   ├── mcp/
-│   ├── queue/
-│   ├── object_storage/
-│   └── providers/
-├── e2e/
-│   ├── author-publish-render.spec.ts
-│   ├── documents-workbench.spec.ts
-│   ├── tenant-isolation.spec.ts
-│   ├── mcp-app-sandbox.spec.ts
-│   └── responsive-keyboard.spec.ts
-└── security/
-    ├── schema-limits/
-    ├── cross-tenant/
-    ├── ssrf/
-    ├── csp/
-    └── postmessage/
-
-deploy/
-├── containers/
-├── compose/
-├── kubernetes/
-├── proxy/
-├── smoke/
-└── backup/
-
-docs/
-├── specs/
-├── adr/
-└── runbooks/
-```
-
-Package tests own unit behavior. Root tests prove cross-boundary contracts. Dated research and migration evidence are not current product specifications.
-
-## Allowed dependency direction
-
-```text
-apps/web ───────────────> workbench-runtime ───> design-system
-   │                              │                    │
-   ├──────────────────────────────┴────────────────────┤
-   ├──────────────> contracts-ts <────────────────────┘
-   └──────────────> mcp-app-host ─> contracts-ts
-
-apps/api ─────┐
-              ├──> platform-core ─────> contracts-py
-apps/worker ──┘          ▲
-                         │ implements ports
-                 platform-adapters
-```
-
-Reject these directions:
-
-- `platform-core` to FastAPI, Celery, SQLAlchemy, Redis, MCP SDK, or provider SDKs.
-- `design-system` to product features or data clients.
-- `workbench-runtime` to a particular standard Workbench.
-- HTTP routes directly to persistence adapters.
-- Worker handlers to other worker handlers.
-- Contracts to implementation code.
-- Customer definitions to raw CSS, raw icons, code imports, secrets, or arbitrary network targets.
-
-## Initial vertical slice
-
-Do not create the complete empty tree. The first scaffold should contain only what is needed for:
-
-```text
-apps/web
-apps/api
-apps/worker
-packages/design-system
-packages/workbench-runtime
-packages/contracts-ts
-packages/contracts-py
-packages/platform-core/workbenches
-packages/platform-adapters/postgres
-contracts/schemas/workbench/v1
-contracts/schemas/appearance/v1
-contracts/examples/workbenches
-tests/contracts
-tests/e2e
-```
-
-The scaffold includes an initial multi-asset catalog for task-list SVGs, sidebar compositions, panel layouts, controls, and states, with schemas and previews. Use the existing Documents Workbench as the first vertical slice. Completion requires a validated definition that combines the registered Documents icon, sidebar tree, and document panel layout across 작업 목록, 사이드바, and 패널 and restores a validated per-user theme. Stocks remains a fictional contract example, not a required product feature.
+Update imports, build/package mappings, resource paths, test discovery, commands,
+CI, and maintained references together with a move. Preserve dirty work and data.
+Verify affected behavior and packaging, and report pre-existing failures separately.
+Recording this specification does not mean source or tests have been relocated.

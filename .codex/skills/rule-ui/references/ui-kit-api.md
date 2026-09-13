@@ -1,6 +1,6 @@
 # 공통 에셋 사용 계약
 
-이 키트는 제품 적용 전 독립 에셋이다. 현재 검증 범위는 [SCOPE.md](../../../../docs/ui-kit/SCOPE.md)와 `assets/ui-kit/tests/verify-*.cjs`에 기록한다. 생성 함수의 존재만으로 모든 상태가 검증됐다고 해석하지 않는다.
+이 키트는 제품 적용 전 독립 에셋이다. 현재 검증 범위는 [SCOPE.md](../../../../docs/specification/design-platform/ui-kit-scope.md)와 `assets/ui-kit/tests/verify-*.cjs`에 기록한다. 생성 함수의 존재만으로 모든 상태가 검증됐다고 해석하지 않는다.
 
 ## 로딩과 소유권
 

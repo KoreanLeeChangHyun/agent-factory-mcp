@@ -1,8 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, SidebarPattern, WorkbenchPanel, WorkbenchSidebar, type NavItem } from "@agent-factory/design-system";
+import { useEffect, useRef, useState } from "react";
+import { Button, WorkbenchPanel, WorkbenchSidebar, type NavItem } from "@agent-factory/design-system";
 import { ApiError } from "../../api-client.js";
 import { apiPath } from "../../api-path.js";
-import { documentClient, type DocumentRecord, type DocumentRevision, type DocumentType } from "./document-client.js";
+import { DocumentEditor } from "./DocumentEditor.js";
+import { DocumentExplorer } from "./DocumentExplorer.js";
+import {
+  documentClient,
+  type DocumentProvenance,
+  type DocumentRecord,
+  type DocumentRevision,
+  type DocumentSearchHit,
+  type DocumentType,
+  type SearchProfile,
+} from "./document-client.js";
+import "./documents.css";
 
 type LoadState = "loading" | "ready" | "empty" | "permission" | "error";
 interface NavigationState {
@@ -113,6 +124,7 @@ export function DocumentsWorkbench({
   permissions: string[];
 }) {
   const [phase, setPhase] = useState<LoadState>("loading");
+  const [loadedNavigationKey, setLoadedNavigationKey] = useState<string | null>(null);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selected, setSelected] = useState<DocumentRecord | null>(null);
@@ -124,7 +136,18 @@ export function DocumentsWorkbench({
   const [titleDraft, setTitleDraft] = useState("");
   const [contentDraft, setContentDraft] = useState("");
   const [message, setMessage] = useState("");
+  const [provenance, setProvenance] = useState<DocumentProvenance[]>([]);
+  const [profiles, setProfiles] = useState<SearchProfile[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchHits, setSearchHits] = useState<DocumentSearchHit[]>([]);
   const [busy, setBusy] = useState(false);
+  const [editorOpen, setEditorOpen] = useState<{
+    id: string;
+    preview: boolean;
+    edge?: "right" | "bottom";
+    serial: number;
+  } | null>(null);
+  const [editorReveal, setEditorReveal] = useState<{ id: string; serial: number } | null>(null);
   const generation = useRef(0);
   const controller = useRef<AbortController | null>(null);
   const canCreate = permissions.includes("document.create");
@@ -150,10 +173,12 @@ export function DocumentsWorkbench({
     controller.current?.abort();
     const request = new AbortController();
     controller.current = request;
+    setLoadedNavigationKey(null);
     setPhase("loading");
     try {
       const rows = await documentClient.list(organizationId, workspaceId, request.signal);
       if (current !== generation.current) return;
+      setLoadedNavigationKey(navigationKey);
       setDocuments(rows);
       setPhase(rows.length ? "ready" : "empty");
       const restored = readNavigation();
@@ -175,6 +200,9 @@ export function DocumentsWorkbench({
     }
   };
   useEffect(() => {
+    setLoadedNavigationKey(null);
+    setEditorOpen(null);
+    setEditorReveal(null);
     void loadList();
     return () => {
       generation.current += 1;
@@ -182,8 +210,17 @@ export function DocumentsWorkbench({
     };
   }, [navigationKey, organizationId, userId, workspaceId]);
   useEffect(() => {
+    const request = new AbortController();
+    void documentClient
+      .searchProfiles(organizationId, workspaceId, request.signal)
+      .then(setProfiles)
+      .catch(() => setProfiles([]));
+    return () => request.abort();
+  }, [organizationId, workspaceId]);
+  useEffect(() => {
     setSelected(null);
     setRevisions([]);
+    setProvenance([]);
     setBlob(null);
     if (!selectedId || selectedId.startsWith("folder:")) return;
     try {
@@ -201,12 +238,14 @@ export function DocumentsWorkbench({
     void Promise.all([
       documentClient.get(organizationId, workspaceId, selectedId, request.signal),
       documentClient.revisions(organizationId, workspaceId, selectedId, request.signal),
+      documentClient.provenance(organizationId, workspaceId, selectedId, request.signal),
     ])
-      .then(([record, history]) => {
+      .then(([record, history, lineage]) => {
         if (current !== generation.current) return;
         setSelected(record);
         setTitleDraft(record.title);
         setRevisions(history);
+        setProvenance(lineage);
         setSelectedRevision(record.current_revision_number || history[0]?.revision_number || null);
       })
       .catch((error: unknown) => {
@@ -224,7 +263,7 @@ export function DocumentsWorkbench({
   }, [expanded, navigationKey, selectedId]);
   useEffect(() => {
     setBlob(null);
-    if (!selected || !selectedRevision || !canExport) return;
+    if (!selected || selected.document_type !== "original" || !selectedRevision || !canExport) return;
     const current = generation.current;
     const request = new AbortController();
     void documentClient
@@ -330,7 +369,22 @@ export function DocumentsWorkbench({
       if (!request.signal.aborted) setBusy(false);
     }
   };
-  const tree = useMemo(() => documentItems(documents), [documents]);
+  const searchDocuments = async () => {
+    if (!searchQuery.trim() || !profiles[0] || busy) return;
+    setBusy(true);
+    const request = new AbortController();
+    controller.current?.abort();
+    controller.current = request;
+    try {
+      setSearchHits(
+        await documentClient.search(organizationId, workspaceId, profiles[0].id, searchQuery.trim(), request.signal),
+      );
+    } catch (error) {
+      if (!request.signal.aborted) setMessage(error instanceof Error ? error.message : "문서를 검색하지 못했습니다.");
+    } finally {
+      if (!request.signal.aborted) setBusy(false);
+    }
+  };
   const previewUrl =
     selected?.document_type === "specification" && mediaType === "application/zip" && selectedRevision
       ? documentClient.packagePreview(organizationId, workspaceId, selected.id, selectedRevision)
@@ -339,16 +393,18 @@ export function DocumentsWorkbench({
     <>
       <WorkbenchSidebar>
         {phase === "ready" || phase === "empty" ? (
-          <SidebarPattern
-            variant="tree"
-            title="문서"
-            items={tree}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            expanded={expanded}
-            onExpandedChange={setExpanded}
-            onCreate={canCreate && !busy ? () => void createDocument() : undefined}
-          />
+          <>
+            <DocumentExplorer
+              documents={documents}
+              storageKey={`${navigationKey}:explorer`}
+              revealRequest={editorReveal}
+              onOpen={(id, preview, edge) => {
+                setSelectedId(id);
+                setEditorOpen((current) => ({ id, preview, edge, serial: (current?.serial ?? 0) + 1 }));
+              }}
+            />
+            {canCreate && !busy && <Button onClick={() => void createDocument()}>새 원본 문서</Button>}
+          </>
         ) : (
           <div className="af-sidebar-host">
             <header className="af-sidebar-header">
@@ -363,64 +419,131 @@ export function DocumentsWorkbench({
         )}
       </WorkbenchSidebar>
       <WorkbenchPanel>
-        {!selected ? (
-          <p className="af-document-empty">문서를 선택해 주세요.</p>
-        ) : (
-          <>
-            <header className="af-document-header">
-              <div>
-                <span>{typeLabel[selected.document_type]}</span>
-                <h1>{selected.title}</h1>
+        <div
+          className={`af-document-panel${
+            canExport && selected && selected.document_type !== "original" ? " has-editor" : ""
+          }`}
+        >
+          {!selected ? (
+            <p className="af-document-empty">문서를 선택해 주세요.</p>
+          ) : (
+            <>
+              <header className="af-document-header">
+                <div>
+                  <span>{typeLabel[selected.document_type]}</span>
+                  <h1>{selected.title}</h1>
+                </div>
+                <label>
+                  revision
+                  <select
+                    value={selectedRevision ?? ""}
+                    onChange={(event) => setSelectedRevision(Number(event.target.value))}
+                  >
+                    {revisions.map((revision) => (
+                      <option key={revision.id} value={revision.revision_number}>
+                        {revision.revision_number} · {revision.filename}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </header>
+              <div className="af-document-body">
+                {message && <p role="status">{message}</p>}
+                <section className="af-document-edit" aria-labelledby="document-search-title">
+                  <label id="document-search-title">
+                    문서 검색
+                    <input
+                      type="search"
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") void searchDocuments();
+                      }}
+                      disabled={!profiles.length || busy}
+                    />
+                  </label>
+                  <Button
+                    busy={busy}
+                    onClick={() => void searchDocuments()}
+                    disabled={!profiles.length || !searchQuery.trim()}
+                  >
+                    검색
+                  </Button>
+                  {!profiles.length && <p className="af-document-muted">사용 가능한 임베딩 프로필이 없습니다.</p>}
+                  {!!searchHits.length && (
+                    <ol aria-label="문서 검색 결과">
+                      {searchHits.map((hit) => (
+                        <li key={hit.chunk_id}>
+                          <button type="button" onClick={() => setSelectedId(hit.document_id)}>
+                            {hit.content.slice(0, 180)}
+                          </button>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </section>
+                {canUpdate && (
+                  <section className="af-document-edit">
+                    <label>
+                      제목
+                      <input value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} />
+                    </label>
+                    <Button busy={busy} onClick={() => void saveTitle()} disabled={!titleDraft.trim()}>
+                      정보 저장
+                    </Button>
+                  </section>
+                )}
+                {!canExport && <p role="alert">revision 내보내기 권한이 없습니다.</p>}
+                {canExport && selected.document_type === "original" && (
+                  <Preview blob={blob} mediaType={mediaType} previewUrl={previewUrl} />
+                )}
+                {canUpdate && selected.document_type === "original" && (
+                  <section className="af-document-edit">
+                    <label>
+                      새 Markdown revision
+                      <textarea value={contentDraft} onChange={(event) => setContentDraft(event.target.value)} />
+                    </label>
+                    <Button busy={busy} onClick={() => void addRevision()} disabled={!contentDraft}>
+                      revision 저장
+                    </Button>
+                  </section>
+                )}
+                <section aria-labelledby="document-provenance-title">
+                  <h2 id="document-provenance-title">출처 관계</h2>
+                  {provenance.length ? (
+                    <ul>
+                      {provenance.map((edge) => (
+                        <li key={edge.id}>
+                          {edge.source_document_id} → {edge.relation} → {edge.target_document_id}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="af-document-muted">기록된 출처 관계가 없습니다.</p>
+                  )}
+                </section>
               </div>
-              <label>
-                revision
-                <select
-                  value={selectedRevision ?? ""}
-                  onChange={(event) => setSelectedRevision(Number(event.target.value))}
-                >
-                  {revisions.map((revision) => (
-                    <option key={revision.id} value={revision.revision_number}>
-                      {revision.revision_number} · {revision.filename}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </header>
-            <div className="af-document-body">
-              {message && <p role="status">{message}</p>}
-              {canUpdate && (
-                <section className="af-document-edit">
-                  <label>
-                    제목
-                    <input value={titleDraft} onChange={(event) => setTitleDraft(event.target.value)} />
-                  </label>
-                  <Button busy={busy} onClick={() => void saveTitle()} disabled={!titleDraft.trim()}>
-                    정보 저장
-                  </Button>
-                </section>
-              )}
-              {!canExport ? (
-                <p role="alert">revision 내보내기 권한이 없습니다.</p>
-              ) : (
-                <Preview blob={blob} mediaType={mediaType} previewUrl={previewUrl} />
-              )}
-              {canUpdate && selected.document_type === "original" && (
-                <section className="af-document-edit">
-                  <label>
-                    새 Markdown revision
-                    <textarea value={contentDraft} onChange={(event) => setContentDraft(event.target.value)} />
-                  </label>
-                  <Button busy={busy} onClick={() => void addRevision()} disabled={!contentDraft}>
-                    revision 저장
-                  </Button>
-                </section>
-              )}
-              {selected.document_type !== "original" && (
-                <p className="af-document-muted">가공 및 명세 문서는 이 대표 slice에서 읽기 전용입니다.</p>
-              )}
+            </>
+          )}
+          {canExport && (
+            <div hidden={!selected || selected.document_type === "original"} className="af-document-editor-host">
+              <DocumentEditor
+                key={`${organizationId}:${workspaceId}`}
+                documents={
+                  loadedNavigationKey === navigationKey
+                    ? documents.filter((item) => item.document_type !== "original")
+                    : []
+                }
+                openRequest={loadedNavigationKey === navigationKey ? editorOpen : null}
+                organizationId={organizationId}
+                workspaceId={workspaceId}
+                onReveal={(id) => {
+                  setEditorReveal((current) => ({ id, serial: (current?.serial ?? 0) + 1 }));
+                }}
+              />
             </div>
-          </>
-        )}
+          )}
+        </div>
       </WorkbenchPanel>
     </>
   );

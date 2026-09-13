@@ -1,4 +1,4 @@
-from scripts.check_workbench_schema_compatibility import breaking_changes
+from tests.tools.check_workbench_schema_compatibility import breaking_changes
 
 
 def test_detects_real_breaking_changes() -> None:

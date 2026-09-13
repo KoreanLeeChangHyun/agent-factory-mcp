@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "agent-factory-api",
+    "agent-factory-worker",
     "alembic",
     "aiosmtplib",
     "asyncpg",
@@ -55,10 +56,11 @@ pythonpath = [
     "packages/contracts-py/src",
     "packages/platform-core/src",
     "packages/platform-adapters/src",
-    "apps/api/src",
+    "apps",
     "apps/worker/src",
 ]
 testpaths = ["tests"]
+addopts = "--import-mode=importlib"
 markers = [
     "integration: requires explicitly configured infrastructure",
 ]
@@ -93,3 +95,4 @@ members = [
 
 [tool.uv.sources]
 agent-factory-api = { workspace = true }
+agent-factory-worker = { workspace = true }

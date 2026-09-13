@@ -12,6 +12,13 @@ dependencies = [
     "agent-factory-core",
     "fastapi",
     "pydantic>=2,<3",
+    "pydantic-settings",
+    "mcp>=2,<3",
+    "redis",
+    "prometheus-client",
+    "opentelemetry-sdk",
+    "itsdangerous",
+    "uvicorn[standard]",
     "sqlalchemy[asyncio]>=2,<3",
     "starlette>=1.6",
 ]
@@ -21,5 +28,12 @@ agent-factory-adapters = { workspace = true }
 agent-factory-contracts = { workspace = true }
 agent-factory-core = { workspace = true }
 
+[tool.hatch.build]
+dev-mode-dirs = [".."]
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/agent_factory_api"]
+only-include = ["__init__.py", "main.py", "settings.py", "paths.py", "logging.py", "observability.py", "composition", "http", "mcp"]
+artifacts = ["http/routes/knowledge/preview_runtime.js"]
+
+[tool.hatch.build.targets.wheel.sources]
+"" = "api"

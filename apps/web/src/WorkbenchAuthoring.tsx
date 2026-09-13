@@ -13,7 +13,7 @@ import {
 } from "@agent-factory/workbench-runtime";
 import { useWorkbenchContext } from "./app/WorkbenchContext.js";
 import { workbenchClient, type DefinitionRecord, type ReleaseRecord } from "./workbench-client.js";
-import { documentOperations } from "./standard/documents/document-operations.js";
+import { documentOperations } from "./standard/documents/index.js";
 
 let previewDocumentReads = 0;
 const previewClient: BindingClient = {

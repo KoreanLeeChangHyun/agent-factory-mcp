@@ -8,19 +8,21 @@ import {
   WorkbenchSidebar,
   WorkbenchTaskList,
 } from "@agent-factory/design-system";
-import { WorkbenchRenderer, type BindingClient, type RuntimeRecord } from "@agent-factory/workbench-runtime";
+import { WorkbenchRenderer, type RuntimeRecord } from "@agent-factory/workbench-runtime";
 import { apiRequest } from "../api-client.js";
 import { legacyWorkspacePath } from "../api-path.js";
 import { useWorkbenchContext } from "../app/WorkbenchContext.js";
 import { loadAuthorizedRegistry, nativeStandards, type RegisteredWorkbench } from "../registry/WorkbenchRegistry.js";
-import { AccountWorkbench } from "../standard/account/AccountWorkbench.js";
-import { AdminWorkbench } from "../standard/admin/AdminWorkbench.js";
-import { DocumentsWorkbench } from "../standard/documents/DocumentsWorkbench.js";
-import { documentClient } from "../standard/documents/document-client.js";
-import { documentOperations } from "../standard/documents/document-operations.js";
-import { OrganizationWorkbench } from "../standard/organization/OrganizationWorkbench.js";
-import { WorkspaceWorkbench } from "../standard/workspace/WorkspaceWorkbench.js";
-import type { WorkspaceRecord } from "../standard/management/management-client.js";
+import { AccountWorkbench } from "../standard/account/index.js";
+import { AdminWorkbench } from "../standard/admin/index.js";
+import { AgentsWorkbench } from "../standard/agents/index.js";
+import { ConnectionsWorkbench } from "../standard/connections/index.js";
+import { DocumentsWorkbench } from "../standard/documents/index.js";
+import { createWorkbenchBindingClient, workbenchOperations } from "../app/workbench-bindings.js";
+import { OrganizationWorkbench } from "../standard/organization/index.js";
+import { ReportingWorkbench } from "../standard/reporting/index.js";
+import { ScheduleWorkbench } from "../standard/schedule/index.js";
+import { WorkspaceWorkbench, type WorkspaceRecord } from "../standard/workspace/index.js";
 
 interface SelectionProjection {
   mode: "legacy" | "react";
@@ -66,10 +68,31 @@ export function WorkbenchShell() {
   };
   const prepareLegacyRollback = () => {
     if (!user || !organizationId || !workspaceId) return;
-    sessionStorage.setItem(
-      `agent-factory:workbench-rollback:v1:${user.id}:${organizationId}:${workspaceId}`,
-      "legacy-once",
-    );
+    const legacyActivity =
+      ({ reporting: "logs", connections: "integrations", administration: "admin" } as Record<string, string>)[
+        selectedId
+      ] ?? selectedId;
+    try {
+      localStorage.setItem(`agentFactoryOrganizationId:${user.id}`, organizationId);
+    } catch {
+      /* optional legacy organization handoff */
+    }
+    try {
+      localStorage.setItem(
+        `agentFactorySelection:${user.id}:${organizationId}`,
+        JSON.stringify({ workspaceId, mode: "workspace", activity: legacyActivity }),
+      );
+    } catch {
+      /* optional legacy view handoff */
+    }
+    try {
+      sessionStorage.setItem(
+        `agent-factory:workbench-rollback:v1:${user.id}:${organizationId}:${workspaceId}`,
+        "legacy-once",
+      );
+    } catch {
+      /* optional one-time rollback marker */
+    }
   };
 
   useEffect(() => {
@@ -83,7 +106,10 @@ export function WorkbenchShell() {
     setEntries(available);
     if (!organizationId || !workspaceId) {
       const allowed = new Set(available.map((item) => item.id));
-      if (!allowed.has(selectedId) || selectedId === "documents")
+      if (
+        !allowed.has(selectedId) ||
+        ["schedule", "agents", "documents", "reporting", "connections"].includes(selectedId)
+      )
         setSelectedId(organizationId ? "workspaces" : "organization");
       setPermissions([]);
       setMessage("");
@@ -170,34 +196,8 @@ export function WorkbenchShell() {
     window.history.pushState({}, "", url);
   };
   const selected = entries.find((entry) => entry.id === selectedId);
-  const bindingClient = useMemo<BindingClient>(
-    () => ({
-      async execute({ operationId, input, signal }): Promise<RuntimeRecord> {
-        if (!organizationId || !workspaceId) throw new Error("작업공간을 먼저 선택해 주세요.");
-        if (operationId === "documents-list@1") {
-          const rows = await documentClient.list(organizationId, workspaceId, signal);
-          const records: RuntimeRecord[] = rows.map((row) => ({
-            id: row.id,
-            label: row.title,
-            meta: row.document_type,
-          }));
-          return { records };
-        }
-        if (operationId === "document-read@1") {
-          const row = await documentClient.get(organizationId, workspaceId, String(input.documentId), signal);
-          if (!row.current_revision_number) return { value: "내용이 없습니다." };
-          const result = await documentClient.content(
-            organizationId,
-            workspaceId,
-            row.id,
-            row.current_revision_number,
-            signal,
-          );
-          return { value: (await result.blob.text()).slice(0, 2048) };
-        }
-        throw new Error("허용되지 않은 binding operation입니다.");
-      },
-    }),
+  const bindingClient = useMemo(
+    () => createWorkbenchBindingClient(organizationId, workspaceId),
     [organizationId, workspaceId],
   );
   const setCustomerPath = (path: string, value: RuntimeRecord[string]) =>
@@ -255,6 +255,15 @@ export function WorkbenchShell() {
           </WorkbenchPanel>
         </>
       )
+    ) : native === "schedule" && organizationId && workspaceId ? (
+      <ScheduleWorkbench
+        key={`${scopeKey}:schedule`}
+        userId={user.id}
+        organizationId={organizationId}
+        workspaceId={workspaceId}
+      />
+    ) : native === "agents" && organizationId && workspaceId ? (
+      <AgentsWorkbench organizationId={organizationId} workspaceId={workspaceId} permissions={permissions} />
     ) : native === "documents" && organizationId && workspaceId ? (
       <DocumentsWorkbench
         key={`${scopeKey}:documents`}
@@ -263,6 +272,10 @@ export function WorkbenchShell() {
         workspaceId={workspaceId}
         permissions={permissions}
       />
+    ) : native === "reporting" && organizationId && workspaceId ? (
+      <ReportingWorkbench organizationId={organizationId} workspaceId={workspaceId} />
+    ) : native === "connections" && organizationId && workspaceId ? (
+      <ConnectionsWorkbench organizationId={organizationId} workspaceId={workspaceId} />
     ) : native === "account" ? (
       <AccountWorkbench
         user={user}
@@ -300,6 +313,9 @@ export function WorkbenchShell() {
           </button>
         ))}
         <span className="af-native-task-spacer" />
+        <a href={legacyWorkspacePath()} onClick={prepareLegacyRollback}>
+          기존 화면
+        </a>
         <button
           type="button"
           aria-label="사이드바 표시"
@@ -317,7 +333,7 @@ export function WorkbenchShell() {
           embedded
           definition={selected.definition}
           client={bindingClient}
-          operations={documentOperations}
+          operations={workbenchOperations}
           scope={{
             userId: user.id,
             organizationId,

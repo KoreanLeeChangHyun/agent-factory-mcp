@@ -1,29 +1,14 @@
-from __future__ import annotations
+"""Worker CLI; application/task registration is supplied by worker composition."""
 
-import argparse
-import json
+import sys
 
-from agent_factory_adapters import FixtureWorkbenchRepository
-from agent_factory_core import GetReferenceWorkbench
-
-
-def smoke() -> dict[str, object]:
-    definition = GetReferenceWorkbench(FixtureWorkbenchRepository()).execute()
-    return {"status": "ok", "workbench": definition["descriptor"]["id"]}
+from celery.bin.celery import main as celery_main
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Agent Factory stage-1 worker entrypoint")
-    parser.add_argument(
-        "--smoke", action="store_true", help="validate the reference fixture and exit"
-    )
-    args = parser.parse_args()
-    if not args.smoke:
-        parser.error(
-            "stage 1 supports only --smoke; durable worker execution is not yet configured"
-        )
-    print(json.dumps(smoke(), sort_keys=True))
-    return 0
+    # Preserve Celery's explicit -A application selection; never substitute a fixture.
+    sys.argv[0] = "agent-factory-worker"
+    return celery_main()
 
 
 if __name__ == "__main__":

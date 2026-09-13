@@ -7,12 +7,21 @@ description: Apply Agent Factory's target Python/TypeScript monorepo structure a
 
 Build toward the target architecture rather than reshaping the target around the legacy tree.
 
+## Human-approved structure
+
+Read [the accepted tree and ownership contract](references/target-structure.md)
+before structural work. Managed root directories are fixed; further root
+additions, removals, or renames require an explicit Human decision. Preserve
+Human-owned, Git-ignored `feedback/` and `uploads/` under that contract.
+The [Human-facing counterpart](../../../docs/specification/rule-workbench-structure/index.html)
+records the same structure. Keep both projections synchronized.
+
 ## Authority
 
 Apply decisions in this order:
 
 1. The Human's explicit instruction.
-2. Current product and security contracts from `$spec-platform`.
+2. Current facts from `$info-platform`, accepted architecture from `$design-platform`, and mandatory behavior from `$rule-platform`.
 3. The target structure in [references/target-structure.md](references/target-structure.md).
 4. Existing implementation patterns only when they do not conflict with the target.
 
@@ -23,14 +32,14 @@ Use `$rule-ui` for Human-facing interface work and `$rule-layout` for the canoni
 - Put executable and deployable entrypoints in `apps/`.
 - Put reusable implementation packages in `packages/`.
 - Keep language-neutral JSON Schema sources in `contracts/`.
-- Keep cross-application contract, integration, end-to-end, and security tests in root `tests/`; keep unit tests with their owning package.
+- Keep all tests under root `tests/`, classified by tested app or package, with shared contract, integration, and support areas.
 - Keep HTTP and MCP adapters thin. They call the same Python application use cases.
-- Keep API and worker composition separate while sharing `platform-core`.
+- Keep API, MCP, web, and worker applications separate while sharing package business logic.
 - Make `design-system` the only owner of shared visual foundations, assets, primitives, patterns, shell surfaces, interaction semantics, and common product language.
 - Make `workbench-runtime` the only interpreter for customer Workbench definitions.
-- Run untrusted external UI only through `mcp-app-host` sandbox boundaries.
-- Keep PostgreSQL, queue, object storage, MCP client, HTTP connector, vector, embedding, and secret implementations in `platform-adapters`.
-- Do not place framework, database, queue, or provider SDK imports in `platform-core`.
+- Preserve sandbox boundaries for untrusted external UI without inventing another package outside the accepted tree.
+- Keep PostgreSQL, queue, object storage, MCP client, HTTP connector, vector, embedding, and secret implementations in `packages/adapters`.
+- Do not place framework, database, queue, or provider SDK imports in `packages/core`.
 
 ## Scaffolding and porting
 
@@ -64,3 +73,7 @@ Verify the smallest affected boundary first, then widen:
 5. Build, migration, security, and deployment gates proportional to the change.
 
 Do not claim the target structure is ported merely because directories exist. Completion requires a working vertical slice using the new contracts and dependency direction.
+
+## Current Human instruction: test ownership
+
+All test code and test-only helpers live under root `tests/`. Use the app/package-first classification in [the accepted structure](references/target-structure.md#contracts-and-tests), replacing the former domain-first layout. Do not place tests beside production source. Docker and Makefile execution have been retired; use direct package/runtime commands.

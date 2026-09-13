@@ -1,3 +1,4 @@
+import { adminClient } from "./admin-client.js";
 import { useEffect, useRef, useState } from "react";
 import {
   Button,
@@ -11,7 +12,6 @@ import {
   type DataTableColumn,
 } from "@agent-factory/design-system";
 import { apiPath } from "../../api-path.js";
-import { managementClient } from "../management/management-client.js";
 
 type View = "dashboard" | "users" | "resources" | "jobs" | "integrations" | "audit" | "flags" | "runtime" | "assets";
 type AdminTableRow = { id: string; title: string; status: string; source: Record<string, unknown> };
@@ -98,10 +98,10 @@ function AdminView({ view }: { view: View }) {
     const request =
       view === "resources"
         ? Promise.all([
-            managementClient.admin<Record<string, unknown>[]>("organizations", controller.signal),
-            managementClient.admin<Record<string, unknown>[]>("workspaces", controller.signal),
+            adminClient.admin<Record<string, unknown>[]>("organizations", controller.signal),
+            adminClient.admin<Record<string, unknown>[]>("workspaces", controller.signal),
           ])
-        : managementClient.admin<Record<string, unknown>[] | Record<string, unknown>>(
+        : adminClient.admin<Record<string, unknown>[] | Record<string, unknown>>(
             endpoint[view as Exclude<View, "resources" | "assets">],
             controller.signal,
           );
@@ -136,7 +136,7 @@ function AdminView({ view }: { view: View }) {
       message: "관리 작업을 처리하는 중입니다.",
     });
     try {
-      await managementClient.mutateAdmin(suffix, method, body);
+      await adminClient.mutateAdmin(suffix, method, body);
       setMutationStatus((current) => (current?.id === mutationId ? null : current));
       if (viewRef.current === mutationView && generation.current === mutationGeneration) load();
     } catch (error) {

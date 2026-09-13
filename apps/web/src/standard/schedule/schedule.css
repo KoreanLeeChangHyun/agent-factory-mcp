@@ -1,0 +1,240 @@
+.af-schedule {
+  min-width: 0;
+  height: 100%;
+  overflow: auto;
+  padding: var(--ui-space-3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-scroll-thumb) transparent;
+}
+.af-schedule__header {
+  display: flex;
+  min-height: var(--ui-workbench-header-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+  border-bottom: 1px solid var(--region-border);
+}
+.af-schedule__header h1,
+.af-schedule h2 {
+  margin: 0;
+  font-size: var(--ui-font-section);
+}
+.af-schedule__header nav,
+.af-schedule__axis {
+  display: flex;
+  gap: var(--ui-space-1);
+  overflow-x: auto;
+}
+.af-schedule__axis {
+  justify-content: flex-end;
+  padding: var(--ui-space-2) 0;
+}
+.af-schedule__state {
+  padding: var(--ui-space-3);
+}
+.af-schedule__rows {
+  margin: var(--ui-space-3) 0;
+  padding: 0;
+  list-style: none;
+}
+.af-schedule__rows li {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 80px minmax(190px, auto);
+  min-height: 40px;
+  align-items: center;
+  gap: var(--ui-space-2);
+  border-bottom: 1px solid var(--ui-chart-grid);
+}
+.af-schedule__rows button,
+.af-schedule__kanban article > button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.af-schedule__timeline {
+  min-width: 720px;
+  overflow-x: auto;
+  border-top: 1px solid var(--region-border);
+}
+.af-schedule__timeline-head,
+.af-schedule__timeline-row {
+  display: grid;
+  grid-template-columns: 280px minmax(420px, 1fr);
+  min-height: 40px;
+  border-bottom: 1px solid var(--ui-chart-grid);
+}
+.af-schedule__timeline-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: 52px;
+  background: var(--primary-sidebar-background);
+}
+.af-schedule__timeline-head > strong,
+.af-schedule__timeline-row > button {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  padding: var(--ui-space-2);
+  border: 0;
+  border-right: 1px solid var(--region-border);
+  background: var(--workspace-background);
+  color: inherit;
+  text-align: left;
+}
+.af-schedule__timeline-row > button span {
+  display: block;
+  color: var(--explorer-muted);
+  font-size: var(--ui-font-caption);
+}
+.af-schedule__timeline-head > div,
+.af-schedule__track {
+  position: relative;
+  min-width: calc(var(--days) * 28px);
+}
+.af-schedule__timeline.is-week .af-schedule__timeline-head > div,
+.af-schedule__timeline.is-week .af-schedule__track {
+  min-width: calc(var(--days) * 8px);
+}
+.af-schedule__timeline.is-month .af-schedule__timeline-head > div,
+.af-schedule__timeline.is-month .af-schedule__track {
+  min-width: calc(var(--days) * 3px);
+}
+.af-schedule__timeline-head time,
+.af-schedule__track i {
+  position: absolute;
+  left: calc(var(--column) * 100% / var(--days));
+  width: calc(100% / var(--days));
+  height: 100%;
+  border-left: 1px solid var(--ui-chart-grid);
+  box-sizing: border-box;
+  font-size: var(--ui-font-caption);
+  font-style: normal;
+}
+.af-schedule__timeline-head time {
+  padding: var(--ui-space-2) var(--ui-space-1);
+  overflow: hidden;
+}
+.af-schedule__timeline .is-weekend {
+  background: color-mix(in srgb, var(--ui-color-error) 7%, transparent);
+}
+.af-schedule__timeline .is-holiday {
+  background: color-mix(in srgb, var(--ui-color-error) 13%, transparent);
+  color: var(--ui-color-error);
+}
+.af-schedule__bar {
+  position: absolute;
+  z-index: 2;
+  left: calc(var(--left) * 100% / var(--days));
+  top: 11px;
+  width: calc(var(--width) * 100% / var(--days));
+  height: 18px;
+  min-height: 18px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 2px;
+  background: var(--explorer-muted);
+}
+.af-schedule__bar.is-active {
+  background: var(--ui-color-primary);
+}
+.af-schedule__bar.is-done,
+.af-schedule__bar > span {
+  background: var(--ui-color-success);
+}
+.af-schedule__bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+}
+.af-schedule__track em {
+  display: inline-block;
+  padding: 10px var(--ui-space-2);
+  color: var(--explorer-muted);
+  font-size: var(--ui-font-caption);
+  font-style: normal;
+}
+.af-schedule__kanban,
+.af-schedule__today {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ui-space-3);
+  margin-top: var(--ui-space-3);
+}
+.af-schedule__today {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.af-schedule__kanban section {
+  min-width: 0;
+  border: 1px solid var(--region-border);
+  padding: var(--ui-space-2);
+}
+.af-schedule__kanban article {
+  display: grid;
+  gap: var(--ui-space-1);
+  padding: var(--ui-space-2) 0;
+  border-bottom: 1px solid var(--region-border);
+}
+.af-schedule__kanban article span {
+  color: var(--explorer-muted);
+  font-size: var(--ui-font-caption);
+}
+.af-schedule__detail {
+  margin-top: var(--ui-space-4);
+  border-top: 1px solid var(--region-border);
+  padding-top: var(--ui-space-3);
+}
+.af-schedule__detail > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.af-schedule__detail dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ui-space-3);
+}
+.af-schedule__detail dt {
+  color: var(--explorer-muted);
+  font-size: var(--ui-font-caption);
+}
+.af-schedule__detail dd {
+  margin: var(--ui-space-1) 0 0;
+}
+.af-schedule__dialog {
+  width: min(520px, calc(100vw - 32px));
+  border: 1px solid var(--region-border);
+  background: var(--workspace-background);
+  color: inherit;
+}
+.af-schedule__dialog form,
+.af-schedule__dialog label {
+  display: grid;
+  gap: var(--ui-space-2);
+}
+.af-schedule__dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
+}
+@media (max-width: 700px) {
+  .af-schedule__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .af-schedule__kanban,
+  .af-schedule__today,
+  .af-schedule__detail dl {
+    grid-template-columns: 1fr;
+  }
+  .af-schedule__rows li {
+    grid-template-columns: 1fr auto;
+  }
+  .af-schedule__rows time {
+    grid-column: 1 / -1;
+  }
+  .af-schedule__timeline-head,
+  .af-schedule__timeline-row {
+    grid-template-columns: 240px minmax(420px, 1fr);
+  }
+}

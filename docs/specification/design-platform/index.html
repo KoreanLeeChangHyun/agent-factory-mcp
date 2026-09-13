@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="agent-factory:specification-id" content="design-platform">
+  <meta name="agent-factory:specification-version" content="1">
+  <meta name="agent-factory:projection" content="human">
+  <meta name="agent-factory:language" content="ko">
+  <meta name="agent-factory:counterpart" content=".codex/skills/design-platform/">
+  <meta name="agent-factory:semantic-revision" content="1">
+  <meta name="agent-factory:sync-base-revision" content="1">
+  <meta name="agent-factory:modified-at" content="2026-09-14T03:40:00+09:00">
+  <title>플랫폼 설계 명세</title>
+  <style>body{max-width:880px;margin:40px auto;padding:0 24px;font:16px/1.6 system-ui;color:#202124}table{border-collapse:collapse;width:100%}th,td{border:1px solid #bbb;padding:8px;text-align:left}code{background:#f2f3f5;padding:2px 5px}</style>
+</head>
+<body>
+  <h1>플랫폼 설계 명세</h1>
+  <section data-clause-id="design-platform.scope">
+    <h2>범위</h2>
+    <p>통합된 기획 의도와 기술 설계를 소유한다. <code>design-*</code>은 시각 디자인만을 뜻하지 않는다.</p>
+  </section>
+  <section data-clause-id="design-platform.routing">
+    <h2>설계 경로</h2>
+    <table><thead><tr><th>영역</th><th>AI 명세 원본</th></tr></thead><tbody>
+      <tr><td>플랫폼 구성</td><td><a href="../../../.codex/skills/design-platform/references/cloud-platform.md">cloud-platform.md</a></td></tr>
+      <tr><td>문서와 편집기</td><td><a href="../../../.codex/skills/design-platform/references/cloud-documents.md">cloud-documents.md</a>, <a href="../../../.codex/skills/design-platform/references/document-editor.md">document-editor.md</a></td></tr>
+      <tr><td>연결과 수집</td><td><a href="../../../.codex/skills/design-platform/references/cloud-integrations.md">cloud-integrations.md</a></td></tr>
+      <tr><td>보고와 일정 가져오기</td><td><a href="../../../.codex/skills/design-platform/references/cloud-reporting.md">cloud-reporting.md</a>, <a href="../../../.codex/skills/design-platform/references/planning-import.md">planning-import.md</a></td></tr>
+      <tr><td>조직과 화면 설정</td><td><a href="../../../.codex/skills/design-platform/references/organization-management.md">organization-management.md</a>, <a href="../../../.codex/skills/design-platform/references/theme-profiles.md">theme-profiles.md</a></td></tr>
+      <tr><td>Workbench</td><td><a href="../../../.codex/skills/design-platform/references/workbench-runtime.md">workbench-runtime.md</a></td></tr>
+      <tr><td>아키텍처 결정 기록</td><td><a href="adr/ADR-001-python-typescript-monorepo.md">ADR-001~010</a></td></tr>
+      <tr><td>UI kit 제작 범위</td><td><a href="ui-kit-scope.md">ui-kit-scope.md</a></td></tr>
+    </tbody></table>
+  </section>
+  <section data-clause-id="design-platform.authority">
+    <h2>권위</h2>
+    <p>사용자의 명시적 지시가 우선한다. 설계 문서는 채택된 의도를 나타내며 구현이나 날짜별 근거가 이를 자동으로 덮어쓰지 않는다. 필수 정책은 연결된 <code>rule-platform</code>을 함께 적용한다.</p>
+  </section>
+  <section data-clause-id="design-platform.pair">
+    <h2>연결된 스킬</h2>
+    <p>AI 표현은 <a href="../../../.codex/skills/design-platform/SKILL.md"><code>.codex/skills/design-platform/</code></a>이다. 소유권이나 설계 의미가 바뀌면 두 표현을 함께 갱신한다.</p>
+  </section>
+</body>
+</html>

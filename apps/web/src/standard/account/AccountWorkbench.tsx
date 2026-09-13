@@ -1,9 +1,11 @@
+import type { SessionUser } from "./account-types.js";
+import type { OrganizationSummary } from "../organization/index.js";
+import { workspaceClient } from "../workspace/index.js";
+import { accountClient } from "./account-client.js";
 import { useEffect, useState } from "react";
 import { Button, StateView, WorkbenchPanel, WorkbenchSidebar } from "@agent-factory/design-system";
 import { ThemeSettingsPanel } from "../../ThemeBootstrap.js";
-import type { OrganizationSummary, SessionUser } from "../../app/WorkbenchContext.js";
 import { legacyWorkspacePath } from "../../api-path.js";
-import { managementClient } from "../management/management-client.js";
 
 type View = "profile" | "security" | "appearance";
 export function AccountWorkbench({
@@ -21,7 +23,7 @@ export function AccountWorkbench({
     const controller = new AbortController();
     setWorkspaceName(null);
     if (organization && workspaceId) {
-      void managementClient.workspaces(organization.id, controller.signal).then((rows) => {
+      void workspaceClient.workspaces(organization.id, controller.signal).then((rows) => {
         if (!controller.signal.aborted) setWorkspaceName(rows.find((row) => row.id === workspaceId)?.name ?? null);
       });
     }
@@ -76,7 +78,7 @@ export function AccountWorkbench({
               </dl>
               <Button
                 variant="primary"
-                onClick={() => void managementClient.logout().then(() => window.location.assign(legacyWorkspacePath()))}
+                onClick={() => void accountClient.logout().then(() => window.location.assign(legacyWorkspacePath()))}
               >
                 로그아웃
               </Button>
@@ -96,7 +98,7 @@ function Security() {
   const [error, setError] = useState("");
   const refresh = () => {
     const controller = new AbortController();
-    void Promise.all([managementClient.sessions(controller.signal), managementClient.tokens(controller.signal)])
+    void Promise.all([accountClient.sessions(controller.signal), accountClient.tokens(controller.signal)])
       .then(([nextSessions, nextTokens]) => {
         setSessions(nextSessions.filter((session) => session.revoked_at == null));
         setTokens(nextTokens.filter((token) => token.revoked_at == null));
@@ -116,7 +118,7 @@ function Security() {
             <span>
               {String(session.user_agent ?? "알 수 없는 클라이언트")} · {String(session.expires_at)}
             </span>
-            <Button onClick={() => void managementClient.revokeSession(String(session.id)).then(refresh)}>
+            <Button onClick={() => void accountClient.revokeSession(String(session.id)).then(refresh)}>
               세션 해제
             </Button>
           </article>
@@ -131,7 +133,7 @@ function Security() {
             <span>
               {String(token.name)} · {String(token.expires_at ?? "만료 없음")}
             </span>
-            <Button onClick={() => void managementClient.revokeToken(String(token.id)).then(refresh)}>폐기</Button>
+            <Button onClick={() => void accountClient.revokeToken(String(token.id)).then(refresh)}>폐기</Button>
           </article>
         ))
       ) : (

@@ -11,12 +11,12 @@ Keep changes consistent with this FastAPI MCP/Workspace application and its exis
 
 1. Read [references/directory-structure.md](references/directory-structure.md) before adding, moving, or substantially reorganizing files.
 2. Inspect the owning module, its callers, nearby tests, and established patterns before editing.
-3. For product behavior, permissions, persistence, or API semantics, use `$spec-platform` and read only the relevant specification documents.
+3. Use `$info-platform` for maintained facts, `$design-platform` for accepted architecture, and `$rule-platform` for mandatory product behavior. Read only the affected references.
 4. For Human-facing Workspace UI work, also use `$rule-ui`; its visual rules supplement this project Skill.
 
 ## Engineering conventions
 
-- Keep routers thin. Put domain rules in `app/modules/<domain>/`, shared infrastructure in `app/infrastructure/`, and cross-cutting configuration or security in `app/core/`.
+- Keep transport handlers thin. Follow `$rule-workbench-structure`: app-specific service flows belong in `apps/`; shared business rules and infrastructure implementations belong in `packages/core/` and `packages/adapters/` respectively.
 - Preserve organization and Workspace isolation across routes, services, repositories, jobs, MCP tools, and tests. UI visibility is never an authorization boundary.
 - Reuse existing abstractions and make the smallest coherent change. Do not mix broad formatting or unrelated cleanup into behavioral work.
 - Keep public API, MCP tool, database migration, static asset, and packaging changes synchronized with their owning tests and documentation.
@@ -27,7 +27,9 @@ Keep changes consistent with this FastAPI MCP/Workspace application and its exis
 
 ## Documentation
 
-- Keep current product contracts in `spec-*/references/` and maintained project conventions in `rule-*/references/`. Put dated investigations, implementation traces, and verification records in `docs/notes/` or clearly named audit documents.
+- Apply `$rule-documents` when creating, moving, or promoting documentation.
+- Keep Original source material in `docs/original/`, Processed investigations and verification records in `docs/processed/`, and Human-facing accepted decisions in `docs/specification/`.
+- Keep agent-facing Specifications in `info-*/`, `design-*/`, and `rule-*/` Skills. Each has a synchronized Human HTML counterpart under `docs/specification/<identity>/`.
 - Separate accepted requirements, observed implementation facts, inferences, and unresolved decisions.
 - Update the owning document instead of copying the same rule into several files or into this Skill.
 - Use short sections for distinct topics, tables for repeated mappings, and diagrams only when relationships or state transitions are materially clearer visually.
@@ -44,3 +46,7 @@ Read [references/testing.md](references/testing.md) when selecting gates. Start 
 - Domain verification scripts under `scripts/` may start disposable PostgreSQL or build images; run them only when their domain and prerequisites match the change.
 
 Do not claim integration, browser, container, migration, deployment, or production verification unless that exact check ran successfully.
+
+## Current Human instruction: test ownership
+
+All test code and test-only helpers live under root `tests/`. Follow the app/package-first layout in `$rule-workbench-structure`: `api/`, `web/`, `mcp/`, `worker/`, `packages/`, with `contracts/`, `integration/`, and `support/` for shared verification. This replaces the former domain-first tree. Do not place tests beside production source. Docker and Makefile execution have been retired; use direct package/runtime commands.

@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint src",
+    "lint": "eslint --config ../../scripts/quality/eslint.config.mjs src",
     "typecheck": "tsc -b",
-    "test": "vitest run --passWithNoTests"
+    "test": "pnpm --dir ../.. exec vitest run --config tests/vitest.config.mts /web/"
   },
   "dependencies": {
     "@agent-factory/contracts": "workspace:*",

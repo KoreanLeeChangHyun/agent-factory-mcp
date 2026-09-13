@@ -2,16 +2,10 @@
 
 import hmac
 import secrets
-from datetime import UTC, datetime
 from hashlib import sha256
 
 from pwdlib import PasswordHash
 from pwdlib.exceptions import UnknownHashError
-
-
-class SystemClock:
-    def now(self) -> datetime:
-        return datetime.now(UTC)
 
 
 class SystemIdentityCrypto:
@@ -34,6 +28,14 @@ class SystemIdentityCrypto:
 
     def new_opaque_token(self) -> str:
         return secrets.token_urlsafe(32)
+
+    def token_digest(self, token: str) -> bytes:
+        return hmac.new(self._secret.encode(), token.encode(), sha256).digest()
+
+
+class SystemTokenDigest:
+    def __init__(self, secret: str):
+        self._secret = secret
 
     def token_digest(self, token: str) -> bytes:
         return hmac.new(self._secret.encode(), token.encode(), sha256).digest()

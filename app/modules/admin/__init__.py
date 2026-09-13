@@ -1,1 +1,0 @@
-"""Platform administration domain."""

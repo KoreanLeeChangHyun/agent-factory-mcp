@@ -1,1 +1,0 @@
-"""Application bootstrap and configuration."""

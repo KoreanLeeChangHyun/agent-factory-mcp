@@ -26,6 +26,7 @@ dependencies = [
     { name = "agent-factory-core" },
     { name = "aiosmtplib" },
     { name = "authlib" },
+    { name = "celery", extra = ["redis"] },
     { name = "pwdlib", extra = ["argon2"] },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "starlette" },
@@ -37,6 +38,7 @@ requires-dist = [
     { name = "agent-factory-core", editable = "packages/platform-core" },
     { name = "aiosmtplib", specifier = ">=5,<6" },
     { name = "authlib", specifier = ">=1.6,<2" },
+    { name = "celery", extras = ["redis"] },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3,<1" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2,<3" },
     { name = "starlette", specifier = ">=1.6" },
@@ -95,6 +97,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "agent-factory-api" },
+    { name = "agent-factory-worker" },
     { name = "aiosmtplib" },
     { name = "alembic" },
     { name = "asyncpg" },
@@ -134,6 +137,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agent-factory-api", editable = "apps/api" },
+    { name = "agent-factory-worker", editable = "apps/worker" },
     { name = "aiosmtplib" },
     { name = "alembic" },
     { name = "asyncpg" },

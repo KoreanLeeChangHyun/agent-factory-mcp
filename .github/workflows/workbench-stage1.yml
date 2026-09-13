@@ -35,18 +35,18 @@ jobs:
           enable-cache: true
       - run: pnpm install --frozen-lockfile
       - run: uv sync --frozen --all-packages --extra dev
-      - run: python3 scripts/generate_workbench_contracts.py --check
-      - run: uv run python scripts/check_workbench_contract_parity.py
-      - run: python3 scripts/check_workbench_schema_compatibility.py
-      - run: python3 scripts/check_workbench_dependencies.py
+      - run: python3 scripts/contracts/generate_workbench_contracts.py --check
+      - run: uv run python tests/tools/check_workbench_contract_parity.py
+      - run: python3 tests/tools/check_workbench_schema_compatibility.py
+      - run: python3 tests/tools/check_workbench_dependencies.py
       - run: pnpm format
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
       - run: uv run ruff format --check --exclude "**/generated/**" apps/api apps/worker packages/contracts-py packages/platform-core packages/platform-adapters tests/contracts tests/architecture scripts/*workbench*.py
       - run: uv run ruff check --exclude "**/generated/**" apps/api apps/worker packages/contracts-py packages/platform-core packages/platform-adapters tests/contracts tests/architecture scripts/*workbench*.py
-      - run: uv run mypy packages/contracts-py/src packages/platform-core/src packages/platform-adapters/src apps/api/src apps/worker/src tests/contracts/type_contracts.py
-      - run: uv run pytest -q tests/contracts tests/architecture apps/api/tests apps/worker/tests
+      - run: uv run mypy packages/contracts-py/src packages/platform-core/src packages/platform-adapters/src apps/api apps/worker/src tests/contracts/type_contracts.py
+      - run: uv run pytest -q tests/contracts tests/architecture tests/*/api tests/*/worker
       - run: uv run agent-factory-worker --smoke
       - run: pnpm build
       - run: uv build --all-packages

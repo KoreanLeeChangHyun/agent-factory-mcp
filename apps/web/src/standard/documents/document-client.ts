@@ -24,6 +24,25 @@ export interface DocumentRevision {
   sha256: string;
   created_at: string;
 }
+export interface DocumentProvenance {
+  id: string;
+  source_document_id: string;
+  target_document_id: string;
+  relation: "derived_from" | "processed_from" | "specifies";
+  provenance_metadata: Record<string, unknown>;
+  created_at: string;
+}
+export interface SearchProfile {
+  id: string;
+  name: string;
+}
+export interface DocumentSearchHit {
+  chunk_id: string;
+  document_id: string;
+  document_revision_id: string;
+  content: string;
+  score: number;
+}
 
 const base = (organizationId: string, workspaceId: string) =>
   `/api/organizations/${encodeURIComponent(organizationId)}/workspaces/${encodeURIComponent(workspaceId)}/documents`;
@@ -57,8 +76,12 @@ export const documentClient = {
     }),
   revisions: (organizationId: string, workspaceId: string, documentId: string, signal?: AbortSignal) =>
     apiRequest<DocumentRevision[]>(`${base(organizationId, workspaceId)}/${documentId}/revisions`, { signal }),
+  provenance: (organizationId: string, workspaceId: string, documentId: string, signal?: AbortSignal) =>
+    apiRequest<DocumentProvenance[]>(`${base(organizationId, workspaceId)}/${documentId}/provenance`, { signal }),
   content: (organizationId: string, workspaceId: string, documentId: string, revision: number, signal?: AbortSignal) =>
     apiBlob(`${base(organizationId, workspaceId)}/${documentId}/revisions/${revision}/content`, signal),
+  contentPath: (organizationId: string, workspaceId: string, documentId: string, revision: number) =>
+    `${base(organizationId, workspaceId)}/${documentId}/revisions/${revision}/content`,
   addTextRevision: (
     organizationId: string,
     workspaceId: string,
@@ -78,4 +101,18 @@ export const documentClient = {
   },
   packagePreview: (organizationId: string, workspaceId: string, documentId: string, revision: number) =>
     `/api/organizations/${encodeURIComponent(organizationId)}/workspaces/${encodeURIComponent(workspaceId)}/cloud-documents/${documentId}/revisions/${revision}/package/preview`,
+  searchProfiles: (organizationId: string, workspaceId: string, signal?: AbortSignal) =>
+    apiRequest<SearchProfile[]>(
+      `/api/organizations/${encodeURIComponent(organizationId)}/workspaces/${encodeURIComponent(workspaceId)}/search/profiles`,
+      { signal },
+    ),
+  search: (organizationId: string, workspaceId: string, profileId: string, query: string, signal?: AbortSignal) =>
+    apiRequest<DocumentSearchHit[]>(
+      `/api/organizations/${encodeURIComponent(organizationId)}/workspaces/${encodeURIComponent(workspaceId)}/search`,
+      {
+        method: "POST",
+        body: JSON.stringify({ query, embedding_profile_id: profileId, limit: 20 }),
+        signal,
+      },
+    ),
 };

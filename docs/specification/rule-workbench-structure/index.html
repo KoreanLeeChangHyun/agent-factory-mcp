@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accepted Repository Structure</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 24px;color:#202124}pre{overflow:auto;padding:20px;background:#f3f4f6}table{border-collapse:collapse;width:100%}td{border:1px solid #ccc;padding:8px;vertical-align:top}code{font-family:ui-monospace,monospace}a{color:#1456b8}</style>
+</head>
+<body>
+<main>
+<h1>Accepted Repository Structure</h1>
+<p>This is the Human-approved target and ownership contract, not a claim that the working tree has finished migrating. Its AI counterpart is <a href="../../../.codex/skills/rule-workbench-structure/SKILL.md">the structure skill</a>.</p>
+<h2>Fixed root boundary</h2>
+<p>The managed root directories are <code>apps/</code>, <code>packages/</code>, <code>contracts/</code>, <code>tests/</code>, <code>scripts/</code>, <code>deploy/</code>, <code>migrations/</code>, and <code>docs/</code>. No further root directory addition, removal, or rename is planned or implicitly authorized. Do not invent another root for a feature, framework convention, or packaging convenience. If a future requirement cannot fit this structure, explain the reason and affected paths and obtain an explicit Human decision before changing it. An explicit instruction already given in the session is sufficient authority; do not ask again for the same accepted change.</p>
+<p>Preserve existing repository metadata and tool directories such as <code>.git/</code>, <code>.github/</code>, <code>.codex/</code>, <code>.vscode/</code>, <code>.venv/</code>, <code>node_modules/</code>, and caches. They are not application architecture. Preserve existing local configuration and ignored data, including <code>env/</code>, until an explicitly scoped migration covers them. Absence from the diagram does not authorize deletion.</p>
+<h2>Accepted tree</h2>
+<pre><code>mcp/
+├── apps/
+│   ├── api/
+│   │   ├── main.py
+│   │   ├── routes/
+│   │   └── services/
+│   ├── web/
+│   │   ├── main.tsx
+│   │   ├── pages/
+│   │   ├── components/
+│   │   └── api/
+│   ├── mcp/
+│   │   ├── main.py
+│   │   ├── tools/
+│   │   ├── resources/
+│   │   └── services/
+│   └── worker/
+│       ├── main.py
+│       ├── scheduler.py
+│       └── jobs/
+├── packages/
+│   ├── core/
+│   ├── adapters/
+│   ├── contracts-py/
+│   ├── contracts-ts/
+│   ├── design-system/
+│   ├── workbench-runtime/
+│   └── workbench-editor/
+├── contracts/
+│   ├── schemas/
+│   ├── examples/
+│   └── compatibility/
+├── tests/
+│   ├── api/
+│   ├── web/
+│   ├── mcp/
+│   ├── worker/
+│   ├── packages/
+│   ├── contracts/
+│   ├── integration/
+│   └── support/
+├── scripts/
+│   ├── contracts/
+│   └── quality/
+├── deploy/
+│   └── local/
+│       ├── config/
+│       ├── env.example
+│       ├── deploy.sh
+│       ├── rollback.sh
+│       └── OPERATIONS.md
+├── migrations/
+├── docs/
+│   ├── original/
+│   ├── processed/
+│   └── specification/
+├── feedback/                 # Human-owned, Git-ignored
+├── uploads/                  # Human-owned, Git-ignored
+├── .github/workflows/
+├── .codex/skills/
+└── README.md</code></pre>
+<p>Root manifests, lockfiles, language configuration, and <code>.gitignore</code> stay at the root. The diagram describes ownership, not every configuration file. Create directories only when actual files need them. Do not add redundant <code>src/&lt;application-or-package-name&gt;/</code> wrappers. A single router does not require a <code>&lt;domain&gt;/router.py</code> directory. Do not add or rename structural groups beyond the accepted tree without first explaining the reason and scope to the Human. Ordinary files and necessary domain groupings within an accepted owner do not constitute a new root design.</p>
+<h2>Application and package ownership</h2>
+<table>
+<tr><td>Owner</td><td>Responsibility</td></tr>
+<tr><td><code>apps/api</code></td><td>HTTP inputs, outputs, and API-specific service orchestration</td></tr>
+<tr><td><code>apps/web/pages</code></td><td>Page-level screens</td></tr>
+<tr><td><code>apps/web/components</code></td><td>Reusable application UI</td></tr>
+<tr><td><code>apps/web/api</code></td><td>Browser HTTP request functions, not a server entrypoint</td></tr>
+<tr><td><code>apps/mcp</code></td><td>MCP tools, resources, transport, and MCP-specific service orchestration</td></tr>
+<tr><td><code>apps/worker</code></td><td>Asynchronous jobs, scheduler, batches, and periodic work</td></tr>
+<tr><td><code>packages/core</code></td><td>Shared domain rules, application use cases, and ports</td></tr>
+<tr><td><code>packages/adapters</code></td><td>Database, storage, queue, secret, and external-service implementations</td></tr>
+<tr><td><code>packages/contracts-py</code>, <code>packages/contracts-ts</code></td><td>Generated language-specific contract code</td></tr>
+<tr><td><code>packages/design-system</code></td><td>Shared visual foundations, assets, components, and UI language</td></tr>
+<tr><td><code>packages/workbench-runtime</code></td><td>Shared Workbench interpretation and rendering</td></tr>
+<tr><td><code>packages/workbench-editor</code></td><td>Shared Workbench editing functionality</td></tr>
+</table>
+<p>App services coordinate transport-specific workflows. Shared authorization, validation, state transitions, and business decisions belong to package use cases; do not duplicate them in API and MCP services. Apps do not import other apps. Core must not import apps, adapters, frameworks, database libraries, queues, or provider SDKs. Adapters implement core ports. Preserve tenant isolation, immutable history, idempotency, runtime authority checks, and external UI sandbox boundaries when changing wiring.</p>
+<p>Choose Python namespaces and build mappings that preserve this physical layout without shadowing third-party modules such as the official <code>mcp</code> SDK. Do not introduce physical wrapper directories to solve import-name collisions.</p>
+<h2>Contracts and tests</h2>
+<p><code>contracts/</code> owns language-neutral sources. Version actual coexisting contracts, for example <code>contracts/schemas/&lt;subject&gt;/v1/</code>; do not create empty version scaffolding. Modify source schemas or generators, not generated outputs by hand.</p>
+<p>All test code and test-only helpers belong under root <code>tests/</code>. Classify by tested owner first: <code>api</code>, <code>web</code>, <code>mcp</code>, <code>worker</code>, or <code>packages</code>. Add domain groupings inside an owner only as needed. <code>tests/contracts</code> owns schema, code-generation, language parity, and compatibility checks. <code>tests/integration</code> owns checks spanning multiple apps; <code>tests/support</code> owns shared fixtures and helpers. Package unit tests belong in <code>tests/packages</code>. This supersedes the former domain-first tree and package-local test placement.</p>
+<h2>Scripts and deployment</h2>
+<p><code>scripts/</code> contains development, code-generation, and verification launchers. Keep assertions in <code>tests/</code>, business logic in <code>packages/</code>, and recurring business work in <code>apps/worker</code>. Do not create a folder for one trivial script.</p>
+<p>Deploy to the Human's local server now. <code>deploy/local</code> owns server configuration and installation, startup, restart, update, and rollback procedures. Do not duplicate deployment procedures in <code>scripts/operations</code>. Include configuration only for the deployment mechanism actually selected. Docker and Makefile execution were retired; this structure does not reintroduce them. <code>.github/workflows</code> connects CI/CD steps. <code>migrations</code> owns append-only database schema history; never rewrite it as part of directory reorganization.</p>
+<p>AWS is a future target. Add <code>deploy/aws</code> when that migration is undertaken; no new root is needed. Do not create empty <code>aws</code> or <code>shared</code> directories now. Extract shared deployment configuration only when both targets consume it and the Human accepts the change. Deployment target (<code>local</code>, later <code>aws</code>) and operating environment (<code>dev</code>, <code>stg</code>, <code>prod</code>) are independent: a local server can run production. Keep secrets out of Git; <code>env.example</code> contains no secrets.</p>
+<h2>Human-owned directories</h2>
+<p>Root <code>feedback/</code> and <code>uploads/</code> belong to the Human, not to application code, deployment output, temporary build storage, or this restructuring task. Preserve their existing <code>.gitignore</code> entries: <code>/feedback/</code> and <code>/uploads/</code>. Do not move, rename, delete, clean, repurpose, automatically manage, or force-add their contents to Git. They remain where the Human uses them. Access or changes require a separate explicit Human instruction concerning those directories; general cleanup, deployment, or restructuring authorization does not include them.</p>
+<p>Preserve Original, Processed, and Specification ownership under <code>docs/</code>. Historical diagrams do not authorize restoring the old architecture.</p>
+<h2>Migration acceptance</h2>
+<p>Update imports, build/package mappings, resource paths, test discovery, commands, CI, and maintained references together with a move. Preserve dirty work and data. Verify affected behavior and packaging, and report pre-existing failures separately. Recording this specification does not mean source or tests have been relocated.</p>
+</main>
+</body>
+</html>

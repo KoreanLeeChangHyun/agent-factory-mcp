@@ -80,16 +80,16 @@ Embedded Document package styles remain owned by the Document, not this shell.
 Run the shared cascade/state regression and relevant real screen flows:
 
 ```sh
-NODE_PATH=/tmp/af-pw/node_modules node tests/browser/ui-components.cjs
-NODE_PATH=/tmp/af-pw/node_modules node tests/browser/ui-screens.cjs
-NODE_PATH=/tmp/af-pw/node_modules node tests/browser/organizations.cjs
-NODE_PATH=/tmp/af-pw/node_modules node tests/browser/workspace-start.cjs
-NODE_PATH=/tmp/af-pw/node_modules node tests/browser/planning.cjs
-NODE_PATH=/tmp/af-pw/node_modules node tests/browser/mcp-onboarding.cjs
-NODE_PATH=/tmp/af-pw/node_modules node tests/browser/document-editor.cjs
-DOCUMENT_HEADERS_ONLY=1 NODE_PATH=/tmp/af-pw/node_modules node tests/browser/document-editor.cjs
-.venv/bin/pytest -q tests/test_workspace_ui.py
-.venv/bin/pytest -q tests/browser/reporting.py
+NODE_PATH=/tmp/af-pw/node_modules node tests/design_system/browser/ui-components.cjs
+NODE_PATH=/tmp/af-pw/node_modules node tests/design_system/browser/ui-screens.cjs
+NODE_PATH=/tmp/af-pw/node_modules node tests/organizations/browser/organizations.cjs
+NODE_PATH=/tmp/af-pw/node_modules node tests/workspaces/browser/workspace-start.cjs
+NODE_PATH=/tmp/af-pw/node_modules node tests/planning/browser/planning.cjs
+NODE_PATH=/tmp/af-pw/node_modules node tests/connections/browser/mcp-onboarding.cjs
+NODE_PATH=/tmp/af-pw/node_modules node tests/knowledge/browser/document-editor.cjs
+DOCUMENT_HEADERS_ONLY=1 NODE_PATH=/tmp/af-pw/node_modules node tests/knowledge/browser/document-editor.cjs
+.venv/bin/pytest -q tests/workspaces/regression/test_workspace_ui.py
+.venv/bin/pytest -q tests/reporting/browser/reporting.py
 ```
 
 `NODE_PATH` must point to the local installation of Playwright; the path above

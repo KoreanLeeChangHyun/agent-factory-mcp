@@ -7,9 +7,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "lint": "eslint src",
+    "lint": "eslint --config ../../scripts/quality/eslint.config.mjs src",
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "pnpm --dir ../.. exec vitest run --config tests/vitest.config.mts tests/workbenches/editor"
   },
   "dependencies": {
     "@agent-factory/contracts": "workspace:*",

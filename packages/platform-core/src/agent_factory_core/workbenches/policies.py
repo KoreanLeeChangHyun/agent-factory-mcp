@@ -5,7 +5,17 @@ from .errors import WorkbenchValidationError
 # Native standards and customer releases share one registry. Historical releases with
 # these descriptors remain immutable but are omitted from authorized projections.
 RESERVED_STANDARD_WORKBENCH_IDS = frozenset(
-    {"organization", "workspaces", "documents", "account", "administration"}
+    {
+        "organization",
+        "workspaces",
+        "schedule",
+        "agents",
+        "documents",
+        "reporting",
+        "connections",
+        "account",
+        "administration",
+    }
 )
 
 

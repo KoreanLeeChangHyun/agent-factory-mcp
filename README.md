@@ -44,23 +44,41 @@ project-local `.agent-factory/workspace` tree. Client installation state may
 live under the user's `~/.agent-factory/` home directory, but it is never an
 authoritative Document store.
 
+## Documentation
+
+Repository knowledge follows three authority stages:
+
+- `docs/original/`: external source documents and unchanged evidence.
+- `docs/processed/`: analysis, audits, proposals, implementation traces, and verification records.
+- `docs/specification/`: Human-facing accepted decisions and maintained specifications.
+
+Each Specification has a synchronized pair: a Human-facing HTML package under
+`docs/specification/<category>-<name>/` and an AI-facing Project Skill under
+`.codex/skills/<category>-<name>/`. Categories are `info-*` for maintained
+information, `design-*` for integrated planning and technical design, and `rule-*`
+for mandatory behavior. Promotion keeps provenance links and never turns dated
+Processed evidence into a Specification implicitly. This is the repository's only
+`README.md`; nested guidance uses a purpose-specific filename or a Skill.
+
 ## Development
 
 ```bash
-python -m venv .venv
-.venv/bin/pip install '.[dev]'
-.venv/bin/uvicorn app.main:app --reload
+uv sync --all-packages --extra dev
+.venv/bin/python scripts/operations/run.py api --env dev
 ```
 
 For the complete local service stack:
 
 ```bash
-cp .env.example .env
-make dev-up
+# Configure env/dev.env before starting.
+uv sync --all-packages --extra dev
+pnpm install
+pnpm build
+pnpm start:api --env dev
 ```
 
-The development stack binds the API, MinIO console, and Mailpit UI to loopback.
-PostgreSQL, Redis, and the MinIO API remain on the internal Compose network.
+Configure PostgreSQL, Redis, and object storage endpoints in the environment.
+The API and worker run directly; Docker and Make are no longer used.
 
 The local HTTP health check is available at `/health`, and Streamable HTTP MCP
 is mounted at `/mcp`. In production these are `/factory/health` and
@@ -82,11 +100,25 @@ then repeat with `--apply` and the destination organization, workspace, and an
 existing revision-author user ID. The importer creates deterministic archives
 for multi-file packages, verifies uploaded hashes, stops on conflicting slugs,
 and can resume matching imports. It never deletes or rewrites the source. See
-[`migration.md`](.codex/skills/spec-platform/references/migration.md) for the cutoff procedure.
+[`migration.md`](.codex/skills/rule-platform/references/migration.md) for the cutoff procedure.
 
 After applying migrations, create the first platform administrator without
 placing a password in shell history:
 
 ```bash
-make admin-bootstrap EMAIL=owner@example.com NAME="Owner"
+uv run python -m api.auth.bootstrap --email owner@example.com --display-name "Owner"
 ```
+
+## Environments
+
+Environment files live in `env/`: `dev.env`, `stg.env`, and `prod.env`. Configure each file with separate endpoints and credentials. Actual `.env` files are ignored by Git. The existing production file was restored to `env/prod.env` without changing its values. Dev and staging credentials have not been provisioned.
+
+Choose the environment explicitly:
+
+```sh
+pnpm start:api --env dev
+pnpm start:worker --env stg
+pnpm start:scheduler --env prod
+```
+
+The runner maps dev/stg/prod to the existing local/staging/production settings modes. It refuses a missing environment file and does not fall back to another environment. Shell environment variables override file values; the runner fixes the environment mode to the selected profile. These commands define process configuration and do not establish that the ongoing application migration is complete.

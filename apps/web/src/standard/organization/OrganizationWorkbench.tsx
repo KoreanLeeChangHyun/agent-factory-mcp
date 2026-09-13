@@ -1,3 +1,11 @@
+import type { OrganizationSummary } from "./organization-types.js";
+import {
+  organizationClient,
+  type OrganizationMemberRecord,
+  type OrganizationTeamRecord,
+  type OrganizationWorkspaceOptionRecord,
+  type OrganizationOverview,
+} from "./organization-client.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Button,
@@ -11,14 +19,6 @@ import {
   WorkbenchSidebar,
   type DataTableColumn,
 } from "@agent-factory/design-system";
-import type { OrganizationSummary } from "../../app/WorkbenchContext.js";
-import {
-  managementClient,
-  type OrganizationMemberRecord,
-  type OrganizationOverview,
-  type OrganizationTeamRecord,
-  type OrganizationWorkspaceOptionRecord,
-} from "../management/management-client.js";
 
 type View = "overview" | "workspaces" | "members" | "teams" | "settings" | "roles" | "audit";
 type OrganizationDialog = "invite" | "team" | "role" | "edit" | "transfer" | "delete";
@@ -75,7 +75,7 @@ export function OrganizationWorkbench({
       requestController.current = controller;
       if (showLoading) setState("loading");
       try {
-        const value = await managementClient.organization(selectedId, controller.signal);
+        const value = await organizationClient.organization(selectedId, controller.signal);
         if (current === generation.current) {
           setOverview(value);
           setState("ready");
@@ -150,7 +150,7 @@ export function OrganizationWorkbench({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            void managementClient
+            void organizationClient
               .createOrganization(draft)
               .then((created) => {
                 setCreateOpen(false);
@@ -232,45 +232,45 @@ function OrganizationView({
     setMessage("불러오는 중입니다.");
     const requests: Promise<Record<string, unknown>[]>[] = [];
     if (view === "workspaces")
-      requests.push(managementClient.organizationResource(organization.id, "workspace-options", controller.signal));
+      requests.push(organizationClient.organizationResource(organization.id, "workspace-options", controller.signal));
     if (view === "members" && can("member.read"))
       requests.push(
-        managementClient.organizationResource(organization.id, "members", controller.signal),
+        organizationClient.organizationResource(organization.id, "members", controller.signal),
         can("role.read")
-          ? managementClient.organizationResource(organization.id, "roles", controller.signal)
+          ? organizationClient.organizationResource(organization.id, "roles", controller.signal)
           : Promise.resolve([]),
-        managementClient.organizationResource(organization.id, "workspace-options", controller.signal),
+        organizationClient.organizationResource(organization.id, "workspace-options", controller.signal),
       );
     if (view === "teams" && can("team.read"))
       requests.push(
-        managementClient.organizationResource(organization.id, "teams", controller.signal),
+        organizationClient.organizationResource(organization.id, "teams", controller.signal),
         can("member.read")
-          ? managementClient.organizationResource(organization.id, "members", controller.signal)
+          ? organizationClient.organizationResource(organization.id, "members", controller.signal)
           : Promise.resolve([]),
         can("member.read")
-          ? managementClient.organizationResource(organization.id, "workspace-options", controller.signal)
+          ? organizationClient.organizationResource(organization.id, "workspace-options", controller.signal)
           : Promise.resolve([]),
         can("role.read")
-          ? managementClient.organizationResource(organization.id, "roles", controller.signal)
+          ? organizationClient.organizationResource(organization.id, "roles", controller.signal)
           : Promise.resolve([]),
       );
     if (view === "settings")
       requests.push(
         can("role.read")
-          ? managementClient.organizationResource(organization.id, "roles", controller.signal)
+          ? organizationClient.organizationResource(organization.id, "roles", controller.signal)
           : Promise.resolve([]),
         !organization.is_personal && can("member.invite")
-          ? managementClient.organizationResource(organization.id, "invitations", controller.signal)
+          ? organizationClient.organizationResource(organization.id, "invitations", controller.signal)
           : Promise.resolve([]),
-        managementClient.organizationResource(organization.id, "workspace-options", controller.signal),
+        organizationClient.organizationResource(organization.id, "workspace-options", controller.signal),
       );
     if (view === "roles" && can("role.read"))
       requests.push(
-        managementClient.organizationResource(organization.id, "roles", controller.signal),
-        managementClient.organizationResource(organization.id, "permission-catalog", controller.signal),
+        organizationClient.organizationResource(organization.id, "roles", controller.signal),
+        organizationClient.organizationResource(organization.id, "permission-catalog", controller.signal),
       );
     if (view === "audit" && can("member.update_role"))
-      requests.push(managementClient.organizationResource(organization.id, "events", controller.signal));
+      requests.push(organizationClient.organizationResource(organization.id, "events", controller.signal));
     void Promise.all(requests)
       .then((values) => {
         if (current !== generation.current) return;
@@ -333,7 +333,7 @@ function OrganizationView({
     busyRef.current = true;
     setBusy(true);
     try {
-      await managementClient.mutateOrganization(organizationId, suffix, method, body, controller.signal);
+      await organizationClient.mutateOrganization(organizationId, suffix, method, body, controller.signal);
       if (
         controller.signal.aborted ||
         current !== mutationGeneration.current ||
@@ -417,7 +417,7 @@ function OrganizationView({
                 disabled={!can("member.read")}
                 onClick={() => {
                   setMemberDetail(null);
-                  void managementClient
+                  void organizationClient
                     .organizationResource<Record<string, unknown>>(organization.id, `members/${row.user_id ?? row.id}`)
                     .then(setMemberDetail);
                 }}

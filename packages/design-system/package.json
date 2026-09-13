@@ -9,9 +9,9 @@
     "./components.css": "./src/components.css"
   },
   "scripts": {
-    "lint": "eslint src",
+    "lint": "eslint --config ../../scripts/quality/eslint.config.mjs src",
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "pnpm --dir ../.. exec vitest run --config tests/vitest.config.mts tests/design_system/components tests/appearance/components"
   },
   "dependencies": {
     "@agent-factory/contracts": "workspace:*",

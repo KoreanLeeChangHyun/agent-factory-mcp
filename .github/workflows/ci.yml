@@ -15,38 +15,11 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: "3.12", cache: pip}
       - run: python -m pip install --upgrade pip
-      - run: pip install '.[dev]'
-      - run: ruff format --check app tests
-      - run: ruff check app tests
-      - run: mypy app
-      - run: pytest --cov=app --cov-report=term-missing --cov-fail-under=60
-      - run: bandit -q -r app -x app/db/migrations
-      - run: pip-audit
-
-  migrations:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: pgvector/pgvector:0.8.6-pg18-bookworm
-        env: {POSTGRES_DB: agent_factory_test, POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres}
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres -d agent_factory_test"
-          --health-interval 5s --health-timeout 5s --health-retries 20
-    env:
-      AGENT_FACTORY_TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/agent_factory_test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: {python-version: "3.12", cache: pip}
-      - run: python -m pip install --upgrade pip
-      - run: pip install '.[dev]'
-      - run: pytest -m integration
-
-  image:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
-        with: {context: ., push: false, tags: agent-factory-mcp:test}
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --all-packages --extra dev
+      - run: uv run ruff format --check apps packages tests
+      - run: uv run ruff check apps packages tests
+      - run: uv run mypy apps/api apps/worker/src packages/platform-core/src packages/platform-adapters/src
+      - run: uv run pytest --cov=api --cov=agent_factory_worker --cov=agent_factory_core --cov=agent_factory_adapters --cov-report=term-missing --cov-fail-under=60
+      - run: uv run bandit -q -r apps/api,apps/worker/src,packages/platform-core/src,packages/platform-adapters/src
+      - run: uv run pip-audit

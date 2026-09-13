@@ -1,19 +1,9 @@
+import { accountClient, type SessionUser } from "../standard/account/index.js";
+import { organizationClient, type OrganizationSummary } from "../standard/organization/index.js";
+import { workspaceClient } from "../standard/workspace/index.js";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ThemeContext } from "../theme-client.js";
-import { apiRequest } from "../api-client.js";
 
-export interface SessionUser {
-  id: string;
-  email: string;
-  display_name: string;
-  is_platform_admin: boolean;
-}
-export interface OrganizationSummary {
-  id: string;
-  name: string;
-  slug: string;
-  is_personal: boolean;
-}
 export interface WorkbenchSelection {
   organizationId: string | null;
   workspaceId: string | null;
@@ -45,10 +35,7 @@ const authorizedSelection = async (
     return { organizationId: null, workspaceId: null };
   }
   if (!candidate.workspaceId) return { organizationId: candidate.organizationId, workspaceId: null };
-  const workspaces = await apiRequest<{ id: string }[]>(
-    `/api/organizations/${encodeURIComponent(candidate.organizationId)}/workspaces`,
-    { signal },
-  );
+  const workspaces = await workspaceClient.workspaces(encodeURIComponent(candidate.organizationId), signal);
   return workspaces.some((item) => item.id === candidate.workspaceId)
     ? candidate
     : { organizationId: candidate.organizationId, workspaceId: null };
@@ -81,10 +68,7 @@ export function WorkbenchContextProvider({
     setError(null);
     setUser(null);
     setOrganizations([]);
-    void Promise.all([
-      apiRequest<{ user: SessionUser }>("/api/auth/me", { signal: request.signal }),
-      apiRequest<OrganizationSummary[]>("/api/account/organizations", { signal: request.signal }),
-    ])
+    void Promise.all([accountClient.me(request.signal), organizationClient.listForAccount(request.signal)])
       .then(async ([session, discovered]) => {
         if (current !== generation.current || request.signal.aborted) return;
         const restored = await authorizedSelection(selectionRef.current, discovered, request.signal);
@@ -151,7 +135,7 @@ export function WorkbenchContextProvider({
     const current = generation.current;
     const request = controller.current;
     if (!user || !request) return;
-    void apiRequest<OrganizationSummary[]>("/api/account/organizations", { signal: request.signal }).then((items) => {
+    void organizationClient.listForAccount(request.signal).then((items) => {
       if (current === generation.current && !request.signal.aborted) setOrganizations(items);
     });
   }, [user]);

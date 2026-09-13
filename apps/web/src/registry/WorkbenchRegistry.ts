@@ -8,7 +8,16 @@ interface PublishedProjection {
     release: { id: string; definition: WorkbenchDefinition };
   }[];
 }
-export type NativeStandard = "organization" | "workspaces" | "documents" | "account" | "administration";
+export type NativeStandard =
+  | "organization"
+  | "workspaces"
+  | "schedule"
+  | "agents"
+  | "documents"
+  | "reporting"
+  | "connections"
+  | "account"
+  | "administration";
 export interface RegisteredWorkbench extends Partial<WorkbenchRegistration> {
   id: string;
   title: string;
@@ -36,6 +45,22 @@ export const nativeStandards: readonly RegisteredWorkbench[] = [
     native: "workspaces",
   },
   {
+    id: "schedule",
+    title: "일정",
+    icon: "calendar@1",
+    origin: "standard",
+    releaseId: "standard:schedule@1",
+    native: "schedule",
+  },
+  {
+    id: "agents",
+    title: "에이전트",
+    icon: "agents@1",
+    origin: "standard",
+    releaseId: "standard:agents@1",
+    native: "agents",
+  },
+  {
     id: "documents",
     title: "문서",
     icon: "documents@1",
@@ -43,6 +68,22 @@ export const nativeStandards: readonly RegisteredWorkbench[] = [
     releaseId: "standard:documents@1",
     native: "documents",
     definition: documentsFixture,
+  },
+  {
+    id: "reporting",
+    title: "보고",
+    icon: "logs@1",
+    origin: "standard",
+    releaseId: "standard:reporting@1",
+    native: "reporting",
+  },
+  {
+    id: "connections",
+    title: "연동",
+    icon: "connections@1",
+    origin: "standard",
+    releaseId: "standard:connections@1",
+    native: "connections",
   },
   {
     id: "account",

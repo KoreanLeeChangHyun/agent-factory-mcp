@@ -1,4 +1,5 @@
-from .crypto import SystemClock, SystemIdentityCrypto
+from agent_factory_adapters.clock import SystemClock
+from .crypto import SystemIdentityCrypto
 from .oauth import build_oauth, external_profile
 from .postgres import PostgresAuthorizationRepository, PostgresIdentityRepository
 

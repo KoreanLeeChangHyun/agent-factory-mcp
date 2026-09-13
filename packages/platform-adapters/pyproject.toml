@@ -11,7 +11,9 @@ dependencies = [
     "agent-factory-core",
     "aiosmtplib>=5,<6",
     "authlib>=1.6,<2",
+    "celery[redis]",
     "pwdlib[argon2]>=0.3,<1",
+    "pydantic-settings",
     "sqlalchemy[asyncio]>=2,<3",
     "starlette>=1.6",
 ]

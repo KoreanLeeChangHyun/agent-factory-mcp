@@ -4,17 +4,20 @@
   "private": true,
   "packageManager": "pnpm@10.15.1",
   "scripts": {
-    "format": "prettier --check \"{apps/web/src,packages/*/src,scripts}/**/*.{ts,tsx,css}\"",
-    "lint": "eslint apps packages scripts --ext .ts,.tsx",
-    "typecheck": "tsc -b",
-    "test": "pnpm -r test",
+    "format": "prettier --ignore-path scripts/quality/prettier.ignore --check \"{apps/web/src,packages/*/src,scripts,tests}/**/*.{ts,tsx,css}\"",
+    "lint": "eslint --config scripts/quality/eslint.config.mjs apps packages scripts tests --ext .ts,.tsx",
+    "typecheck": "tsc -b && tsc -p tests/tsconfig.json",
+    "test": "vitest run --config tests/vitest.config.mts",
     "build": "pnpm --filter @agent-factory/web build",
-    "codegen": "python3 scripts/generate_workbench_contracts.py && node scripts/generate_workbench_validators.mjs",
-    "codegen:check": "python3 scripts/generate_workbench_contracts.py --check && node scripts/generate_workbench_validators.mjs --check",
-    "contracts:parity": "uv run python scripts/check_workbench_contract_parity.py",
-    "contracts:compatibility": "python3 scripts/check_workbench_schema_compatibility.py",
-    "dependencies:check": "python3 scripts/check_workbench_dependencies.py",
-    "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm codegen:check && pnpm contracts:parity && pnpm contracts:compatibility && pnpm dependencies:check"
+    "codegen": "python3 scripts/contracts/generate_workbench_contracts.py && node scripts/contracts/generate_workbench_validators.mjs",
+    "codegen:check": "python3 scripts/contracts/generate_workbench_contracts.py --check && node scripts/contracts/generate_workbench_validators.mjs --check",
+    "contracts:parity": "uv run python tests/tools/check_workbench_contract_parity.py",
+    "contracts:compatibility": "python3 tests/tools/check_workbench_schema_compatibility.py",
+    "dependencies:check": "python3 tests/tools/check_workbench_dependencies.py",
+    "check": "pnpm format && pnpm lint && pnpm typecheck && pnpm test && pnpm codegen:check && pnpm contracts:parity && pnpm contracts:compatibility && pnpm dependencies:check",
+    "start:api": ".venv/bin/python scripts/operations/run.py api",
+    "start:worker": ".venv/bin/python scripts/operations/run.py worker",
+    "start:scheduler": ".venv/bin/python scripts/operations/run.py scheduler"
   },
   "devDependencies": {
     "@eslint/js": "9.35.0",
@@ -23,6 +26,19 @@
     "prettier": "3.6.2",
     "tsx": "4.20.5",
     "typescript": "5.9.2",
-    "typescript-eslint": "8.42.0"
+    "typescript-eslint": "8.42.0",
+    "vitest": "3.2.4",
+    "jsdom": "26.1.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
+    "@agent-factory/contracts": "workspace:*",
+    "@agent-factory/design-system": "workspace:*",
+    "@agent-factory/workbench-runtime": "workspace:*",
+    "@agent-factory/workbench-editor": "workspace:*"
+  },
+  "prettier": {
+    "printWidth": 120
   }
 }

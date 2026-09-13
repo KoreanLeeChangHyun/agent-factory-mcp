@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "agent-factory-worker"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["agent-factory-adapters", "agent-factory-core"]
+dependencies = ["agent-factory-adapters", "agent-factory-core", "celery[redis]"]
 
 [project.scripts]
 agent-factory-worker = "agent_factory_worker.main:main"
