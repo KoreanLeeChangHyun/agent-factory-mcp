@@ -1,4 +1,25 @@
-# Declarative Workbench runtime and authoring contract
+# Workbench runtime and authoring contract
+
+## Current authority — code-based structure accepted 2026-09-15
+
+Read [product-overview.md](product-overview.md) and the
+[target structure](../../rule-workbench-structure/references/target-structure.md) first.
+Customer-authored code with shared assets and a public SDK supersedes the JSON-only restriction.
+The accepted owners are workbench-sdk (public API), workbench-build (isolated toolchain),
+workbench-runtime (host loading/rendering/bridge), and workbench-editor (authoring/preview).
+Worker dispatch and adapter-managed isolation are separate from build execution.
+Exact protocols, sandbox technology and file-level behavior require subsequent specifications.
+The Korean current decision is recorded in
+[product-overview.html](../../../../docs/specification/design-platform/product-overview.html).
+
+## Legacy declarative design — migration reference only
+
+The remaining sections describe the previous declarative model, not the new customer-code contract.
+Do not use their JSON-only, closed-tree-only, asset-composition-only or workspace-only ownership
+assumptions to override the latest Human decisions. Keep existing stored definitions and releases
+until an explicit migration maps them. Server authorization, credential secrecy, immutable history,
+bounded requests and stale-response rejection remain applicable principles; old schema fields,
+permission names and transaction details need explicit mapping, not automatic reuse.
 
 Customer Workbenches are data, not executable extensions. The JSON Schema source in
 `contracts/schemas/workbench/v1` is the first validation boundary. The runtime then

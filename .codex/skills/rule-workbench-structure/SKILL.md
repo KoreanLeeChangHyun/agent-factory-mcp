@@ -16,6 +16,19 @@ Human-owned, Git-ignored `feedback/` and `uploads/` under that contract.
 The [Human-facing counterpart](../../../docs/specification/rule-workbench-structure/index.html)
 records the same structure. Keep both projections synchronized.
 
+For the 2026-09-15 file-planning pass, consult the linked Processed file plan and
+baseline migration ledger in target-structure.md. Their mappings and implementation
+records are drafts, not approved moves; do not treat path-based classification as
+completed source analysis. Chat is human-to-human with read-only agent MCP access.
+
+For directory contracts and file-level implementation planning, read
+[the directory structure contract](references/directory-contract.md).
+It requires an exact target tree, directory responsibilities, per-file implementation
+records, and an existing-to-target ledger before claiming the specification complete.
+Use the Human's [product overview](../design-platform/references/product-overview.md)
+as the product basis. The contract's Human counterpart is
+[contract.html](../../../docs/specification/rule-workbench-structure/contract.html).
+
 ## Authority
 
 Apply decisions in this order:
@@ -31,15 +44,18 @@ Use `$rule-ui` for Human-facing interface work and `$rule-layout` for the canoni
 
 - Put executable and deployable entrypoints in `apps/`.
 - Put reusable implementation packages in `packages/`.
-- Keep language-neutral JSON Schema sources in `contracts/`.
+- Treat `packages/contracts` as the data-contract domain: `schemas/` owns feature-grouped language-neutral sources; `py/` and `ts/` own generated code. Do not retain a second root contracts owner. Group SDK/build/runtime/editor packages under `packages/workbench` while preserving their separate dependencies.
 - Keep all tests under root `tests/`, classified by tested app or package, with shared contract, integration, and support areas.
 - Keep HTTP and MCP adapters thin. They call the same Python application use cases.
-- Keep API, MCP, web, and worker applications separate while sharing package business logic.
+- Keep API, MCP, web, and jobs applications separate while sharing package business logic.
 - Make `design-system` the only owner of shared visual foundations, assets, primitives, patterns, shell surfaces, interaction semantics, and common product language.
-- Make `workbench-runtime` the only interpreter for customer Workbench definitions.
+- Make `workbench/runtime` own platform-side loading, trusted/isolated rendering and bridge validation.
+- Make `workbench/sdk` own the public customer API, and `workbench/build` own the fixed toolchain inside build isolation. These package additions were Human-approved on 2026-09-15.
+- Keep worker job dispatch separate from adapter-managed build isolation; do not run customer builds in the ordinary worker process. The build package is an internal tool, not a new application service.
 - Preserve sandbox boundaries for untrusted external UI without inventing another package outside the accepted tree.
 - Keep PostgreSQL, queue, object storage, MCP client, HTTP connector, vector, embedding, and secret implementations in `packages/adapters`.
 - Do not place framework, database, queue, or provider SDK imports in `packages/core`.
+- Keep metering and configurable resource limits in `core/usage`, independent of billing. Adapters own atomic counters and expiring capacity leases; deployment owns whole-server safety ceilings. See the target structure's usage ownership section; do not introduce pricing or automatic overage charging.
 
 ## Scaffolding and porting
 
@@ -56,6 +72,8 @@ Read [references/target-structure.md](references/target-structure.md) completely
 
 ## Naming
 
+- Background application: `apps/jobs/`; its tests: `tests/jobs/`. Worker remains a process role, not the target application directory name.
+
 - UI term: `작업` for an item in the `작업 목록` region.
 - Domain aggregate: `WorkbenchDefinition`.
 - Immutable published snapshot: `WorkbenchRelease`.
@@ -68,7 +86,7 @@ Verify the smallest affected boundary first, then widen:
 
 1. Schema examples and Python/TypeScript validator parity.
 2. Owning package unit tests and dependency-direction checks.
-3. HTTP/MCP/worker integration tests for the affected use case.
+3. HTTP/MCP/jobs integration tests for the affected use case.
 4. Browser tests for 작업 목록, 사이드바, 패널, state restoration, permissions, and responsive behavior.
 5. Build, migration, security, and deployment gates proportional to the change.
 

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="agent-factory:specification-id" content="design-platform">
+<meta name="agent-factory:specification-version" content="1">
+<meta name="agent-factory:semantic-revision" content="5">
+<meta name="agent-factory:sync-base-revision" content="5">
+<meta name="agent-factory:projection" content="human">
+<meta name="agent-factory:language" content="ko">
+<meta name="agent-factory:counterpart" content=".codex/skills/design-platform/references/product-overview.md">
+<meta name="agent-factory:modified-at" content="2026-09-15T02:11:18+09:00">
+<title>Agent Factory 제품 전체 그림</title>
+<style>body{max-width:960px;margin:40px auto;padding:0 24px;font:16px/1.8 system-ui;color:#202124}h2{margin-top:2em}a{color:#1456b8}</style>
+</head>
+<body><main><h1>Agent Factory 제품 전체 그림</h1>
+<p>2026-09-14 사용자 설명 기록 · 2026-09-15 갱신 · design-platform v1 / 리비전 5</p>
+<p><a href="index.html">플랫폼 설계 명세</a> · <a href="../../../.codex/skills/design-platform/references/product-overview.md">AI용 영문 명세</a></p>
+<section data-clause-id="design-platform.overview.purpose"><h2>클라우드 에이전트 관제탑</h2><p>Agent Factory는 AI 에이전트를 위한 클라우드 관제탑이다. 사람이 AI의 작업을 파악하고, 필요할 때 직접 지시하며, 적절할 때는 자율적으로 일하도록 맡길 수 있어야 한다. 제품은 사람의 상황 판단과 개입을 지원하며, 항상 수동 지시하거나 무조건 자율 실행하도록 강제하지 않는다.</p></section>
+<section data-clause-id="design-platform.overview.layout"><h2>작업 인터페이스</h2><p>UI/UX는 작업을 이해하고 개입 여부를 판단하는 핵심 수단이다. VS Code를 구조적 참고 대상으로 삼아 작업 목록·선택적 사이드바·패널(사용자 설명의 작업 패널)로 구성한다. 사이드바는 작업별 선택 사항이며 없을 때 빈 공간을 남기지 않는다. 패널 내부 탭도 선택 사항이고 사이드바 유무와 독립적이다. 이 결정만으로 기존 기술 식별자를 바꾸지 않는다.</p></section>
+<section data-clause-id="design-platform.overview.work"><h2>스탠다드·커스텀 작업</h2><p>같은 관제 인터페이스에서 기본 제공 스탠다드 작업과 사용자가 구성하는 커스텀 작업을 제공한다. VS Code 기본 탐색기와 마켓플레이스 확장은 구분을 설명하는 참고이며, 실제 마켓플레이스·배포 정책·확장 판매 생태계는 아직 명세되지 않았다. 플랫폼이 커스텀 작업의 컴파일과 렌더링을 담당한다. 사용자 작성 코드·공통 UI 에셋·공개 SDK를 지원한다. TypeScript·React를 구조 계획의 기준으로 두고 정확한 버전·번들러·의존성 정책·샌드박스 기술은 상세 설계에서 정한다. JSON은 등록 정보·프로토콜 계약이며 화면 작성의 유일한 형식이 아니다. 임의 사용자 서버 함수 지원은 포함하지 않는다.</p></section>
+<section><h2>코드 기반 작업의 구조 결정</h2><p>2026-09-15 사용자가 workbench-sdk와 workbench-build 분리를 승인했다. runtime은 호스트 로딩·렌더링·메시지 검사, editor는 작성·미리보기, worker는 빌드 요청 전달, adapters는 격리 환경 관리, build 패키지는 그 경계 안의 도구 실행을 소유한다. 소스·산출물은 런타임 데이터이며 고객 이름별 저장소 디렉터리를 만들지 않는다. 게시와 워크스페이스 활성화를 구분한다. 경로별 책임은 <a href="../rule-workbench-structure/index.html">전체 구조</a>를 따른다. 파일별 상세 기록과 보안 기술은 아직 완료 전이며 구조 승인이 구현 승인을 뜻하지 않는다.</p></section>
+<section data-clause-id="design-platform.overview.standard"><h2>스탠다드 작업 목록</h2><p>스탠다드 작업은 조직·작업공간·일정·에이전트·문서·연동·로그·테스트·DB·계정의 10개다. 개별 상세 동작은 후속 명세에서 정한다. 앞서 사용자가 요구한 SaaS 관리자 전용 관리 작업은 이 10개 및 조직 관리자 권한과 별개다. DB·테스트라는 작업 이름만으로 무제한 DB 접근이나 특정 실행 엔진을 확정하지 않는다.</p></section>
+<section data-clause-id="design-platform.overview.plans"><h2>플랜과 조직 접근</h2><p>플랜은 개인·팀·엔터프라이즈다. 개인 플랜은 1인 사용이며 조직 작업과 워크스페이스 초대 기능이 없다. 워크스페이스 1개까지 무료이고 추가 워크스페이스는 개수에 따른 구독제다. 개수 구간과 가격은 미확정이며 개인 플랜의 추가 구독이 협업 허용을 뜻하지 않는다. 팀 플랜부터 조직을 제공하고 조직 소유자는 사용자 초대·사용자별 접근 범위 지정·조직 관리자 권한 부여를 할 수 있다. 접근 범위의 세분화 수준과 관리자의 위임 권한은 미확정이다. 엔터프라이즈와 팀의 핵심 차이는 보안이며 구체적 기능과 차등 범위는 조사 후 결정한다. 개인·팀 플랜에 기본 보안이 없다는 뜻은 아니다. 복수 조직 소속·플랜 전환·인원 제한·팀 및 엔터프라이즈 가격은 아직 정하지 않았다.</p></section>
+<section data-clause-id="design-platform.overview.mcp"><h2>워크스페이스 MCP</h2><p>각 워크스페이스는 관제 시스템의 일부로 MCP 기능을 제공한다. 구체적인 도구·리소스 목록, 엔드포인트 형식, 전송 방식, 인증 수단, 권한 매핑은 후속 설계 대상이다. 워크스페이스별 MCP 제공이 워크스페이스마다 별도 프로세스나 배포를 둔다는 뜻은 아니다.</p></section>
+<section><h2>추가 확정: 조직 권한과 외부 데이터</h2><p>팀은 팀 플랜의 조직을 뜻하며 별도 하위 팀 계층이 아니다. 조직 소유자는 개별 권한을 묶어 권한 집합을 구성하고 사용자에게 부여한다. 적용 범위 종류·상속·합산·거부 우선순위·위임은 미확정이다. 외부 DB 연결은 요구사항이며 SQL 작성 방식·지원 DB·읽기/쓰기·사설망 경로·플랫폼의 테이블 생성은 미정이다. docs/processed의 외부 DB 및 SaaS 비교 문서는 조사 자료이지 확정 구현 요구가 아니다.</p></section>
+<section data-clause-id="design-platform.overview.collaboration"><h2>사람 간 채팅과 편집 범위</h2><p>채팅은 사람끼리 한다. 에이전트는 권한 있는 이력을 MCP로 읽을 수 있지만 채팅 발송·상시 구독·새 메시지에 따른 자동 기동은 포함하지 않는다. 사람의 실시간 전달과 에이전트의 필요 시 조회는 별개다. 대화방 범위·참여 규칙·수정/삭제·읽음·첨부·보존은 미정이며 11번째 스탠다드 작업을 추가하는 요구가 아니다. 저장 충돌 안내는 계획 제안이고 실시간 커서 공동 편집이나 특정 협업 엔진은 승인하지 않았다.</p></section>
+<section data-clause-id="design-platform.overview.usage"><h2>과금보다 먼저 조절 가능한 사용량·한도</h2><p>BM 구현 전에 운영 사용량과 자원 한도를 조절할 수 있어야 한다. core/usage는 billing과 독립이며 시스템 기본값과 조직/워크스페이스별 설정에 가격 계산·자동 초과 과금을 도입하지 않는다. 계측·원자적 사용권 집행·회수·서버 전체 안전 상한은 전체 구조에서 소유자를 구분한다. 수치 기본값·설정 우선순위·기능별 초과 동작은 상세 설계 대상이다.</p></section>
+<section data-clause-id="design-platform.overview.status"><h2>기록의 상태와 다음 단계</h2><p>출처는 2026-09-14 이 대화에서 사용자가 직접 설명한 제품 방향과 기록 요청이다. 이 제품 결정은 디렉터리 구조 계약과 파일별 구현 명세의 기준이며 구현 완료나 설명하지 않은 세부 사항의 승인을 뜻하지 않는다. 조사는 미확정 결정을 돕되 조사 결과를 자동 확정하지 않는다. 구조 계약과 파일별 명세를 작성하고 사용자 검수를 거친 후 단계별 장기 솔로 작업을 구성한다. 이 개요를 기록하는 것만으로 구현·테스트·배포·무인 실행을 시작하지 않는다.</p></section>
+</main></body></html>

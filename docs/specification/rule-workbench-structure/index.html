@@ -1,111 +1,877 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Accepted Repository Structure</title>
-<style>body{font:16px/1.6 system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 24px;color:#202124}pre{overflow:auto;padding:20px;background:#f3f4f6}table{border-collapse:collapse;width:100%}td{border:1px solid #ccc;padding:8px;vertical-align:top}code{font-family:ui-monospace,monospace}a{color:#1456b8}</style>
+<title>합의한 저장소 구조</title>
+<style>
+:root{color-scheme:dark;--bg:#15171b;--surface:#1d2026;--border:#373c46;--text:#e0e4eb;--muted:#b0b8c5;--link:#8ebeff;--hover:#272e3b;--selected:#283e5c}
+*{box-sizing:border-box}
+body{font:16px/1.75 system-ui,sans-serif;max-width:1200px;margin:40px auto;padding:0 24px;background:var(--bg);color:var(--text)}
+h1,h2,h3{color:#f1f4f9;line-height:1.4}h2{margin-top:2em}h3{font-size:1.1em;margin:1.5em 0 .5em;color:#c8d8ef}
+main>ul,main>ol,main>section>ul{padding-left:1.5em}
+main>ul>li,main>ol>li,main>section>ul>li{margin:.4em 0}
+p,li{overflow-wrap:anywhere}
+a{color:var(--link);text-underline-offset:3px}
+a:hover{color:#bdd8ff}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--link);outline-offset:3px}
+table{border-collapse:collapse;width:100%;background:var(--surface)}
+th,td{border:1px solid var(--border);padding:10px;vertical-align:top;text-align:left;overflow-wrap:anywhere}
+th{background:#252a33;color:#f1f4f9}
+code{font-family:ui-monospace,monospace;overflow-wrap:anywhere}
+::selection{background:#375579;color:#fff}
+.status-accepted{color:#8edbb5;font-weight:700}
+.status-pending{color:#f0cd87;font-weight:700}
+.boundary{color:#f1b2b7;font-weight:700}
+.important{color:#b8d5ff;font-weight:700}
+.document-note{color:var(--muted);font-style:italic}
+#directory-tree{margin:20px 0;overflow:visible;max-height:none;color:var(--text)}
+#directory-tree .jstree-anchor{font-family:ui-monospace,monospace;color:var(--text);white-space:normal;height:auto;min-height:28px;line-height:1.75;max-width:calc(100% - 28px);vertical-align:top;overflow-wrap:anywhere;padding:2px 6px;border-radius:4px}
+#directory-tree .jstree-node{white-space:normal;min-height:28px}
+#directory-tree .jstree-hovered{background:var(--hover);box-shadow:none}
+#directory-tree .jstree-clicked{background:var(--selected);box-shadow:none;color:#fff}
+#directory-tree .jstree-anchor:focus-visible{outline:2px solid var(--link);outline-offset:1px}
+#directory-tree .jstree-ocl{filter:invert(.85)}
+#directory-tree ul{padding-left:22px}
+#directory-tree .jstree-container-ul,#directory-tree .jstree-children{padding-left:0}
+#directory-tree .jstree-children:not(.jstree-container-ul){position:relative}
+#directory-tree .jstree-children:not(.jstree-container-ul)::before{content:"";position:absolute;left:12px;top:0;bottom:0;border-left:1px solid #424956;pointer-events:none}
+#directory-tree .jstree-node:hover>.jstree-children::before{border-color:#748197}
+#directory-tree .tree-fallback{list-style:none;font-family:ui-monospace,monospace}
+#directory-tree .tree-fallback li{margin:4px 0}
+#directory-tree .tree-fallback ul{position:relative;list-style:none}
+#directory-tree .tree-fallback ul:not(:empty)::before{content:"";position:absolute;left:10px;top:0;bottom:0;border-left:1px solid #424956;pointer-events:none}
+@media(max-width:640px){body{margin:24px auto;padding:0 14px;font-size:14px}th,td{padding:7px}}
+.document-toc{margin:1.5em 0;padding:16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.document-toc summary{font-weight:700;cursor:pointer}
+.document-toc ul{list-style:none;padding-left:1.2em;margin:.4em 0}
+.document-toc>details>ul{padding-left:0}
+.document-toc li{margin:.25em 0}
+.doc-section{margin:1.2em 0;border-top:1px solid var(--border);scroll-margin-top:20px}
+.doc-section>summary{padding:12px 0;cursor:pointer}
+.doc-section>summary:hover{color:var(--link)}
+.doc-section>summary h2,.doc-section>summary h3{display:inline;margin:0}
+.doc-section>summary h2{font-size:1.4em}
+.doc-subsection{margin:.7em 0;border-top:0}
+.doc-subsection>summary{padding:6px 0}
+.section-body{padding-left:16px}
+.section-body>ul{padding-left:1.5em}
+.section-body>ul>li{margin:.4em 0}
+.tree-section{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:0 16px}
+.tree-section>summary{padding:16px 0}
+.tree-section>summary h2{font-size:1.4em}
+.tree-section>.section-body{padding:0 0 16px;min-width:0}
+.tree-section[open]>summary{border-bottom:1px solid var(--border)}
+.tree-section .directory-explorer{padding:4px 0;overflow:visible}
+.tree-section>.section-body>ul{border-top:1px solid var(--border);padding-top:16px;margin-bottom:0}
+</style>
 </head>
-<body>
-<main>
-<h1>Accepted Repository Structure</h1>
-<p>This is the Human-approved target and ownership contract, not a claim that the working tree has finished migrating. Its AI counterpart is <a href="../../../.codex/skills/rule-workbench-structure/SKILL.md">the structure skill</a>.</p>
-<h2>Fixed root boundary</h2>
-<p>The managed root directories are <code>apps/</code>, <code>packages/</code>, <code>contracts/</code>, <code>tests/</code>, <code>scripts/</code>, <code>deploy/</code>, <code>migrations/</code>, and <code>docs/</code>. No further root directory addition, removal, or rename is planned or implicitly authorized. Do not invent another root for a feature, framework convention, or packaging convenience. If a future requirement cannot fit this structure, explain the reason and affected paths and obtain an explicit Human decision before changing it. An explicit instruction already given in the session is sufficient authority; do not ask again for the same accepted change.</p>
-<p>Preserve existing repository metadata and tool directories such as <code>.git/</code>, <code>.github/</code>, <code>.codex/</code>, <code>.vscode/</code>, <code>.venv/</code>, <code>node_modules/</code>, and caches. They are not application architecture. Preserve existing local configuration and ignored data, including <code>env/</code>, until an explicitly scoped migration covers them. Absence from the diagram does not authorize deletion.</p>
-<h2>Accepted tree</h2>
-<pre><code>mcp/
-├── apps/
-│   ├── api/
-│   │   ├── main.py
-│   │   ├── routes/
-│   │   └── services/
-│   ├── web/
-│   │   ├── main.tsx
-│   │   ├── pages/
-│   │   ├── components/
-│   │   └── api/
-│   ├── mcp/
-│   │   ├── main.py
-│   │   ├── tools/
-│   │   ├── resources/
-│   │   └── services/
-│   └── worker/
-│       ├── main.py
-│       ├── scheduler.py
-│       └── jobs/
-├── packages/
-│   ├── core/
-│   ├── adapters/
-│   ├── contracts-py/
-│   ├── contracts-ts/
-│   ├── design-system/
-│   ├── workbench-runtime/
-│   └── workbench-editor/
-├── contracts/
-│   ├── schemas/
-│   ├── examples/
-│   └── compatibility/
-├── tests/
-│   ├── api/
-│   ├── web/
-│   ├── mcp/
-│   ├── worker/
-│   ├── packages/
-│   ├── contracts/
-│   ├── integration/
-│   └── support/
-├── scripts/
-│   ├── contracts/
-│   └── quality/
-├── deploy/
-│   └── local/
-│       ├── config/
-│       ├── env.example
-│       ├── deploy.sh
-│       ├── rollback.sh
-│       └── OPERATIONS.md
-├── migrations/
-├── docs/
-│   ├── original/
-│   ├── processed/
-│   └── specification/
-├── feedback/                 # Human-owned, Git-ignored
-├── uploads/                  # Human-owned, Git-ignored
-├── .github/workflows/
-├── .codex/skills/
-└── README.md</code></pre>
-<p>Root manifests, lockfiles, language configuration, and <code>.gitignore</code> stay at the root. The diagram describes ownership, not every configuration file. Create directories only when actual files need them. Do not add redundant <code>src/&lt;application-or-package-name&gt;/</code> wrappers. A single router does not require a <code>&lt;domain&gt;/router.py</code> directory. Do not add or rename structural groups beyond the accepted tree without first explaining the reason and scope to the Human. Ordinary files and necessary domain groupings within an accepted owner do not constitute a new root design.</p>
-<h2>Application and package ownership</h2>
-<table>
-<tr><td>Owner</td><td>Responsibility</td></tr>
-<tr><td><code>apps/api</code></td><td>HTTP inputs, outputs, and API-specific service orchestration</td></tr>
-<tr><td><code>apps/web/pages</code></td><td>Page-level screens</td></tr>
-<tr><td><code>apps/web/components</code></td><td>Reusable application UI</td></tr>
-<tr><td><code>apps/web/api</code></td><td>Browser HTTP request functions, not a server entrypoint</td></tr>
-<tr><td><code>apps/mcp</code></td><td>MCP tools, resources, transport, and MCP-specific service orchestration</td></tr>
-<tr><td><code>apps/worker</code></td><td>Asynchronous jobs, scheduler, batches, and periodic work</td></tr>
-<tr><td><code>packages/core</code></td><td>Shared domain rules, application use cases, and ports</td></tr>
-<tr><td><code>packages/adapters</code></td><td>Database, storage, queue, secret, and external-service implementations</td></tr>
-<tr><td><code>packages/contracts-py</code>, <code>packages/contracts-ts</code></td><td>Generated language-specific contract code</td></tr>
-<tr><td><code>packages/design-system</code></td><td>Shared visual foundations, assets, components, and UI language</td></tr>
-<tr><td><code>packages/workbench-runtime</code></td><td>Shared Workbench interpretation and rendering</td></tr>
-<tr><td><code>packages/workbench-editor</code></td><td>Shared Workbench editing functionality</td></tr>
-</table>
-<p>App services coordinate transport-specific workflows. Shared authorization, validation, state transitions, and business decisions belong to package use cases; do not duplicate them in API and MCP services. Apps do not import other apps. Core must not import apps, adapters, frameworks, database libraries, queues, or provider SDKs. Adapters implement core ports. Preserve tenant isolation, immutable history, idempotency, runtime authority checks, and external UI sandbox boundaries when changing wiring.</p>
-<p>Choose Python namespaces and build mappings that preserve this physical layout without shadowing third-party modules such as the official <code>mcp</code> SDK. Do not introduce physical wrapper directories to solve import-name collisions.</p>
-<h2>Contracts and tests</h2>
-<p><code>contracts/</code> owns language-neutral sources. Version actual coexisting contracts, for example <code>contracts/schemas/&lt;subject&gt;/v1/</code>; do not create empty version scaffolding. Modify source schemas or generators, not generated outputs by hand.</p>
-<p>All test code and test-only helpers belong under root <code>tests/</code>. Classify by tested owner first: <code>api</code>, <code>web</code>, <code>mcp</code>, <code>worker</code>, or <code>packages</code>. Add domain groupings inside an owner only as needed. <code>tests/contracts</code> owns schema, code-generation, language parity, and compatibility checks. <code>tests/integration</code> owns checks spanning multiple apps; <code>tests/support</code> owns shared fixtures and helpers. Package unit tests belong in <code>tests/packages</code>. This supersedes the former domain-first tree and package-local test placement.</p>
-<h2>Scripts and deployment</h2>
-<p><code>scripts/</code> contains development, code-generation, and verification launchers. Keep assertions in <code>tests/</code>, business logic in <code>packages/</code>, and recurring business work in <code>apps/worker</code>. Do not create a folder for one trivial script.</p>
-<p>Deploy to the Human's local server now. <code>deploy/local</code> owns server configuration and installation, startup, restart, update, and rollback procedures. Do not duplicate deployment procedures in <code>scripts/operations</code>. Include configuration only for the deployment mechanism actually selected. Docker and Makefile execution were retired; this structure does not reintroduce them. <code>.github/workflows</code> connects CI/CD steps. <code>migrations</code> owns append-only database schema history; never rewrite it as part of directory reorganization.</p>
-<p>AWS is a future target. Add <code>deploy/aws</code> when that migration is undertaken; no new root is needed. Do not create empty <code>aws</code> or <code>shared</code> directories now. Extract shared deployment configuration only when both targets consume it and the Human accepts the change. Deployment target (<code>local</code>, later <code>aws</code>) and operating environment (<code>dev</code>, <code>stg</code>, <code>prod</code>) are independent: a local server can run production. Keep secrets out of Git; <code>env.example</code> contains no secrets.</p>
-<h2>Human-owned directories</h2>
-<p>Root <code>feedback/</code> and <code>uploads/</code> belong to the Human, not to application code, deployment output, temporary build storage, or this restructuring task. Preserve their existing <code>.gitignore</code> entries: <code>/feedback/</code> and <code>/uploads/</code>. Do not move, rename, delete, clean, repurpose, automatically manage, or force-add their contents to Git. They remain where the Human uses them. Access or changes require a separate explicit Human instruction concerning those directories; general cleanup, deployment, or restructuring authorization does not include them.</p>
-<p>Preserve Original, Processed, and Specification ownership under <code>docs/</code>. Historical diagrams do not authorize restoring the old architecture.</p>
-<h2>Migration acceptance</h2>
-<p>Update imports, build/package mappings, resource paths, test discovery, commands, CI, and maintained references together with a move. Preserve dirty work and data. Verify affected behavior and packaging, and report pre-existing failures separately. Recording this specification does not mean source or tests have been relocated.</p>
-</main>
-</body>
+<body><main>
+<h1>합의한 저장소 구조</h1>
+<ul>
+<li>사용자와 합의한 목표 구조와 책임 기준이다.</li>
+<li><em class="document-note">실제 코드 이전이 완료되었다는 뜻은 아니다.</em></li>
+<li>AI용 문서는 <a href="../../../.codex/skills/rule-workbench-structure/SKILL.md">구조 스킬</a>에 있다.</li>
+<li>파일 단위 계획과 자료 조사는 <a href="../design-platform/product-overview.html">제품 전체 그림</a>을 기준으로 <a href="contract.html">디렉터리 구조 계약</a>에 따라 진행한다.</li>
+<li>명세 완료에는 정확한 전체 목표 트리·디렉터리 책임표·파일별 구현 명세·기존 파일 대응표가 필요하다.</li>
+<li>아래 트리는 이 상세 명세를 대신하지 않는다.</li>
+</ul>
+<nav class="document-toc" aria-label="문서 목차">
+<details open>
+<summary>목차</summary>
+<ul>
+<li><a href="#section-1">1. 고정된 루트 경계</a>
+<ul>
+<li><a href="#section-1-1">1.1 관리 대상과 변경 승인</a></li>
+<li><a href="#section-1-2">1.2 도구·로컬 설정 보존</a></li>
+</ul></li>
+<li><a href="#section-2">2. 통합 반영 내용과 확정 상태</a>
+<ul>
+<li><a href="#section-2-1">2.1 반영 범위와 문서 상태</a></li>
+<li><a href="#section-2-2">2.2 확정된 제품 기능</a></li>
+<li><a href="#section-2-3">2.3 플랜·조직·사용량</a></li>
+<li><a href="#section-2-4">2.4 미확정 사항</a></li>
+<li><a href="#section-2-5">2.5 관련 자료와 우선순위</a></li>
+</ul></li>
+<li><a href="#section-3">3. 도메인 연결과 미확정 경계</a>
+<ul>
+<li><a href="#section-3-1">3.1 화면과 도메인 연결</a></li>
+<li><a href="#section-3-2">3.2 기존 업무 도메인 배치</a></li>
+<li><a href="#section-3-3">3.3 연결·데이터 경계</a></li>
+<li><a href="#section-3-4">3.4 조직과 권한</a></li>
+<li><a href="#section-3-5">3.5 커스텀 작업의 소유·사용 설정</a></li>
+<li><a href="#section-3-6">3.6 사용자 코드 작성 방식</a></li>
+<li><a href="#section-3-7">3.7 SDK·런타임·빌드 역할</a></li>
+<li><a href="#section-3-8">3.8 산출물·게시·활성화</a></li>
+<li><a href="#section-3-9">3.9 공통 UI 구성</a></li>
+<li><a href="#section-3-10">3.10 후속 설계와 미완료 범위</a></li>
+</ul></li>
+<li><a href="#section-4">4. 채팅·편집 범위와 파일 계획</a>
+<ul>
+<li><a href="#section-4-1">4.1 사람 채팅과 MCP 조회</a></li>
+<li><a href="#section-4-2">4.2 채팅 UI와 미정 기능</a></li>
+<li><a href="#section-4-3">4.3 동시 편집 범위</a></li>
+<li><a href="#section-4-4">4.4 파일 계획과 대응표</a></li>
+</ul></li>
+<li><a href="#section-5">5. 확장된 전체 목표 트리</a></li>
+<li><a href="#section-6">6. 앱과 패키지의 책임</a>
+<ul>
+<li><a href="#section-6-1">6.1 서비스 조립과 의존성</a></li>
+<li><a href="#section-6-2">6.2 Python 패키징</a></li>
+</ul></li>
+<li><a href="#section-7">7. 사용량·자원 한도의 책임</a>
+<ul>
+<li><a href="#section-7-1">7.1 사용량과 과금 분리</a></li>
+<li><a href="#section-7-2">7.2 한도 변경 권한</a></li>
+<li><a href="#section-7-3">7.3 계측과 저장소</a></li>
+<li><a href="#section-7-4">7.4 사용권 수명과 서버 상한</a></li>
+<li><a href="#section-7-5">7.5 후속 명세</a></li>
+</ul></li>
+<li><a href="#section-8">8. 사용자 코드의 의존성과 실행 경계</a>
+<ul>
+<li><a href="#section-8-1">8.1 SDK와 호스트 검증</a></li>
+<li><a href="#section-8-2">8.2 미리보기와 화면 격리</a></li>
+<li><a href="#section-8-3">8.3 빌드 실행 경계</a></li>
+<li><a href="#section-8-4">8.4 후속 검수</a></li>
+</ul></li>
+<li><a href="#section-9">9. 계약과 테스트</a>
+<ul>
+<li><a href="#section-9-1">9.1 계약 원본과 생성물</a></li>
+<li><a href="#section-9-2">9.2 테스트 배치</a></li>
+</ul></li>
+<li><a href="#section-10">10. 스크립트와 배포</a>
+<ul>
+<li><a href="#section-10-1">10.1 개발 스크립트</a></li>
+<li><a href="#section-10-2">10.2 현재 로컬 배포</a></li>
+<li><a href="#section-10-3">10.3 향후 AWS 전환</a></li>
+</ul></li>
+<li><a href="#section-11">11. 사용자 소유 디렉터리</a></li>
+<li><a href="#section-12">12. 이전 완료 기준</a></li>
+</ul>
+</details>
+</nav>
+<details class="doc-section" id="section-1" open>
+<summary><h2>1. 고정된 루트 경계</h2></summary>
+<div class="section-body">
+<details class="doc-section doc-subsection" id="section-1-1" open>
+<summary><h3>1.1 관리 대상과 변경 승인</h3></summary>
+<div class="section-body">
+<ul>
+<li>관리 대상 루트 디렉터리는 <code>apps/</code>, <code>packages/</code>, <code>tests/</code>, <code>scripts/</code>, <code>deploy/</code>, <code>migrations/</code>, <code>docs/</code>다.</li>
+<li>추가적인 루트 생성·삭제·이름 변경은 계획되어 있지 않으며 암묵적으로 허용하지 않는다.</li>
+<li>기능·프레임워크 관례·패키징 편의 때문에 새 루트를 만들지 않는다.</li>
+<li>향후 요구사항을 이 구조에 담을 수 없다면 사유와 영향 경로를 설명하고 사용자 결정 후 변경한다.</li>
+<li>이미 명시적으로 승인한 변경은 같은 승인을 반복해서 묻지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-1-2" open>
+<summary><h3>1.2 도구·로컬 설정 보존</h3></summary>
+<div class="section-body">
+<ul>
+<li><code>.git/</code>, <code>.github/</code>, <code>.codex/</code>, <code>.vscode/</code>, <code>.venv/</code>, <code>node_modules/</code> 및 캐시는 기존 메타데이터·도구 디렉터리로 보존한다.</li>
+<li>애플리케이션 구조와 구분하며, <code>env/</code>를 포함한 기존 로컬 설정과 무시된 데이터도 명시적인 이전 범위가 정해질 때까지 보존한다.</li>
+<li>그림에 없다는 이유로 삭제하지 않는다.</li>
+<li><code>env/local/dev/</code>·<code>stg/</code>·<code>prod/</code>: 실제 환경변수·비밀 설정. Git 관리 대상이 아니다.</li>
+<li><code>deploy/</code>는 배포 절차·비밀 없는 예시를, <code>env/</code>는 실제 값을 소유한다.</li>
+<li><code>env/aws/</code>는 AWS 전환 시 추가한다. 현재 구조 표기는 기존 설정의 이동을 뜻하지 않는다.</li>
+<li><code>.codex/</code>: Codex 프로젝트 설정과 스킬·영문 AI 명세.</li>
+<li><code>.github/</code>: CI/CD와 이슈·PR 템플릿.</li>
+<li><code>.vscode/</code>: 에디터·디버깅·개발 명령·권장 확장 설정.</li>
+<li>도구 설정 중 공유 가능한 항목만 Git으로 관리한다. 개인 설정·토큰·비밀 값은 제외한다.</li>
+<li>템플릿·에디터 파일은 목표 배치다. 필요한 파일만 만들며 기존 파일을 덮어쓰지 않는다.</li>
+</ul>
+</div>
+</details>
+</div>
+</details>
+
+<details class="doc-section" id="section-2" open>
+<summary id="consolidated"><h2>2. 통합 반영 내용과 확정 상태</h2></summary>
+<div class="section-body">
+<details class="doc-section doc-subsection" id="section-2-1" open>
+<summary><h3>2.1 반영 범위와 문서 상태</h3></summary>
+<div class="section-body">
+<ul>
+<li>2026-09-15 사용자 승인에 따라 코드 기반 커스텀 작업 구조와 workbench/sdk·workbench/build 패키지를 반영했다.</li>
+<li>사용자 승인으로 루트 contracts를 packages/contracts에 통합하고 workbench 하위 패키지를 묶는다. 앱 경계는 유지한다.</li>
+<li><strong class="status-pending">[후보]</strong>는 조사에서 제안한 기능·방식으로 미확정이다.</li>
+<li>나머지 추가 경로도 확정 요구의 담당 위치를 제안한 것이며 정확한 파일명은 파일별 명세 검수가 필요하다.</li>
+<li>트리만 보고 빈 디렉터리를 만들지 않는다.</li>
+
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-2-2" open>
+<summary><h3>2.2 확정된 제품 기능</h3></summary>
+<div class="section-body">
+<ul>
+<li><strong class="status-accepted">확정</strong>: 클라우드 에이전트 관제 시스템.</li>
+<li><strong class="status-accepted">확정</strong>: 스탠다드 작업과 사용자 코드 기반 커스텀 작업.</li>
+<li><strong class="status-accepted">확정</strong>: 공통 에셋·공개 SDK 제공.</li>
+<li><strong class="status-accepted">확정</strong>: 사이드바와 패널 탭은 선택 사항.</li>
+<li><strong class="status-accepted">확정</strong>: 커스텀 작업 컴파일·렌더링 지원.</li>
+<li><strong class="status-accepted">확정</strong>: 워크스페이스 MCP와 외부 DB 연결.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-2-3" open>
+<summary><h3>2.3 플랜·조직·사용량</h3></summary>
+<div class="section-body">
+<ul>
+<li><strong class="status-accepted">확정</strong>: 개인은 1인·워크스페이스 1개 무료·추가 개수별 구독이며 조직 작업·초대가 없다.</li>
+<li><strong class="important">팀은 조직을 뜻한다.</strong></li>
+<li>조직 소유자가 초대·접근 범위·관리자 권한·권한 집합을 관리한다.</li>
+<li>엔터프라이즈는 보안 차등이며 구체 기능과 가격은 미정이다.</li>
+<li><strong class="status-accepted">확정</strong>: 과금과 독립된 사용량 계측·자원 한도 조절. 시스템 기본값과 조직·워크스페이스별 한도를 관리하며 가격 계산·자동 초과 과금을 도입하지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-2-4" open>
+<summary><h3>2.4 미확정 사항</h3></summary>
+<div class="section-body">
+<ul>
+<li><strong class="status-pending">미확정</strong>: 등록형 데이터 작업.</li>
+<li><strong class="status-pending">미확정</strong>: PostgreSQL 우선·읽기 우선 도입과 사설망 연결 방식.</li>
+<li><strong class="status-pending">미확정</strong>: 구독 소유 모델과 권한 합산 규칙.</li>
+<li><strong class="status-pending">미확정</strong>: SSO·SCIM·감사 내보내기 등 보안 기능.</li>
+<li><strong class="boundary">조사 결과를 자동 채택하지 않는다.</strong></li>
+
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-2-5" open>
+<summary><h3>2.5 관련 자료와 우선순위</h3></summary>
+<div class="section-body">
+<ul>
+<li><a href="../design-platform/product-overview.html">제품 개요</a> · <a href="../../processed/external-db-custom-work-research.html">외부 DB 조사</a> · <a href="../../processed/saas-plans-organization-permissions-research.html">SaaS 플랜·권한 조사</a> · <a href="../../processed/custom-work-code-runtime-research.html">사용자 코드·실행 구조 조사</a></li>
+<li>이전 조사 문서의 배치안은 당시 제안이다.</li>
+<li><strong class="important">현재 승인된 구조가 우선한다.</strong></li>
+</ul>
+</div>
+</details>
+</div>
+</details>
+
+<details class="doc-section" id="section-3" open>
+<summary><h2>3. 도메인 연결과 미확정 경계</h2></summary>
+<div class="section-body">
+<details class="doc-section doc-subsection" id="section-3-1" open>
+<summary><h3>3.1 화면과 도메인 연결</h3></summary>
+<div class="section-body">
+<ul>
+<li>스탠다드 작업과 업무 도메인은 일대일이 아니다.</li>
+<li>조직 화면: organizations·identity.</li>
+<li>계정 화면: identity·후보 billing.</li>
+<li>DB 화면: connections·후보 data_access.</li>
+<li>로그 화면: audit·reporting.</li>
+<li>제품의 테스트 작업은 실행 도메인 상세가 미정이다.</li>
+<li>루트 tests/는 개발 검증 코드이며 제품 데이터 저장소가 아니다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-3-2" open>
+<summary><h3>3.2 기존 업무 도메인 배치</h3></summary>
+<div class="section-body">
+<ul>
+<li>agents·planning·scheduling·reporting을 core 바로 아래로 옮겨 executions 중첩을 줄이는 안을 반영했다.</li>
+<li>문서 업무는 knowledge가 소유한다.</li>
+<li>실제 이동 전에 기존 클래스·import·이력을 대응시켜야 하며 트리에 없는 기존 기능을 폐기하는 뜻은 아니다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-3-3" open>
+<summary><h3>3.3 연결·데이터 경계</h3></summary>
+<div class="section-body">
+<ul>
+<li>연동과 DB 화면이 같은 연결을 보여줘도 연결 수명 관리는 한 도메인이 소유한다.</li>
+<li>외부 DB 접근과 플랫폼 운영 DB 권한을 분리하며 고객 테이블 자동 생성을 가정하지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-3-4" open>
+<summary><h3>3.4 조직과 권한</h3></summary>
+<div class="section-body">
+<ul>
+<li>권한 목록·조직별 권한 집합·사용자 범위 할당은 organizations, 공통 인가 적용은 identity가 담당하는 안이다.</li>
+<li>멤버십·소유권·구독 제공 기능·유효 권한을 구분한다.</li>
+<li>조직 하위 팀 도메인은 추가하지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-3-5" open>
+<summary><h3>3.5 커스텀 작업의 소유·사용 설정</h3></summary>
+<div class="section-body">
+<ul>
+<li>작업 정의·릴리스·사용 설정은 workbenches, 공통 렌더러는 workbench/runtime이 소유한다.</li>
+<li>개인·조직별 커스텀 정의는 데이터와 결과물로 관리하며 고객 이름별 소스 디렉터리를 만들지 않는다.</li>
+<li>정의 소유·워크스페이스 사용 설정·개인 표시 설정은 분리할 설계 축이며 공유·상속 규칙은 미확정이다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-3-6" open>
+<summary><h3>3.6 사용자 코드 작성 방식</h3></summary>
+<div class="section-body">
+<ul>
+<li>커스텀 작업은 사용자 코드·공통 UI 에셋·공개 SDK를 사용한다.</li>
+<li>TypeScript·React를 계획 기준으로 두며 정확한 버전·번들러·의존성 허용 목록·격리 기술은 후속 명세 대상이다.</li>
+<li>JSON은 등록·프로토콜 계약이며 화면 작성의 유일한 형식이 아니다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-3-7" open>
+<summary><h3>3.7 SDK·런타임·빌드 역할</h3></summary>
+<div class="section-body">
+<ul>
+<li>workbench/sdk는 사용자용 API, workbench/runtime은 호스트의 로딩·렌더링·메시지 검사, workbench/build는 격리 환경 안의 고정 빌드 도구를 소유한다.</li>
+<li>jobs는 요청을 전달하고 adapters가 격리 환경 생성·호출·취소·회수를 담당한다.</li>
+<li><strong class="boundary">일반 worker 프로세스 안에서 사용자 빌드를 직접 실행하지 않는다.</strong></li>
+<li>임의 사용자 서버 함수 지원은 포함하지 않는다.</li>
+<li>두 패키지 추가는 사용자 승인 사항이다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-3-8" open>
+<summary><h3>3.8 산출물·게시·활성화</h3></summary>
+<div class="section-body">
+<ul>
+<li>소스 스냅샷과 불변 산출물은 런타임 저장 데이터이며 고객별 저장소 폴더가 아니다.</li>
+<li>메타데이터·소유·게시·워크스페이스 활성화는 core/workbenches가 소유한다.</li>
+<li>빌드 완료·게시·활성화를 구분하고 사용할 릴리스를 고정한다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-3-9" open>
+<summary><h3>3.9 공통 UI 구성</h3></summary>
+<div class="section-body">
+<ul>
+<li><strong class="important">컴포넌트는 골격 + 데이터 + 테마로 구성</strong>하고 사이드바와 패널 탭은 독립적으로 선택한다.</li>
+<li>공통 UI는 design-system이 소유하며 웹 클라이언트와 런타임 바인딩에 DB 비밀을 전달하지 않는다.</li>
+<li><code>packages/design-system/assets/</code>는 공통 아이콘·로고·폰트·이미지 원본을 소유한다.</li>
+<li>웹과 커스텀 작업은 design-system의 공개 에셋 경로를 사용한다. 복사본을 따로 관리하지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-3-10" open>
+<summary><h3>3.10 후속 설계와 미완료 범위</h3></summary>
+<div class="section-body">
+<ul>
+<li>엔터프라이즈는 현재 플랜·보안 구분이지 조직 상위 엔터티가 아니다.</li>
+<li>SSO·SCIM·세션 통제·결제 어댑터·서비스 신원은 별도 결정과 파일 명세가 필요하다.</li>
+<li>대표 파일만 표기한 도메인 라우트·서비스는 후속 명세에서 개별 경로를 완성해야 한다.</li>
+<li>설정·자산·테스트·기존 파일 대응표까지 모두 완료한 상태는 아니다.</li>
+</ul>
+</div>
+</details>
+</div>
+</details>
+
+<details class="doc-section" id="section-4" open>
+<summary><h2>4. 채팅·편집 범위와 파일 계획</h2></summary>
+<div class="section-body">
+<details class="doc-section doc-subsection" id="section-4-1" open>
+<summary><h3>4.1 사람 채팅과 MCP 조회</h3></summary>
+<div class="section-body">
+<ul>
+<li>채팅은 사람끼리 하며 <strong class="important">에이전트는 권한 있는 대화를 MCP로 읽기만 한다</strong>.</li>
+<li>에이전트 발송 도구·상시 구독·자동 기동은 추가하지 않는다.</li>
+<li>사람의 실시간 전달과 MCP 조회는 별도 경로다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-4-2" open>
+<summary><h3>4.2 채팅 UI와 미정 기능</h3></summary>
+<div class="section-body">
+<ul>
+<li>채팅 UI는 우선 앱 전용 보조 UI로 배치하며 내비게이션 위치는 미정이다.</li>
+<li>11번째 스탠다드 작업을 확정하지 않는다.</li>
+<li>대화방 범위·참여·수정/삭제·보존·읽음·첨부는 후속 결정이다.</li>
+<li>저장과 전달 사이 누락을 막기 위한 영속 이벤트 전달은 제안이며 전송 기술은 미선정이다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-4-3" open>
+<summary><h3>4.3 동시 편집 범위</h3></summary>
+<div class="section-body">
+<ul>
+<li>초기 편집은 저장 버전 검사·충돌 안내를 제안한다.</li>
+<li>실시간 커서 공유·CRDT/OT 공동 편집은 승인되지 않았다.</li>
+<li>충돌 처리는 편집 대상 도메인에 두며 여러 사용자가 저장한다는 이유로 별도 공동 편집 서비스를 만들지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-4-4" open>
+<summary><h3>4.4 파일 계획과 대응표</h3></summary>
+<div class="section-body">
+<ul>
+<li><a href="../../processed/structure-file-plan.html">파일별 구현 계획 초안</a> · <a href="../../processed/structure-migration-ledger.html">기준 파일·이전 대응표</a>.</li>
+<li>두 문서는 관찰·목적지 후보·미정 설계를 구분한 가공 자료다.</li>
+<li><a href="../../processed/service-boundary-design.html">도메인·서비스·데이터·배포 경계 설계 초안</a>: 독립 서비스안을 비교하는 검수 자료. 현재 트리를 대체하지 않는다.</li>
+<li><strong class="status-pending">경로 재조정 필요</strong>: 두 초안은 contracts·workbench 통합 및 worker → jobs 이름 변경 전 자료다.</li>
+<li>기존 소스 경로 기록은 보존하고, 구현 전에 목적지를 현재 구조에 맞춘다.</li>
+<li><em class="document-note">구현 승인이나 전체 파일 명세 완료를 뜻하지 않는다.</em></li>
+<li>트리에서 생략된 기존 파일도 대응표에서 보존한다.</li>
+</ul>
+</div>
+</details>
+</div>
+</details>
+
+<details class="doc-section tree-section" id="section-5" open>
+<summary><h2>5. 확장된 전체 목표 트리</h2></summary>
+<div class="section-body">
+<section class="directory-explorer" aria-label="디렉터리 탐색기">
+<div id="directory-tree" aria-label="목표 디렉터리 트리"></div>
+<noscript><ul>
+<li>디렉터리 트리를 표시하려면 JavaScript를 활성화해 주세요.</li>
+</ul></noscript>
+</section>
+<script type="application/json" id="structure-source">"mcp/ # 목표 구조·상세 경로는 검수 전 설계안\n├── apps/ # 실행·배포 단위 애플리케이션\n│   ├── api/ # HTTP 진입점·API 서비스 흐름\n│   │   ├── main.py # HTTP 앱 구성·수명 관리\n│   │   ├── settings.py # API 전용 설정 검증\n│   │   ├── composition/ # API 의존성 조립·공유 업무 판단 제외\n│   │   │   ├── chat.py # 채팅 저장·권한·이벤트 서비스 조립\n│   │   │   └── usage.py # 사용량 저장소·사용권 검사 조립\n│   │   ├── routes/ # 기능별 요청·응답 계약\n│   │   │   ├── organizations.py # 조직·초대·멤버·권한 집합 API\n│   │   │   ├── workspaces.py # 개인·조직 작업공간 API\n│   │   │   ├── workbenches.py # 소스·빌드 요청·게시·활성화 API\n│   │   │   ├── identity.py # 로그인·계정·세션 API\n│   │   │   ├── connections.py # 연결 등록·상태·자격증명 변경 API\n│   │   │   ├── data_access.py # [후보] 외부 데이터 작업 API\n│   │   │   ├── usage.py # 권한 있는 사용량 조회·한도 설정 API\n│   │   │   ├── chat.py # 사람 채팅 명령·권한 있는 이력 조회\n│   │   │   ├── chat_events.py # 사람 클라이언트 이벤트 연결·복구·종료\n│   │   │   ├── billing.py # [후보] 향후 구독 API·실시간 한도 집행과 분리\n│   │   │   └── admin.py # SaaS 관리자 전용 API\n│   │   └── services/ # API 흐름 조립·공통 유스케이스 호출\n│   ├── web/ # 관제 화면·웹 렌더링\n│   │   ├── main.tsx # 웹 진입점\n│   │   ├── App.tsx # 작업 목록·선택적 사이드바·패널 조립\n│   │   ├── pages/ # 스탠다드 작업별 화면\n│   │   │   ├── organizations/ # 조직·멤버·권한 집합 관리\n│   │   │   │   └── OrganizationWorkbench.tsx # 조직 화면 진입·세부 동작 후속 명세\n│   │   │   ├── workspaces/ # 작업공간 선택·관리\n│   │   │   │   └── WorkspaceWorkbench.tsx # 작업공간 화면 진입·세부 동작 후속 명세\n│   │   │   ├── schedule/ # 일정 화면\n│   │   │   │   └── ScheduleWorkbench.tsx # 일정 화면 진입·세부 동작 후속 명세\n│   │   │   ├── agents/ # 에이전트 관제 화면\n│   │   │   │   └── AgentsWorkbench.tsx # 에이전트 화면 진입·세부 동작 후속 명세\n│   │   │   ├── documents/ # 문서 탐색·열람·편집\n│   │   │   │   └── DocumentsWorkbench.tsx # 문서 화면 진입·세부 동작 후속 명세\n│   │   │   ├── connections/ # 연동 등록·연결 상태\n│   │   │   │   └── ConnectionsWorkbench.tsx # 연동 화면 진입·세부 동작 후속 명세\n│   │   │   ├── logs/ # 허용된 작업·운영 이력 조회\n│   │   │   │   └── LogsWorkbench.tsx # 로그 화면 진입·세부 동작 후속 명세\n│   │   │   ├── tests/ # 제품의 테스트 작업 화면\n│   │   │   │   └── TestsWorkbench.tsx # 테스트 화면 진입·세부 동작 후속 명세\n│   │   │   ├── db/ # 외부 DB 연결·데이터 관리 화면\n│   │   │   │   └── DatabaseWorkbench.tsx # DB 화면 진입·세부 동작 후속 명세\n│   │   │   ├── account/ # 본인 계정·개인 구독 관리\n│   │   │   │   └── AccountWorkbench.tsx # 계정 화면 진입·세부 동작 후속 명세\n│   │   │   └── admin/ # SaaS 관리자 전용 관제·사용량 조회·한도 조정\n│   │   │       └── AdminWorkbench.tsx # SaaS 관리 화면 진입·세부 동작 후속 명세\n│   │   ├── components/ # 웹 앱에만 필요한 재사용 UI\n│   │   │   ├── WorkbenchHost.tsx # 작업 목록·선택적 사이드바·패널 배치\n│   │   │   └── chat/ # 앱 전용 채팅 UI·내비게이션 위치 미정\n│   │   │       ├── ChatPanel.tsx # 사람 대화 이력·발송 UI\n│   │   │       └── chat-state.ts # 중복 제거·조회 커서·발송 대기 상태\n│   │   └── api/ # 도메인별 HTTP 클라이언트·비밀 값 금지\n│   │       ├── chat.ts # 이력·발송·재접속 클라이언트\n│   │       └── usage.ts # 사용량 조회·권한 있는 설정 클라이언트\n│   ├── mcp/ # 독립 워크스페이스 MCP·공통 요청 한도 적용\n│   │   ├── main.py # MCP 서버 구성·수명 관리\n│   │   ├── settings.py # 독립 MCP 설정\n│   │   ├── composition.py # API import 없는 MCP 의존성 조립\n│   │   ├── auth.py # 토큰 신원·범위와 공통 인가 연결\n│   │   ├── tools/ # 허용된 기능별 MCP 도구\n│   │   │   ├── workbenches.py # 작업 정의 관련 도구·범위 별도 명세\n│   │   │   ├── chat.py # 권한 있는 채팅 이력·변경 읽기 전용 조회\n│   │   │   └── data_access.py # [후보] 등록 데이터 작업 호출\n│   │   ├── resources/ # 허용된 워크스페이스 리소스 제공\n│   │   └── services/ # MCP 흐름 조립·공통 유스케이스 호출\n│   └── jobs/ # 비동기·배치·스케줄러·공통 실행 동시성 한도 적용\n│       ├── main.py # 작업 실행 프로세스 진입점\n│       ├── settings.py # worker 설정·큐 한도\n│       ├── composition.py # worker 핸들러·어댑터 조립\n│       ├── celery_app.py # 명시적 Celery 앱·허용 핸들러 등록\n│       ├── scheduler.py # 주기 실행 등록·호출\n│       └── jobs/ # 작업 유형별 실행·현재 권한 재확인\n│           ├── data_access.py # [후보] 장기 데이터 작업·내보내기\n│           ├── chat_events.py # 후보: 저장된 채팅 이벤트 전달·에이전트 기동 아님\n│           ├── usage_reconcile.py # 사용권 만료·정합성 회수 요청\n│           └── workbench_build.py # 격리 빌드 요청 전달·상태·결과 처리\n├── packages/ # 공통 구현·도메인별 책임 분리\n│   ├── core/ # 공통 업무 규칙·유스케이스·외부 구현 인터페이스\n│   │   ├── identity/ # 계정·인증 주체·공통 인가\n│   │   ├── organizations/ # 조직·초대·소속·권한 집합·할당\n│   │   │   ├── permissions.py # 행위 권한 목록·허용 범위 정의\n│   │   │   ├── permission_sets.py # 권한 집합 구성·변경·검증\n│   │   │   └── grants.py # 사용자·권한 집합·대상 범위 할당\n│   │   ├── workspaces/ # 개인·조직 소유 작업공간의 규칙\n│   │   ├── workbenches/ # 소스·빌드·게시·활성화 업무 규칙\n│   │   │   ├── definitions.py # 소스 스냅샷·초안·소유 규칙\n│   │   │   ├── builds.py # 빌드 요청·상태 전이\n│   │   │   ├── releases.py # 불변 게시 버전·호환성\n│   │   │   ├── activations.py # 워크스페이스별 릴리스 선택·롤백\n│   │   │   ├── policies.py # 작성·게시·활성화·실행 권한\n│   │   │   ├── ports.py # 저장소·산출물·격리 빌드 인터페이스\n│   │   │   └── use_cases.py # 공유 업무 흐름\n│   │   ├── agents/ # 에이전트 관련 업무 규칙\n│   │   ├── planning/ # 계획·일정 편집 규칙\n│   │   ├── scheduling/ # 주기·실행 상태·중복·재시도 규칙\n│   │   ├── reporting/ # 실행 보고·결과 수집 규칙\n│   │   ├── knowledge/ # 문서·검색·패키지·이력 규칙\n│   │   ├── connections/ # 연결 소유·상태·자격증명 수명 규칙\n│   │   ├── chat/ # 사람 채팅·에이전트 읽기 접근 도메인\n│   │   │   ├── channels.py # 대화방 식별·참여 모델\n│   │   │   ├── messages.py # 메시지 식별·버전·정렬\n│   │   │   ├── policies.py # 사람 발송·범위별 열람 권한\n│   │   │   ├── ports.py # 이력 저장 트랜잭션·이벤트 전달 인터페이스\n│   │   │   └── use_cases.py # 발송·열람·변경 조회 흐름\n│   │   ├── data_access/ # [후보] 외부 데이터 작업의 공통 정책\n│   │   │   ├── domain.py # [후보] 데이터 작업·버전·실행 상태\n│   │   │   ├── ports.py # [후보] 실행·스키마 조회·저장 인터페이스\n│   │   │   ├── policies.py # [후보] 입력·범위·실행 한도\n│   │   │   └── use_cases.py # [후보] 등록·게시·실행·취소\n│   │   ├── usage/ # 과금과 독립된 사용량 계측·자원 한도\n│   │   │   ├── metrics.py # 계측 항목·단위·측정 의미\n│   │   │   ├── limits.py # 시스템 기본값·조직·워크스페이스별 한도 설정\n│   │   │   ├── policies.py # 유효 한도 결정·초과 처리 판단\n│   │   │   ├── ports.py # 계측·저장·원자적 사용권 확보 인터페이스\n│   │   │   └── use_cases.py # 조회·설정·사용권 확보·갱신·반환\n│   │   ├── billing/ # [후보] 향후 구독·플랜 제공 기능·계측과 분리\n│   │   ├── appearance/ # 테마 설정·검증 규칙\n│   │   ├── audit/ # 조직·권한·실행 변경 이력\n│   │   ├── administration/ # SaaS 운영자 유스케이스\n│   │   └── shared/ # 실제 여러 도메인이 공유하는 최소 기반\n│   ├── adapters/ # DB·비밀 정보·큐·외부 서비스 구현\n│   │   ├── postgres/ # 플랫폼 저장·테넌트 격리·한도 설정·사용량 이력\n│   │   │   ├── chat.py # 채팅 저장·커서 조회·트랜잭션 이벤트 기록\n│   │   │   └── usage.py # 한도 설정 이력·영속 계측 저장\n│   │   ├── identity/ # 암호 처리·인증 제공자 연동\n│   │   ├── external_db/ # [후보] 고객 DB 드라이버·운영 DB와 분리\n│   │   │   ├── postgres.py # [후보] 외부 PostgreSQL 실행·스키마 조회\n│   │   │   ├── pools.py # [후보] 연결별 풀·상한·회수\n│   │   │   └── network.py # [후보] 목적지·TLS·접속 경로 검증\n│   │   ├── redis/ # 큐·공유 상태·원자적 사용량 카운터·만료 가능한 사용권\n│   │   │   ├── chat_events.py # 실시간 이벤트 전달·채팅 이력 원본 아님\n│   │   │   └── usage.py # 원자적 카운터·사용권·갱신·반환\n│   │   ├── object_storage/ # 문서·사용자 소스 스냅샷·불변 산출물 저장\n│   │   ├── workbench_build.py # 격리 빌드 환경 생성·호출·취소·회수\n│   │   ├── mcp_client/ # 외부 MCP 연결 구현\n│   │   ├── http_connectors/ # 외부 API·제공자 호출 구현\n│   │   ├── embeddings/ # 임베딩 제공자 구현\n│   │   └── pgvector/ # 문서 벡터 검색 구현\n│   ├── contracts/ # 데이터 계약 도메인·원본과 언어별 생성 코드 소유\n│   │   ├── schemas/ # 실제 공존 버전의 스키마\n│   │   │   ├── workbench/ # 등록 정보·SDK 메시지·릴리스·화면 계약\n│   │   │   │   ├── v1/ # 기존 선언형 계약 보존·이전 대응 후 전환\n│   │   │   │   └── v2/ # 제안: 코드 기반 계약 버전·미구현\n│   │   │   │       ├── manifest.schema.json # 코드 진입점·요구 기능·호환성\n│   │   │   │       ├── bridge.schema.json # SDK 요청·응답·이벤트·취소\n│   │   │   │       └── release.schema.json # 소스·빌드·산출물 릴리스 메타데이터\n│   │   │   ├── catalog/ # 컴포넌트·자산 목록 계약\n│   │   │   ├── appearance/ # 테마 계약\n│   │   │   ├── usage/ # 사용량·한도·초과 오류 계약\n│   │   │   │   └── v1/ # 제안: 첫 사용량 계약\n│   │   │   │       ├── limit.schema.json # 범위·계측 단위·한도 설정\n│   │   │   │       └── result.schema.json # 사용량·허용·한도 초과 결과\n│   │   │   ├── chat/ # 사람 채팅·읽기 전용 MCP 데이터 계약\n│   │   │   │   └── v1/ # 제안: 첫 채팅 계약\n│   │   │   │       ├── message.schema.json # 메시지 레코드·제한된 발송 입력\n│   │   │   │       └── page.schema.json # 이력·변경·불투명 다음 조회 커서\n│   │   │   └── data-access/ # [후보] 데이터 작업 입력·출력 계약\n│   │   ├── py/ # Python 계약 코드·생성물 원본 추적\n│   │   ├── ts/ # TypeScript 계약 코드·생성물 원본 추적\n│   │   ├── examples/ # 계약 예제·민감 데이터 금지\n│   │   └── compatibility/ # 버전 호환성 비교 자료\n│   ├── design-system/ # 공통 골격·데이터 계약·테마·UI 자산\n│   │   ├── components/ # 공통 작업 목록·사이드바·패널·기본 UI\n│   │   ├── theme.tsx # 테마 제공·전환\n│   │   ├── tokens.css # 공통 시각 토큰\n│   │   └── assets/ # 공통 UI 에셋·아이콘·로고·폰트·이미지 원본\n│   └── workbench/ # 작업 화면 도구 묶음·하위 패키지 의존성 독립\n│       ├── sdk/ # 사용자 코드용 공개 API·호스트 내부 구현 제외\n│       │   ├── index.ts # 공개 export\n│       │   ├── client.ts # 호스트 통신 클라이언트\n│       │   ├── data.ts # 허용된 데이터 동작 요청\n│       │   ├── actions.ts # 실행·탐색 요청\n│       │   ├── context.ts # 화면 컨텍스트·변경 구독\n│       │   └── theme.ts # 호스트 테마 연결\n│       ├── build/ # 격리 환경 안에서 실행하는 고정 빌드 도구\n│       │   ├── main.ts # 내부 빌드 도구 진입점\n│       │   ├── validate.ts # 소스·등록 정보·의존성 정책 검사\n│       │   ├── typecheck.ts # 타입 검사·진단\n│       │   ├── bundle.ts # 고정 도구체인으로 번들 생성\n│       │   └── artifact.ts # 파일 목록·해시·빌드 메타데이터\n│       ├── runtime/ # 플랫폼 측 로딩·렌더링·수명 관리\n│       │   ├── renderer.tsx # 신뢰된 표준 화면·격리된 커스텀 화면 선택\n│       │   ├── SandboxHost.tsx # 격리 화면 생성·종료·복구·구체 기술 미정\n│       │   ├── bridge.ts # SDK 메시지 검사·허용 기능 중계\n│       │   ├── bindings.ts # 호스트 측 데이터 연결·취소\n│       │   ├── actions.ts # 호스트 측 동작 전달·서버 인가 대체 금지\n│       │   ├── registry.ts # 작업·에셋·호환 버전 조회\n│       │   └── view-state.ts # 사이드바·패널 상태 연결·복원\n│       └── editor/ # 사용자 코드 작성 환경\n│           ├── WorkbenchEditor.tsx # 편집·미리보기·게시 화면\n│           ├── preview.tsx # 동일한 격리 런타임의 초안 미리보기\n│           └── diagnostics.ts # 파일·행·열·단계별 오류 표시\n├── tests/ # 모든 테스트·앱 또는 패키지 우선 분류\n│   ├── api/ # API 테스트\n│   ├── web/ # 웹·브라우저 테스트\n│   ├── mcp/ # MCP 테스트\n│   ├── jobs/ # 작업 실행·스케줄러 테스트\n│   ├── packages/ # 패키지 테스트·사용량 한도·동시성·사용권 회수 포함\n│   ├── contracts/ # 계약 생성·언어 간 일치·호환성 테스트\n│   ├── integration/ # 여러 앱에 걸친 통합 테스트\n│   └── support/ # 공통 테스트 데이터·보조 코드\n├── scripts/ # 개발·생성·검증 실행 도구\n│   ├── contracts/ # 계약 코드 생성 도구\n│   └── quality/ # 코드 품질 검사 실행 도구·설정\n├── deploy/ # 배포 대상별 절차·설정\n│   └── local/ # 현재 로컬 서버 배포\n│       ├── dev/ # 개발 환경 설정·개발용 자원 참조\n│       ├── stg/ # 사전 검증 환경 설정·검증용 자원 참조\n│       ├── prod/ # 운영 환경 설정·운영용 자원 참조\n│       ├── config/ # 로컬 서비스·빌드 격리·산출물 제공·서버 자원 상한\n│       ├── env.example # 비밀 값 없는 설정 예시\n│       ├── deploy.sh # 설치·갱신 절차\n│       ├── rollback.sh # 이전 배포 복구 절차\n│       └── OPERATIONS.md # 시작·재시작·운영·복구 안내\n├── migrations/ # 플랫폼 DB의 추가 방식 변경 이력\n├── docs/ # 원본·조사·명세 문서\n│   ├── original/ # 보존할 원본 자료\n│   ├── processed/ # 출처 기반 조사·미승인 제안\n│   │   └── artifacts/ # 문서·검수용 비민감 증빙·런타임 출력 제외\n│   │       └── screenshots/ # Codex 화면 캡처·검수 이미지\n│   └── specification/ # 사용자 언어 HTML 명세\n│       ├── info-*/ # 정보 명세·용어와 확인된 시스템 정보\n│       ├── rule-*/ # 규칙 명세·필수 정책과 개발 규칙\n│       └── design-*/ # 설계 명세·승인된 제품 및 기술 설계\n├── env/ # 로컬 전용 실제 환경변수·비밀 설정·Git 제외\n│   └── local/ # 현재 로컬 서버 환경별 설정\n│       ├── dev/ # 개발 환경 실제 값\n│       ├── stg/ # 사전 검증 환경 실제 값\n│       └── prod/ # 운영 환경 실제 값\n├── .codex/ # Codex 프로젝트 설정·영문 AI 명세\n│   ├── config.toml # 공유 가능한 Codex 설정·비밀 제외\n│   └── skills/ # 프로젝트 스킬·명세\n│       ├── info-*/ # 정보 명세\n│       ├── rule-*/ # 규칙 명세\n│       └── design-*/ # 설계 명세\n├── .github/ # GitHub 협업·자동화 설정\n│   ├── workflows/ # CI/CD 워크플로\n│   ├── ISSUE_TEMPLATE/ # 이슈 작성 템플릿\n│   └── pull_request_template.md # PR 작성 템플릿\n├── .vscode/ # 공유 가능한 VS Code 개발 설정\n│   ├── settings.json # 프로젝트 에디터 설정\n│   ├── launch.json # 실행·디버깅 설정\n│   ├── tasks.json # 개발 명령 연결\n│   └── extensions.json # 권장 확장 목록\n├── feedback/ # 사용자 소유·Git 제외·자동 관리 금지\n├── uploads/ # 사용자 소유·Git 제외·자동 관리 금지\n└── README.md # 저장소 안내"</script>
+<ul>
+<li>루트 패키지 설정·잠금 파일·언어 설정·<code>.gitignore</code>는 루트에 둔다.</li>
+<li>이 그림은 소유권을 설명하며 모든 설정 파일을 나열한 최종 파일 명세가 아니다.</li>
+<li>실제 파일이 필요할 때만 디렉터리를 만든다.</li>
+<li>불필요한 <code>src/&lt;앱 또는 패키지 이름&gt;/</code> 중첩을 추가하지 않는다.</li>
+<li>라우터 하나를 위해 <code>&lt;도메인&gt;/router.py</code> 구조를 만들지 않는다.</li>
+<li>합의 범위를 벗어난 구조 그룹 추가·이름 변경은 사유와 범위를 먼저 설명한다.</li>
+<li>기존 소유자 아래 필요한 일반 파일이나 도메인 묶음은 새 루트 설계와 구분한다.</li>
+</ul>
+</div>
+</details>
+
+<details class="doc-section" id="section-6" open>
+<summary><h2>6. 앱과 패키지의 책임</h2></summary>
+<div class="section-body">
+<table><thead><tr><th>소유 경로</th><th>책임</th></tr></thead><tbody>
+<tr><td><code>apps/api</code></td><td>HTTP 입출력과 API 전용 서비스 흐름 조립</td></tr>
+<tr><td><code>apps/web/pages</code></td><td>페이지 단위 화면</td></tr>
+<tr><td><code>apps/web/components</code></td><td>웹 앱 내부에서 재사용하는 UI</td></tr>
+<tr><td><code>apps/web/api</code></td><td>브라우저 HTTP 요청 함수. 서버 진입점이 아님</td></tr>
+<tr><td><code>apps/mcp</code></td><td>MCP 도구·리소스·전송과 MCP 전용 서비스 흐름 조립</td></tr>
+<tr><td><code>apps/jobs</code></td><td>비동기 작업·스케줄러·배치·주기 실행</td></tr>
+<tr><td><code>packages/core</code></td><td>공유 도메인 규칙·유스케이스·외부 구현을 위한 인터페이스</td></tr>
+<tr><td><code>packages/core/usage</code></td><td>계측 항목·조절 가능한 한도·사용권 허용 판단. 과금에 의존하지 않음</td></tr>
+<tr><td><code>packages/core/chat</code></td><td>사람 메시지·권한 있는 이력/변경 조회. 에이전트 발송 제외</td></tr>
+<tr><td><code>packages/adapters</code></td><td>DB·스토리지·큐·비밀·외부 서비스·원자적 카운터와 사용권 구현</td></tr>
+<tr><td><code>packages/contracts/schemas</code></td><td>기능별 데이터 계약 원본</td></tr>
+<tr><td><code>packages/contracts/py</code>, <code>packages/contracts/ts</code></td><td>언어별 계약 생성 코드</td></tr>
+<tr><td><code>packages/design-system</code></td><td>공통 시각 기반·자산·컴포넌트·UI 용어</td></tr>
+<tr><td><code>packages/workbench/sdk</code></td><td>사용자용 타입 API·호스트 통신. 호스트 내부 구현·비밀 제외</td></tr>
+<tr><td><code>packages/workbench/build</code></td><td>격리 환경 안의 고정 검증·타입 검사·번들·산출물 도구</td></tr>
+<tr><td><code>packages/workbench/runtime</code></td><td>호스트 로딩·표준/격리 렌더링·중계·화면 수명 관리</td></tr>
+<tr><td><code>packages/workbench/editor</code></td><td>코드 편집·진단·격리 미리보기·게시 UI</td></tr>
+</tbody></table>
+<details class="doc-section doc-subsection" id="section-6-1" open>
+<summary><h3>6.1 서비스 조립과 의존성</h3></summary>
+<div class="section-body">
+<ul>
+<li>앱 서비스는 전송 방식에 맞는 흐름을 조립한다.</li>
+<li>공통 권한 판단·검증·상태 전이·업무 판단은 패키지 유스케이스에 두고 API와 MCP에 중복 구현하지 않는다.</li>
+<li><strong class="boundary">앱끼리 직접 import하지 않는다.</strong></li>
+<li>core는 앱·adapters·프레임워크·DB 라이브러리·큐·외부 제공자 SDK를 import하지 않는다.</li>
+<li>adapters는 core의 인터페이스를 구현한다.</li>
+<li>연결 구성을 바꿔도 테넌트 격리·불변 이력·멱등성·실행 시점 권한 확인·외부 UI 샌드박스 경계를 유지한다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-6-2" open>
+<summary><h3>6.2 Python 패키징</h3></summary>
+<div class="section-body">
+<ul>
+<li>Python 이름 공간과 빌드 매핑은 이 물리 구조를 유지하면서 공식 <code>mcp</code> SDK 같은 외부 모듈을 가리지 않도록 선택한다.</li>
+<li>import 이름 충돌을 해결하려고 물리적 중첩 디렉터리를 다시 만들지 않는다.</li>
+</ul>
+</div>
+</details>
+</div>
+</details>
+
+<details class="doc-section" id="section-7" open>
+<summary><h2>7. 사용량·자원 한도의 책임</h2></summary>
+<div class="section-body">
+<details class="doc-section doc-subsection" id="section-7-1" open>
+<summary><h3>7.1 사용량과 과금 분리</h3></summary>
+<div class="section-body">
+<ul>
+<li>2026-09-15 승인: BM 구현에 앞서 운영 사용량을 계측하고 한도를 조절한다.</li>
+<li>core/usage가 계측 항목·시스템 기본값·조직/워크스페이스별 설정·사용 허용 판단을 소유한다.</li>
+<li><strong class="important">billing 없이 동작하며 billing을 import하지 않는다.</strong></li>
+<li>향후 billing이 usage 계약으로 플랜별 한도 설정을 제공할 수 있지만 이번 구조에 가격·청구·자동 초과 과금을 도입하지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-7-2" open>
+<summary><h3>7.2 한도 변경 권한</h3></summary>
+<div class="section-body">
+<ul>
+<li>API는 권한 있는 조회·설정, SaaS 관리자 화면은 조정을 담당한다.</li>
+<li>조직/워크스페이스별 한도가 있다는 이유로 해당 구성원에게 변경 권한이 생기지는 않는다.</li>
+<li>변경 이력은 기존 audit 도메인에 남긴다.</li>
+<li>MCP와 jobs도 같은 정책을 적용한다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-7-3" open>
+<summary><h3>7.3 계측과 저장소</h3></summary>
+<div class="section-body">
+<ul>
+<li>계측 후보는 동시 연결·메시지 빈도/크기·저장 바이트·MCP 조회 빈도·빌드/작업 동시 실행 수다.</li>
+<li>현재 점유량·시간 구간별 횟수·누적 사용량을 구분하고 재시도·재전달을 중복 계측하지 않는다.</li>
+<li>PostgreSQL은 설정·사용량 이력, Redis는 공유 원자적 카운터·만료 가능한 사용권을 구현한다.</li>
+<li>도메인은 Redis API가 아닌 필요한 동작을 정의한다.</li>
+<li>여러 프로세스에서 단순 조회 후 증가만으로 한도를 집행하지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-7-4" open>
+<summary><h3>7.4 사용권 수명과 서버 상한</h3></summary>
+<div class="section-body">
+<ul>
+<li>사용권 확보·갱신·반환·만료/정합성 회수는 연결 해제와 비정상 종료를 포함한다.</li>
+<li>사용권만 만료되고 작업은 계속 실행되어 한도를 넘는 문제도 설계해야 한다.</li>
+<li>한도가 권한 검사나 실행 격리를 대신하지 않는다.</li>
+<li>deploy/local은 서버 전체 연결·메모리·프로세스의 안전 상한을 소유하며 테넌트 설정이 이를 우회하지 못한다.</li>
+<li>새 루트·서비스·배포 기술은 추가하지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-7-5" open>
+<summary><h3>7.5 후속 명세</h3></summary>
+<div class="section-body">
+<ul>
+<li>수치 기본값·집계 시간 구간·설정 우선순위·실행 중 한도 축소·거절/대기/재시도·계측 저장소 장애 정책은 파일별 후속 명세 대상이다.</li>
+<li>기존 Redis 배치 재사용이 서비스 변경 허가는 아니다.</li>
+<li><em class="document-note">전체 파일/테스트 대응표는 아직 완료 전이다.</em></li>
+</ul>
+</div>
+</details>
+</div>
+</details>
+
+<details class="doc-section" id="section-8" open>
+<summary><h2>8. 사용자 코드의 의존성과 실행 경계</h2></summary>
+<div class="section-body">
+<details class="doc-section doc-subsection" id="section-8-1" open>
+<summary><h3>8.1 SDK와 호스트 검증</h3></summary>
+<div class="section-body">
+<ul>
+<li>사용자 코드는 공개 SDK와 design-system을 사용하며 앱·호스트 runtime 내부·core·adapters·빌드 도구를 import하지 않는다.</li>
+<li>SDK는 생성된 계약을 사용하고 권한을 부여하지 않는다.</li>
+<li>runtime은 호스트 측 프로토콜을 구현한다.</li>
+<li>SDK를 우회한 요청도 메시지와 서버 동작 검사를 거친다.</li>
+<li><strong class="boundary">클라이언트 컨텍스트는 권한 증거가 아니다.</strong></li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-8-2" open>
+<summary><h3>8.2 미리보기와 화면 격리</h3></summary>
+<div class="section-body">
+<ul>
+<li>editor는 runtime으로 미리보기를 구성한다.</li>
+<li>스탠다드·커스텀은 UI·데이터 계약을 공유하지만 신뢰 수준은 다르다.</li>
+<li>호스트가 작업 목록·외곽 배치를 소유하고 선택적 사이드바·패널은 제한된 상태를 교환한다.</li>
+<li>호스트 DOM 접근을 공유하지 않으며 패널 탭은 선택 사항이다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-8-3" open>
+<summary><h3>8.3 빌드 실행 경계</h3></summary>
+<div class="section-body">
+<ul>
+<li>workbench/build는 내부 실행 도구 패키지이지 별도 배포 서비스가 아니다.</li>
+<li>작업 진입점은 apps/jobs이고 adapter가 격리 경계 너머에서 빌드 도구를 호출한다.</li>
+<li>환경별 설정은 deploy/local에 둔다.</li>
+<li>브라우저 패키지는 빌드 도구에 의존하지 않는다.</li>
+<li>임의 사용자 스크립트·플러그인으로 고정 빌드 정책을 대체하지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-8-4" open>
+<summary><h3>8.4 후속 검수</h3></summary>
+<div class="section-body">
+<ul>
+<li>정확한 SDK export·메시지 스키마·산출물 접근 통제·의존성 정책·샌드박스 기술·파일별 입출력/오류/테스트 연결은 후속 검수 대상이다.</li>
+<li>이 트리로 구현 계약 완료나 현재 테스트 실행을 승인하지 않는다.</li>
+</ul>
+</div>
+</details>
+</div>
+</details>
+
+<details class="doc-section" id="section-9" open>
+<summary><h2>9. 계약과 테스트</h2></summary>
+<div class="section-body">
+<details class="doc-section doc-subsection" id="section-9-1" open>
+<summary><h3>9.1 계약 원본과 생성물</h3></summary>
+<div class="section-body">
+<ul>
+<li><code>packages/contracts/</code>는 데이터 계약 도메인이다.</li>
+<li><code>schemas/</code>: 기능별 계약 원본. 채팅·작업·사용량 등으로 구분한다.</li>
+<li><code>py/</code>·<code>ts/</code>: 원본에서 생성하는 언어별 코드.</li>
+<li>루트 <code>contracts/</code>는 목표 구조에서 제외한다. 기존 파일은 후속 이전 때 대응시켜 보존한다.</li>
+<li><code>packages/workbench/</code>는 sdk·build·runtime·editor를 묶으며 하위 패키지의 의존성 경계는 유지한다.</li>
+<li>실제 공존하는 계약에만 <code>packages/contracts/schemas/&lt;대상&gt;/v1/</code>처럼 버전을 두고 빈 버전 구조는 만들지 않는다.</li>
+<li>생성물을 직접 수정하지 말고 원본 스키마나 생성기를 수정한다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-9-2" open>
+<summary><h3>9.2 테스트 배치</h3></summary>
+<div class="section-body">
+<ul>
+<li>모든 테스트와 테스트 전용 보조 코드는 루트 <code>tests/</code>에 둔다.</li>
+<li>검증 대상인 api·web·mcp·jobs·packages를 우선 기준으로 분류하고 필요한 경우에만 그 안에서 도메인을 나눈다.</li>
+<li><code>tests/contracts</code>: 스키마·코드 생성·언어 간 일치·호환성 검증.</li>
+<li><code>tests/integration</code>: 여러 앱에 걸친 동작 검증.</li>
+<li><code>tests/support</code>: 공통 테스트 데이터와 보조 코드.</li>
+<li>패키지 단위 테스트는 <code>tests/packages</code>에 둔다.</li>
+<li>이는 이전의 도메인 우선 구조와 패키지 내부 테스트 배치를 대체한다.</li>
+</ul>
+</div>
+</details>
+</div>
+</details>
+
+<details class="doc-section" id="section-10" open>
+<summary><h2>10. 스크립트와 배포</h2></summary>
+<div class="section-body">
+<details class="doc-section doc-subsection" id="section-10-1" open>
+<summary><h3>10.1 개발 스크립트</h3></summary>
+<div class="section-body">
+<ul>
+<li><code>scripts/</code>는 개발·코드 생성·검증 실행 도구를 담는다.</li>
+<li>검증 조건은 tests, 비즈니스 로직은 packages, 반복 업무 실행은 apps/jobs에 둔다.</li>
+<li>단순 스크립트 하나 때문에 폴더를 만들지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-10-2" open>
+<summary><h3>10.2 현재 로컬 배포</h3></summary>
+<div class="section-body">
+<ul>
+<li><strong class="important">현재 배포 대상은 사용자의 로컬 서버다.</strong></li>
+<li><code>deploy/local</code>은 서버 설정 및 설치·시작·재시작·업데이트·복구 절차를 소유한다.</li>
+<li><strong class="status-accepted">추가 승인</strong>: <code>dev/</code>·<code>stg/</code>·<code>prod/</code>를 환경별 설정 위치로 확보한다.</li>
+<li>공통 절차는 local에 두고 환경별 차이만 각 하위 디렉터리에 둔다.</li>
+<li>환경 구조 확보는 세 환경의 실제 배포·기동을 뜻하지 않는다. 비밀 값은 저장하지 않는다.</li>
+<li>이를 <code>scripts/operations</code>에 중복 배치하지 않는다.</li>
+<li>실제 선택한 배포 방식의 설정만 포함한다.</li>
+<li>폐기한 Docker·Makefile 실행 방식을 이 구조로 다시 도입하지 않는다.</li>
+<li><code>.github/workflows</code>는 CI/CD 단계를 연결한다.</li>
+<li><code>migrations</code>는 추가 방식으로 DB 스키마 이력을 관리하며 디렉터리 개편 중 기존 이력을 재작성하지 않는다.</li>
+</ul>
+</div>
+</details>
+<details class="doc-section doc-subsection" id="section-10-3" open>
+<summary><h3>10.3 향후 AWS 전환</h3></summary>
+<div class="section-body">
+<ul>
+<li>AWS는 향후 배포 대상이다.</li>
+<li>실제 전환 시 <code>deploy/aws</code>를 추가하며 새 루트는 필요 없다.</li>
+<li>지금 빈 aws·shared 디렉터리를 만들지 않는다.</li>
+<li>두 대상이 실제로 공유하고 사용자가 수용할 때만 공통 배포 설정을 추출한다.</li>
+<li>배포 대상(local·향후 aws)과 운영 환경(dev·stg·prod)은 별개이므로 로컬 서버에서도 운영 환경을 실행할 수 있다.</li>
+<li><strong class="boundary">비밀 값은 Git에 넣지 않으며 env.example에도 포함하지 않는다.</strong></li>
+</ul>
+</div>
+</details>
+</div>
+</details>
+
+<details class="doc-section" id="section-11" open>
+<summary><h2>11. 사용자 소유 디렉터리</h2></summary>
+<div class="section-body">
+<ul>
+<li>루트 feedback/·uploads/는 사용자 소유이며 앱 코드·배포 출력·임시 빌드 저장소나 이번 개편 대상이 아니다.</li>
+<li>기존 <code>.gitignore</code>의 <code>/feedback/</code>·<code>/uploads/</code> 항목을 유지한다.</li>
+<li>이동·이름 변경·삭제·정리·용도 변경·자동 관리·Git 강제 추가를 하지 않는다.</li>
+<li>접근이나 변경에는 해당 디렉터리를 대상으로 한 별도 사용자 지시가 필요하며 일반 정리·배포·개편 허가에 포함되지 않는다.</li>
+<li>docs의 원본·가공 자료·명세 소유권을 보존한다.</li>
+<li><code>docs/processed/artifacts/screenshots/</code>: Codex가 생성한 문서·검수용 화면 캡처.</li>
+<li>캡처에는 비밀·개인정보·사용자 업로드를 포함하지 않는다. 보존할 증빙은 관련 가공 문서에서 출처·검수 대상을 기록한다.</li>
+<li>자동 테스트 출력·빌드 결과·런타임 로그는 이 문서 증빙 디렉터리에 넣지 않는다.</li>
+<li><code>docs/specification/info-*/</code>: 용어·확인된 시스템 정보.</li>
+<li><code>docs/specification/rule-*/</code>: 필수 정책·개발 규칙.</li>
+<li><code>docs/specification/design-*/</code>: 승인된 제품·기술 설계.</li>
+<li><code>*</code>는 이름 패턴이다. 실제 디렉터리는 <code>rule-workbench-structure/</code>처럼 만든다.</li>
+<li>각 명세의 한국어 HTML은 동일 이름의 <code>.codex/skills/</code> 영문 AI 명세와 동기화한다.</li>
+<li>과거 구조 그림은 이전 아키텍처를 복원할 권한이 아니다.</li>
+</ul>
+</div>
+</details>
+
+<details class="doc-section" id="section-12" open>
+<summary><h2>12. 이전 완료 기준</h2></summary>
+<div class="section-body">
+<ul>
+<li>파일 이동 시 import·빌드 및 패키지 매핑·리소스 경로·테스트 탐색·실행 명령·CI·유지 중인 참조 문서를 함께 갱신한다.</li>
+<li>기존 미커밋 변경과 데이터를 보존한다.</li>
+<li>영향받는 동작과 패키징을 검증하고 기존 실패는 별도로 보고한다.</li>
+<li>이 명세의 작성은 코드나 테스트의 이전 완료를 뜻하지 않는다.</li>
+<li><strong class="important">현재 명세 단계의 실행 제한과 테스트 보류</strong>는 <a href="contract.html">디렉터리 구조 계약</a>을 따른다.</li>
+</ul>
+</div>
+</details>
+<script>
+(async () => {
+  const container = document.getElementById("directory-tree");
+  const source = JSON.parse(document.getElementById("structure-source").textContent);
+  const storageKey = "agent-factory:directory-structure:expanded:v1:" + location.pathname;
+  const data = [{id:"root", parent:"#", text:source.split("\n")[0], state:{opened:false}}];
+  const parents = [];
+  for (const line of source.split("\n").slice(1)) {
+    const match = line.match(/^([│ ]*)(?:├── |└── )(.*)$/);
+    if (!match) continue;
+    const depth = match[1].length / 4;
+    const name = match[2].split(" # ")[0].replace(/\/$/, "");
+    const parent = depth === 0 ? "root" : parents[depth - 1];
+    const path = (parent === "root" ? "" : parent + "/") + name;
+    parents[depth] = path;
+    data.push({id:path, parent, text:match[2], state:{opened:false}});
+  }
+
+  const folderIds = new Set(data.map(node => node.parent).filter(id => id !== "#"));
+  const nodesById = new Map(data.map(node => [node.id, node]));
+  const expanded = new Set();
+  try {
+    const raw = localStorage.getItem(storageKey);
+    const saved = raw && raw.length <= 100000 ? JSON.parse(raw) : null;
+    if (saved?.version === 1 && Array.isArray(saved.expanded)) {
+      for (const id of saved.expanded) {
+        if (typeof id === "string" && folderIds.has(id)) expanded.add(id);
+      }
+    }
+  } catch (_) {
+    // Missing, malformed or inaccessible storage starts with every folder closed.
+  }
+  for (const node of data) node.state.opened = expanded.has(node.id);
+  function rememberExpansion(id, opened) {
+    if (!folderIds.has(id)) return;
+    if (opened) expanded.add(id);
+    else expanded.delete(id);
+    nodesById.get(id).state.opened = opened;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({version:1, expanded:[...expanded]}));
+    } catch (_) {
+      // Browsers may deny storage for local files; tree interaction still works.
+    }
+  }
+
+  // The fallback shares the same collapsed defaults and persisted folder state.
+  const lists = new Map();
+  const rootList = document.createElement("ul");
+  rootList.className = "tree-fallback";
+  lists.set("#", rootList);
+  for (const node of data) {
+    const item = document.createElement("li");
+    if (folderIds.has(node.id)) {
+      const details = document.createElement("details");
+      details.open = node.state.opened;
+      const label = document.createElement("summary");
+      label.textContent = node.text;
+      details.appendChild(label);
+      const children = document.createElement("ul");
+      details.appendChild(children);
+      details.addEventListener("toggle", () => {
+        if (details.isConnected) rememberExpansion(node.id, details.open);
+      });
+      item.appendChild(details);
+      lists.set(node.id, children);
+    } else {
+      const label = document.createElement("span");
+      label.textContent = node.text;
+      item.appendChild(label);
+    }
+    lists.get(node.parent).appendChild(item);
+  }
+  container.appendChild(rootList);
+
+  function loadAsset(url, integrity, css = false) {
+    return new Promise((resolve, reject) => {
+      const element = document.createElement(css ? "link" : "script");
+      element.integrity = integrity;
+      element.crossOrigin = "anonymous";
+      element.referrerPolicy = "no-referrer";
+      if (css) { element.rel = "stylesheet"; element.href = url; }
+      else { element.src = url; }
+      const timeout = setTimeout(() => { element.remove(); reject(new Error("timeout")); }, 15000);
+      element.onload = () => { clearTimeout(timeout); resolve(); };
+      element.onerror = () => { clearTimeout(timeout); element.remove(); reject(new Error("load")); };
+      document.head.appendChild(element);
+    });
+  }
+  try {
+    await loadAsset("https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js",
+      "sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs");
+    await Promise.all([
+      loadAsset("https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.17/jstree.min.js",
+        "sha384-foAvcRZ1cqpr2BrR53KQxGncZUQ2bYIq4y98ZBY0fNoWNXZW02MnL+fJ/lIyfyC+"),
+      loadAsset("https://cdnjs.cloudflare.com/ajax/libs/jstree/3.3.17/themes/default/style.min.css",
+        "sha384-clXSAz7utDyIerGEOzTe7HkSNZ7xrhxVuTY6yGNeF4LBW1zmtgF3AfFMP7iMZuRB", true)
+    ]);
+    window.jQuery(container).on("open_node.jstree close_node.jstree", (event, result) => {
+      rememberExpansion(result.node.id, event.type === "open_node");
+    }).jstree({
+      core:{data, force_text:true, multiple:false, check_callback:false,
+        themes:{icons:false, dots:false}}
+    });
+  } catch (_) {
+    // The already-rendered nested tree remains available without extra controls.
+  }
+})();
+</script>
+<script>
+(() => {
+  const sections = [...document.querySelectorAll("details.doc-section")];
+  const storageKey = "agent-factory:directory-structure:sections:v1:" + location.pathname;
+  let closed = new Set();
+  try {
+    const raw = localStorage.getItem(storageKey);
+    const saved = raw && raw.length < 10000 ? JSON.parse(raw) : null;
+    if (saved?.version === 1 && Array.isArray(saved.closed)) {
+      const known = new Set(sections.map(section => section.id));
+      closed = new Set(saved.closed.filter(id => known.has(id)));
+    }
+  } catch (_) {
+    // Without accessible storage the document remains expanded and readable.
+  }
+  for (const section of sections) section.open = !closed.has(section.id);
+  function save() {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({
+        version: 1, closed: sections.filter(section => !section.open).map(section => section.id)
+      }));
+    } catch (_) { /* Folding still works when storage is unavailable. */ }
+  }
+  for (const section of sections) section.addEventListener("toggle", save);
+  function revealHash(focus = false) {
+    let id;
+    try { id = decodeURIComponent(location.hash.slice(1)); } catch (_) { return; }
+    const target = document.getElementById(id);
+    if (!target) return;
+    let section = target.closest("details.doc-section");
+    if (!section) return;
+    const destination = section;
+    while (section) {
+      section.open = true;
+      section = section.parentElement.closest("details.doc-section");
+    }
+    save();
+    requestAnimationFrame(() => {
+      destination.scrollIntoView({block: "start"});
+      if (focus) destination.querySelector("summary").focus({preventScroll: true});
+    });
+  }
+  document.querySelector(".document-toc").addEventListener("click", event => {
+    const link = event.target.closest("a[href^='#']");
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    if (location.hash !== link.hash) location.hash = link.hash;
+    revealHash(true);
+  });
+  window.addEventListener("hashchange", () => revealHash());
+  revealHash();
+})();
+</script>
+</main></body>
 </html>
