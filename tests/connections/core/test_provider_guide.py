@@ -9,7 +9,7 @@ def test_target_guide_matches_maintained_specification_byte_for_byte() -> None:
     from agent_factory_core.connections.providers.guide import GUIDE
 
     source = Path(__file__).resolve().parents[3]
-    maintained = source / ".codex/skills/design-platform/references/cloud-integrations.md"
+    maintained = source / "../docs/skills/design-platform/assets/cloud-integrations.md"
     assert GUIDE.encode() == maintained.read_bytes()
 
 

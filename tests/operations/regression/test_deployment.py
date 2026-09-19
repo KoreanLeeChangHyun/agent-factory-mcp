@@ -59,6 +59,6 @@ def test_workspace_login_is_visible_before_javascript_boots() -> None:
 
 
 def test_operations_runbook_covers_recovery_and_alerting() -> None:
-    runbook = (ROOT / ".codex/skills/rule-platform/references/operations.md").read_text()
+    runbook = (ROOT / "../docs/skills/rule-platform/SKILL.md").read_text()
     for term in ("expand/contract", "RPO/RTO", "dead jobs", "queue age", "cost"):
         assert term in runbook

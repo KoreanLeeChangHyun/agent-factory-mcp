@@ -46,19 +46,18 @@ authoritative Document store.
 
 ## Documentation
 
-Repository knowledge follows three authority stages:
+Project documents are maintained in the parent checkout:
 
-- `docs/original/`: external source documents and unchanged evidence.
-- `docs/processed/`: analysis, audits, proposals, implementation traces, and verification records.
-- `docs/specification/`: Human-facing accepted decisions and maintained specifications.
+- `../docs/original/`: source metadata and links only.
+- `../docs/processed/`: research, analysis, interviews and historical records.
+- `../docs/skills/`: current Human-requested information, rules and designs.
 
-Each Specification has a synchronized pair: a Human-facing HTML package under
-`docs/specification/<category>-<name>/` and an AI-facing Project Skill under
-`.codex/skills/<category>-<name>/`. Categories are `info-*` for maintained
-information, `design-*` for integrated planning and technical design, and `rule-*`
-for mandatory behavior. Promotion keeps provenance links and never turns dated
-Processed evidence into a Specification implicitly. This is the repository's only
-`README.md`; nested guidance uses a purpose-specific filename or a Skill.
+Each Processed or Specification package has one `SKILL.md` and optional `assets/`.
+Specification categories are `info`, `rule` and `design`. HTML and English counterparts
+have been consolidated into their owning document; `.codex/skills/` in the parent
+checkout is generated from its `docs/skills/`. Existing source-language clauses,
+code and protocol guide bytes are preserved. Read
+[document rules](../docs/skills/rule-documents/SKILL.md) for source ownership.
 
 ## Development
 
@@ -122,3 +121,7 @@ pnpm start:scheduler --env prod
 ```
 
 The runner maps dev/stg/prod to the existing local/staging/production settings modes. It refuses a missing environment file and does not fall back to another environment. Shell environment variables override file values; the runner fixes the environment mode to the selected profile. These commands define process configuration and do not establish that the ongoing application migration is complete.
+
+Project document sources are maintained in the parent Agent Factory checkout’s `docs/`. Its `.codex/skills/` is generated from `docs/skills/`; run Document synchronization against the parent checkout after editing Skill documents. Existing HTML and Skill formats are retained.
+
+Component references: [current test ownership](../docs/skills/rule-project/SKILL.md), [historical test layout](../docs/processed/process-mcp-test-layout-history/SKILL.md), and [design-system catalog policy](../docs/skills/rule-ui/SKILL.md#catalog-policy).

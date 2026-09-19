@@ -55,5 +55,5 @@ def test_packaged_guide_is_synchronized_with_maintained_markdown():
     source = Path(__file__).resolve().parents[3]
     assert (
         GUIDE
-        == (source / ".codex/skills/design-platform/references/cloud-integrations.md").read_text()
+        == (source / "../docs/skills/design-platform/assets/cloud-integrations.md").read_text()
     )

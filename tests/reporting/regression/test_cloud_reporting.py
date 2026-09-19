@@ -329,7 +329,7 @@ def test_packaged_cloud_guide_matches_document():
 
     document = (
         Path(__file__).resolve().parents[3]
-        / ".codex/skills/design-platform/references/cloud-reporting.md"
+        / "../docs/skills/design-platform/assets/cloud-reporting.md"
     )
     assert CLOUD_REPORTING_GUIDE == document.read_text(encoding="utf-8")
 
