@@ -44,15 +44,27 @@ project-local `.agent-factory/workspace` tree. Client installation state may
 live under the user's `~/.agent-factory/` home directory, but it is never an
 authoritative Document store.
 
+## Related components
+
+- [Plugin](../plugin/README.md): local document workflows, contracts and
+  Work–Verification loops, interviews, and lessons learned.
+- [VS Code extension](../extension/README.md): the chat interface for the local workflow.
+- The plugin and extension work without this service. Their local execution
+  workflow and this service's cloud persistence have separate ownership.
+
 ## Documentation
 
 Project documents are maintained in the parent checkout:
 
 - `../docs/original/`: source metadata and links only.
-- `../docs/processed/`: research, analysis, interviews and historical records.
+- `../docs/refined/`: research, analysis, interviews and historical records.
 - `../docs/skills/`: current Human-requested information, rules and designs.
+- `../docs/progress/`: contracts, progress and execution evidence.
+- `../docs/lessons-learned/`: errors, judgment differences and application outcomes.
 
-Each Processed or Specification package has one `SKILL.md` and optional `assets/`.
+Refined documents retain the `processed` metadata type for compatibility.
+
+Each Refined or Specification package has one `SKILL.md` and optional `assets/`.
 Specification categories are `info`, `rule` and `design`. HTML and English counterparts
 have been consolidated into their owning document; `.codex/skills/` in the parent
 checkout is generated from its `docs/skills/`. Existing source-language clauses,
@@ -99,7 +111,7 @@ then repeat with `--apply` and the destination organization, workspace, and an
 existing revision-author user ID. The importer creates deterministic archives
 for multi-file packages, verifies uploaded hashes, stops on conflicting slugs,
 and can resume matching imports. It never deletes or rewrites the source. See
-[`migration.md`](.codex/skills/rule-platform/references/migration.md) for the cutoff procedure.
+[migration rules](../docs/skills/rule-platform/SKILL.md#migration) for the cutoff procedure.
 
 After applying migrations, create the first platform administrator without
 placing a password in shell history:
@@ -124,4 +136,4 @@ The runner maps dev/stg/prod to the existing local/staging/production settings m
 
 Project document sources are maintained in the parent Agent Factory checkout’s `docs/`. Its `.codex/skills/` is generated from `docs/skills/`; run Document synchronization against the parent checkout after editing Skill documents. Existing HTML and Skill formats are retained.
 
-Component references: [current test ownership](../docs/skills/rule-project/SKILL.md), [historical test layout](../docs/processed/process-mcp-test-layout-history/SKILL.md), and [design-system catalog policy](../docs/skills/rule-ui/SKILL.md#catalog-policy).
+Component references: [current test ownership](../docs/skills/rule-project/SKILL.md), [historical test layout](../docs/refined/process-mcp-test-layout-history/SKILL.md), and [design-system catalog policy](../docs/skills/rule-ui/SKILL.md#catalog-policy).
