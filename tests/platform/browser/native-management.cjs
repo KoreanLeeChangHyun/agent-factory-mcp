@@ -163,7 +163,7 @@ const assertReadableGroupHeader = async (page, fullName) => {
           name: `긴 한국어 조직 ${suffix}`,
           slug: `native-${suffix}`,
         });
-        const overview = await call("GET", `./api/organizations/${organization.id}`);
+        await call("GET", `./api/organizations/${organization.id}`);
         const roles = await call("GET", `./api/organizations/${organization.id}/roles`);
         const catalog = await call("GET", `./api/organizations/${organization.id}/permission-catalog`);
         assert.ok(catalog.some((permission) => permission.key === "test.execute" && permission.available === false));

@@ -28,6 +28,7 @@ dependencies = [
     { name = "authlib" },
     { name = "celery", extra = ["redis"] },
     { name = "pwdlib", extra = ["argon2"] },
+    { name = "pydantic-settings" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "starlette" },
 ]
@@ -40,6 +41,7 @@ requires-dist = [
     { name = "authlib", specifier = ">=1.6,<2" },
     { name = "celery", extras = ["redis"] },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3,<1" },
+    { name = "pydantic-settings" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2,<3" },
     { name = "starlette", specifier = ">=1.6" },
 ]
@@ -53,9 +55,16 @@ dependencies = [
     { name = "agent-factory-contracts" },
     { name = "agent-factory-core" },
     { name = "fastapi" },
+    { name = "itsdangerous" },
+    { name = "mcp" },
+    { name = "opentelemetry-sdk" },
+    { name = "prometheus-client" },
     { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "redis" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "starlette" },
+    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.metadata]
@@ -64,9 +73,16 @@ requires-dist = [
     { name = "agent-factory-contracts", editable = "packages/contracts-py" },
     { name = "agent-factory-core", editable = "packages/platform-core" },
     { name = "fastapi" },
+    { name = "itsdangerous" },
+    { name = "mcp", specifier = ">=2,<3" },
+    { name = "opentelemetry-sdk" },
+    { name = "prometheus-client" },
     { name = "pydantic", specifier = ">=2,<3" },
+    { name = "pydantic-settings" },
+    { name = "redis" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2,<3" },
     { name = "starlette", specifier = ">=1.6" },
+    { name = "uvicorn", extras = ["standard"] },
 ]
 
 [[package]]
@@ -94,7 +110,7 @@ requires-dist = [{ name = "agent-factory-contracts", editable = "packages/contra
 [[package]]
 name = "agent-factory-mcp"
 version = "0.1.0"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "agent-factory-api" },
     { name = "agent-factory-worker" },
@@ -178,12 +194,14 @@ source = { editable = "apps/worker" }
 dependencies = [
     { name = "agent-factory-adapters" },
     { name = "agent-factory-core" },
+    { name = "celery", extra = ["redis"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "agent-factory-adapters", editable = "packages/platform-adapters" },
     { name = "agent-factory-core", editable = "packages/platform-core" },
+    { name = "celery", extras = ["redis"] },
 ]
 
 [[package]]

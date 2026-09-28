@@ -47,9 +47,6 @@ dev = [
     "ruff",
 ]
 
-[tool.setuptools.packages.find]
-include = ["app*"]
-
 [tool.pytest.ini_options]
 pythonpath = [
     ".",
@@ -77,12 +74,9 @@ warn_unused_ignores = false
 disable_error_code = ["arg-type", "attr-defined", "return-value", "union-attr", "valid-type"]
 exclude = ["app/db/migrations"]
 
-[tool.setuptools.package-data]
-"app.modules.document" = ["preview_runtime.js"]
-"app.resources" = ["*.md", "document_template_inventory.json", "document_template/*", "document_template/vendor/*/*/*"]
-
-[tool.setuptools.cmdclass]
-build_py = "app.build_assets.BuildPy"
+[tool.uv]
+# The root is a workspace root: code lives in apps/* and packages/*, so do not build it as a package.
+package = false
 
 [tool.uv.workspace]
 members = [

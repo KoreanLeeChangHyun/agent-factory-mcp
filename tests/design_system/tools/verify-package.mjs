@@ -23,7 +23,7 @@ let browser;
 try {
   let ready = false;
   for(let i=0;i<30;i++) {
-    try { ready = (await fetch('http://127.0.0.1:8766/MANIFEST.json')).ok; } catch {}
+    try { ready = (await fetch('http://127.0.0.1:8766/MANIFEST.json')).ok; } catch { /* server not listening yet */ }
     if(ready) break;
     await new Promise(resolve => setTimeout(resolve,100));
   }

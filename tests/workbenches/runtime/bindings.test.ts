@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Binding } from "@agent-factory/contracts";
 import { BindingRuntime } from "../../../packages/workbench-runtime/src/bindings.js";
-import type { BindingClient, BindingOperation, RuntimeRecord, RuntimeScope } from "../../../packages/workbench-runtime/src/contracts.js";
+import type {
+  BindingClient,
+  BindingOperation,
+  RuntimeRecord,
+  RuntimeScope,
+} from "../../../packages/workbench-runtime/src/contracts.js";
 
 const binding: Binding = {
   id: "document",

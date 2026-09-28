@@ -1,1 +1,2 @@
-packages/contracts-ts/src/generated/
+# Prettier 3 resolves these patterns relative to this file.
+../../packages/contracts-ts/src/generated/

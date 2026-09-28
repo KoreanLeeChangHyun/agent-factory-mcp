@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadAuthorizedRegistry, nativeStandards, reservedStandardIds } from "../../../apps/web/src/registry/WorkbenchRegistry.js";
+import {
+  loadAuthorizedRegistry,
+  nativeStandards,
+  reservedStandardIds,
+} from "../../../apps/web/src/registry/WorkbenchRegistry.js";
 
 describe("authorized Workbench registry", () => {
   it("retains the code-owned Documents entry when no customer release is published", async () => {

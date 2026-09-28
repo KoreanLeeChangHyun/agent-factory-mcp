@@ -9,6 +9,8 @@
   const bytes = path => Uint8Array.from(atob(files[path]), c => c.charCodeAt(0));
   const text = path => new TextDecoder('utf-8', { fatal: true }).decode(bytes(path));
   const resolve = (base, value) => {
+    // Rejecting control characters in package paths is intentional.
+    // eslint-disable-next-line no-control-regex
     if (!value || /^(?:[a-z][a-z0-9+.-]*:|\/\/|\/)/i.test(value) || /[\\\x00-\x1f]/.test(value)) return null;
     try {
       const url = new URL(value, 'https://package.invalid/' + base);

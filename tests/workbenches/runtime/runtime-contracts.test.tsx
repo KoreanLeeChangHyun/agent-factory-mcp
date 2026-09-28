@@ -5,7 +5,12 @@ import { ActionDispatcher } from "../../../packages/workbench-runtime/src/action
 import { WorkbenchRegistry } from "../../../packages/workbench-runtime/src/registry.js";
 import { WorkbenchRenderer } from "../../../packages/workbench-runtime/src/renderer.js";
 import { diagnoseWorkbench, validateParameterValues } from "../../../packages/workbench-runtime/src/validation.js";
-import { defaultViewState, readViewState, viewStateKey, writeViewState } from "../../../packages/workbench-runtime/src/view-state.js";
+import {
+  defaultViewState,
+  readViewState,
+  viewStateKey,
+  writeViewState,
+} from "../../../packages/workbench-runtime/src/view-state.js";
 
 const scope = { userId: "u", organizationId: "o", workspaceId: "w", workbenchId: "documents", releaseId: "r1" };
 

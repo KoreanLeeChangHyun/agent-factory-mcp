@@ -4,7 +4,13 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { documentsFixture, type WorkbenchDefinition } from "@agent-factory/contracts";
 import { WorkbenchRenderer } from "../../../packages/workbench-runtime/src/renderer.js";
-import type { ActionEnvironment, BindingClient, BindingOperation, RuntimeRecord, RuntimeScope } from "../../../packages/workbench-runtime/src/index.js";
+import type {
+  ActionEnvironment,
+  BindingClient,
+  BindingOperation,
+  RuntimeRecord,
+  RuntimeScope,
+} from "../../../packages/workbench-runtime/src/index.js";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const scope: RuntimeScope = {

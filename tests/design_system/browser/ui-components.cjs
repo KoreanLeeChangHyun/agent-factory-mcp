@@ -11,7 +11,7 @@ const root = path.resolve(__dirname, '../../..');
   try {
     const page = await browser.newPage();
     const template = await fs.readFile(path.join(root, 'template/workspace/index.html'), 'utf8');
-    const styles = await Promise.all([...template.matchAll(/href="\.\.\/(static\/css\/[^\"]+)"/g)]
+    const styles = await Promise.all([...template.matchAll(/href="\.\.\/(static\/css\/[^"]+)"/g)]
       .map(match => fs.readFile(path.join(root, match[1]), 'utf8')));
     const hosts = ['organization-view', 'planning-panel', 'reporting-panel', 'mcp-onboarding', 'integration-workspace', 'workspace-dialog', 'auth-card'];
     // Only the host layout is simplified. All component and feature CSS is real.
