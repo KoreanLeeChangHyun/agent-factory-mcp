@@ -3,9 +3,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.config import Settings
-from app.core.security import validate_public_https_url
-from app.main import create_app
+from api.settings import Settings
+from api.http.middleware.security import validate_public_https_url
+from api.main import create_app
 
 
 def test_security_headers_are_present() -> None:

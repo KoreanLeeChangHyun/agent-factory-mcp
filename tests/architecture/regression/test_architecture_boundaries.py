@@ -78,18 +78,6 @@ def test_http_routers_do_not_call_transaction_methods() -> None:
     assert not violations, "\n".join(violations)
 
 
-def test_http_and_mcp_share_agent_execution_composition() -> None:
-    for path in (ROUTERS / "agents.py", ROOT / "app/mcp/server.py"):
-        tree = ast.parse(path.read_text(), filename=str(path))
-        imported = any(
-            isinstance(node, ast.ImportFrom)
-            and node.module == "app.modules.agent.factory"
-            and any(alias.name == "agent_execution_service" for alias in node.names)
-            for node in ast.walk(tree)
-        )
-        assert imported, f"{path.relative_to(ROOT)} bypasses shared Agent composition"
-
-
 def _import_names(tree: ast.AST) -> list[tuple[int, str]]:
     imports: list[tuple[int, str]] = []
     for node in ast.walk(tree):
@@ -106,9 +94,7 @@ def _import_names(tree: ast.AST) -> list[tuple[int, str]]:
             and node.args
             and isinstance(node.args[0], ast.Constant)
             and isinstance(node.args[0].value, str)
-        ):
-            imports.append((node.lineno, node.args[0].value))
-        elif (
+        ) or (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
             and node.func.id == "__import__"

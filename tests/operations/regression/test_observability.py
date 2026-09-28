@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from app.main import create_app
+from api.main import create_app
 
 
 def test_metrics_endpoint_exposes_request_counters() -> None:

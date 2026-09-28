@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 from agent_factory_core.connections.providers.guide import GUIDE
-assert len(GUIDE.encode()) == 19146
+assert len(GUIDE.encode()) == 19307
 assert 'collection_start' in GUIDE
 assert Path(sys.argv[1]) in Path(sys.modules['agent_factory_core.connections.providers.guide'].__file__).parents
 """

@@ -4,6 +4,7 @@ import json
 from types import SimpleNamespace
 from uuid import UUID
 
+import api.mcp.server as adapter
 import pytest
 from agent_factory_core import (
     WorkbenchConflictError,
@@ -13,9 +14,6 @@ from agent_factory_core import (
     WorkbenchValidationError,
 )
 from mcp.server.mcpserver.exceptions import ToolError
-
-import app.mcp.server as adapter
-
 
 USER = UUID("00000000-0000-4000-8000-000000000001")
 ORGANIZATION = UUID("00000000-0000-4000-8000-000000000002")

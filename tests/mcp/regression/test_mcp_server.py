@@ -1,8 +1,7 @@
 """MCP capability registration and token verifier tests."""
 
 import pytest
-
-from app.mcp.server import ACTIVITIES, create_mcp_server
+from api.mcp.server import ACTIVITIES, create_mcp_server
 
 
 @pytest.mark.asyncio

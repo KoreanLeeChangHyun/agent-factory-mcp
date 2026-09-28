@@ -2,7 +2,6 @@ from pathlib import Path
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DOCUMENTS = ROOT.parent / "docs"
 PLATFORM_SPECIFICATIONS = ("info-platform", "design-platform", "rule-platform")
@@ -16,7 +15,7 @@ def _skill_frontmatter(path: Path) -> dict[str, object]:
 
 
 def test_platform_specifications_use_only_the_three_categories() -> None:
-    assert {path.name for path in DOCUMENTS.iterdir()} == {"original", "processed", "skills"}
+    assert {path.name for path in DOCUMENTS.iterdir()} == {"original", "refined", "skills", "artifact", "lessons-learned", "progress"}
     assert not (DOCUMENTS / "skills/spec-platform").exists()
     assert {name.split("-", 1)[0] for name in PLATFORM_SPECIFICATIONS} == {
         "info", "design", "rule"
