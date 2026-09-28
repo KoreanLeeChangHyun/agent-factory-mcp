@@ -7,7 +7,11 @@ import { DocumentEditor } from "../../../apps/web/src/standard/documents/Documen
 import { DocumentExplorer } from "../../../apps/web/src/standard/documents/DocumentExplorer.js";
 import { DocumentViewer } from "../../../apps/web/src/standard/documents/DocumentViewer.js";
 import type { DocumentRecord } from "../../../apps/web/src/standard/documents/document-client.js";
-import { editorReducer, initialEditorState, type EditorDocument } from "../../../apps/web/src/standard/documents/document-editor-state.js";
+import {
+  editorReducer,
+  initialEditorState,
+  type EditorDocument,
+} from "../../../apps/web/src/standard/documents/document-editor-state.js";
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const createObjectUrlDescriptor = Object.getOwnPropertyDescriptor(URL, "createObjectURL");
@@ -277,7 +281,10 @@ describe("Documents editor", () => {
     await act(async () => undefined);
     expect(view.host.textContent).toContain("접근할 권한이 없습니다");
     act(() => view.host.querySelector<HTMLButtonElement>("button")?.click());
-    await act(async () => undefined);
+    // Reading the text body finishes on a later task, so flush until the retried content renders.
+    for (let task = 0; task < 20 && !view.host.querySelector("pre"); task += 1) {
+      await act(() => new Promise((resolve) => setTimeout(resolve, 5)));
+    }
     expect(view.host.querySelector("pre")?.textContent).toBe("allowed");
     view.cleanup();
   });
