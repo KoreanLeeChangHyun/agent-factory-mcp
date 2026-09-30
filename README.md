@@ -71,8 +71,9 @@ Refined documents retain the `processed` metadata type for compatibility.
 
 Each Refined or Specification package has one `SKILL.md` and optional `assets/`.
 Specification categories are `info`, `rule` and `design`. HTML and English counterparts
-have been consolidated into their owning document; `.codex/skills/` in the parent
-checkout is generated from its `docs/skills/`, together with `.claude/skills/`. Existing source-language clauses,
+have been consolidated into their owning document; `.codex/skills/`, `.claude/skills/`
+and `.agents/skills/` in the parent checkout are generated from its `docs/skills/`.
+Existing source-language clauses,
 code and protocol guide bytes are preserved. Read
 [document rules](../docs/skills/rule-documents/SKILL.md) for source ownership.
 
@@ -121,6 +122,6 @@ pnpm start:scheduler --env prod
 
 The runner maps dev/stg/prod to the existing local/staging/production settings modes. It refuses a missing environment file and does not fall back to another environment. Shell environment variables override file values; the runner fixes the environment mode to the selected profile. These commands define process configuration and do not establish that the ongoing application migration is complete.
 
-Project document sources are maintained in the parent Agent Factory checkout’s `docs/`. Its `.codex/skills/` and `.claude/skills/` are generated from `docs/skills/`; run Document synchronization against the parent checkout after editing Skill documents. Existing HTML and Skill formats are retained.
+Project document sources are maintained in the parent Agent Factory checkout’s `docs/`. Its `.codex/skills/`, `.claude/skills/` and `.agents/skills/` are generated from `docs/skills/`; run Document synchronization against the parent checkout after editing Skill documents. Existing HTML and Skill formats are retained.
 
 Component references: [current test ownership](../docs/skills/rule-project/SKILL.md), [historical test layout](../docs/refined/other-mcp-test-layout-history/SKILL.md), and [design-system catalog policy](../docs/skills/rule-ui/SKILL.md#catalog-policy).
