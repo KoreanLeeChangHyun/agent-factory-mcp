@@ -159,3 +159,18 @@ async def test_failure_retries_until_attempt_budget_is_exhausted(attempt_count, 
     else:
         assert publications == []
         assert result.dead_lettered_at is not None
+
+
+@pytest.mark.asyncio
+async def test_cancellation_requested_during_failing_handler_is_not_retried() -> None:
+    job = make_job("request-0005")
+    factory = Factory(job)
+    repository = factory.lease.repository
+
+    async def handler(running, _context, _cancelled):
+        repository.job = replace(running, status=JobStatus.CANCEL_REQUESTED)
+        raise RuntimeError("collection_cancelled")
+
+    result = await ExecuteJob(factory, {"system.noop": handler}, Authorizer()).execute(job.id)
+    assert result.status == JobStatus.CANCELLED
+    assert repository.events == ["job.running", "job.cancelled"]

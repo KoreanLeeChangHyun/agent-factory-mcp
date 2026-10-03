@@ -219,6 +219,17 @@ async def test_redirect_hop_rejects_private_dns_rebinding() -> None:
 
 
 @pytest.mark.asyncio
+async def test_redirect_with_malformed_port_is_rejected_as_unsafe_url() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(302, headers={"location": "https://provider.example:99999/next"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        adapter = SafeProviderHttpClient(client, resolver=resolver(("93.184.216.34",)))
+        with pytest.raises(ApplicationError, match="unsafe_provider_url"):
+            await adapter.request("GET", "https://provider.example/data")
+
+
+@pytest.mark.asyncio
 async def test_cross_origin_redirect_uses_fresh_cookie_free_client_on_same_ip() -> None:
     redirect_clients: list[httpx.AsyncClient] = []
 

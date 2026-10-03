@@ -244,12 +244,17 @@ class SafeProviderHttpClient:
 
     async def _pin(self, url: str) -> tuple[SplitResult, str, str]:
         parsed = urlsplit(url)
+        try:
+            port = parsed.port
+        except ValueError:
+            # Malformed ports (for example in a provider redirect) are unsafe, not server errors.
+            port = -1
         if (
             parsed.scheme != "https"
             or not parsed.hostname
             or parsed.username
             or parsed.password
-            or parsed.port not in {None, 443}
+            or port not in {None, 443}
         ):
             raise ApplicationError(
                 "unsafe_provider_url", "Provider URL must be credential-free HTTPS", 422
@@ -270,4 +275,8 @@ class SafeProviderHttpClient:
     @staticmethod
     def _origin(url: str) -> tuple[str, str | None, int | None]:
         parsed = urlsplit(url)
-        return parsed.scheme, parsed.hostname, parsed.port or 443
+        try:
+            port = parsed.port or 443
+        except ValueError:
+            port = -1
+        return parsed.scheme, parsed.hostname, port

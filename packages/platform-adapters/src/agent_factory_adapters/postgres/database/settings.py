@@ -15,4 +15,5 @@ class DatabaseSettings(BaseSettings):
     database_pool_recycle_seconds: int = 1800
 
 
-settings = DatabaseSettings(_env_file=os.environ.get("AGENT_FACTORY_ENV_FILE") or None)
+# `_env_file` is a pydantic-settings runtime keyword that mypy cannot see without its plugin.
+settings = DatabaseSettings(_env_file=os.environ.get("AGENT_FACTORY_ENV_FILE") or None)  # type: ignore[call-arg]
