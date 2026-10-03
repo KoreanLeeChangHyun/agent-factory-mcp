@@ -58,3 +58,25 @@ async def test_mcp_registers_six_activity_resources_and_scoped_tools() -> None:
         "test_status",
         "agent_run_submit",
     }
+
+
+def test_bound_token_scope_accepts_equivalent_uuid_text_forms(monkeypatch) -> None:
+    from types import SimpleNamespace
+    from uuid import uuid4
+
+    from agent_factory_core.shared.errors import PermissionDeniedError
+    from api.mcp import server
+
+    organization_id, workspace_id = uuid4(), uuid4()
+    token = SimpleNamespace(
+        claims={"organization_id": str(organization_id), "workspace_id": str(workspace_id)}
+    )
+    monkeypatch.setattr(server, "get_access_token", lambda: token)
+
+    expected = (str(organization_id), str(workspace_id))
+    assert server._resolve_scope(organization_id.hex, workspace_id.hex) == expected
+    assert server._resolve_scope(None, str(workspace_id).upper()) == expected
+    with pytest.raises(PermissionDeniedError, match="workspace_token_mismatch"):
+        server._resolve_scope(None, uuid4().hex)
+    with pytest.raises(PermissionDeniedError, match="workspace_token_mismatch"):
+        server._resolve_scope(None, "not-a-uuid")

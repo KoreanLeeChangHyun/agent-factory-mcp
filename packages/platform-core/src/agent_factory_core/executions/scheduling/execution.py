@@ -115,9 +115,19 @@ class ExecuteJob:
                         repository, running, authorization_error
                     )
                 await lease.establish(context)
+                # Re-read under lock like the success path: a cancellation requested while the
+                # handler ran (or a state finalized elsewhere) must not be overwritten.
+                latest = await repository.get_job(running.workspace_id, job_id, lock=True)
+                if latest is None:
+                    return None
+                if latest.status == JobStatus.CANCEL_REQUESTED:
+                    return await self._finish_cancel(repository, latest)
+                if latest.status != JobStatus.RUNNING:
+                    await repository.commit()
+                    return latest
                 return await self._fail(
                     repository,
-                    running,
+                    latest,
                     str(getattr(error, "code", None) or str(error) or type(error).__name__),
                     str(error),
                     retryable=bool(getattr(error, "retryable", True)),

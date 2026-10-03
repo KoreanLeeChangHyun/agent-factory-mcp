@@ -207,7 +207,8 @@ class ProviderWebhookUseCases:
         if not valid:
             raise ConflictError("webhook_secret_unavailable", "Webhook secret is unavailable")
         expected = hmac.new(str(secret["secret"]).encode(), body, sha256).hexdigest()
-        if not hmac.compare_digest(expected, signature.removeprefix("sha256=")):
+        # Compare bytes: str comparison raises TypeError for non-ASCII header values.
+        if not hmac.compare_digest(expected.encode(), signature.removeprefix("sha256=").encode()):
             raise ApplicationError("invalid_webhook_signature", "Invalid webhook signature", 401)
         duplicate = await self.repository.delivery(endpoint.id, event_id)
         if duplicate is not None:

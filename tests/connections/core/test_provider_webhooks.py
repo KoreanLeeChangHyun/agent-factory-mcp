@@ -104,6 +104,8 @@ async def test_signature_is_verified_before_payload_is_persisted_and_duplicate_i
 
     with pytest.raises(ApplicationError, match="invalid_webhook_signature"):
         await service.accept(str(created["public_id"]), "event-1", body, "sha256=wrong")
+    with pytest.raises(ApplicationError, match="invalid_webhook_signature"):
+        await service.accept(str(created["public_id"]), "event-1", body, "sha256=\u00e9")
     assert repository.insert_attempts == 0
 
     signature = hmac.new(str(created["signing_secret"]).encode(), body, hashlib.sha256).hexdigest()

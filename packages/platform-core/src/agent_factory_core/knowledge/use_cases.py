@@ -275,7 +275,8 @@ def split_text(text: str, size: int, overlap: int) -> list[str]:
         chunks.append(normalized[start:end].strip())
         if end == len(normalized):
             break
-        start = end - overlap
+        # A newline boundary can end a chunk early; never step back to or before its start.
+        start = max(end - overlap, start + 1)
     return [chunk for chunk in chunks if chunk]
 
 

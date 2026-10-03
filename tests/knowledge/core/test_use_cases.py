@@ -111,6 +111,12 @@ def test_split_text_is_deterministic_and_overlaps() -> None:
         split_text("   ", 10, 2)
 
 
+def test_split_text_progresses_when_overlap_exceeds_newline_boundary() -> None:
+    chunks = split_text("aaaaaa\n" + "b" * 30, 10, 8)
+    assert chunks[0] == "aaaaaa"
+    assert chunks[-1].endswith("b")
+
+
 @pytest.mark.asyncio
 async def test_list_requires_document_read() -> None:
     current = actor()

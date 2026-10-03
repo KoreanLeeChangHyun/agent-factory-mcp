@@ -147,6 +147,15 @@ def _identity(required_scope: str) -> Principal:
     )
 
 
+def _same_identifier(value: str, bound: object) -> bool:
+    """Compare UUID text forms (hex or dashed, any case) instead of raw strings."""
+
+    try:
+        return UUID(value) == UUID(str(bound))
+    except ValueError:
+        return False
+
+
 def _resolve_scope(organization_id: str | None, workspace_id: str | None):
     token = get_access_token()
     claims = token.claims if token else {}
@@ -154,8 +163,9 @@ def _resolve_scope(organization_id: str | None, workspace_id: str | None):
     bound_workspace = claims.get("workspace_id")
     bound_organization = claims.get("organization_id")
     if bound_workspace:
-        if (workspace_id is not None and workspace_id != bound_workspace) or (
-            organization_id is not None and organization_id != bound_organization
+        if (workspace_id is not None and not _same_identifier(workspace_id, bound_workspace)) or (
+            organization_id is not None
+            and not _same_identifier(organization_id, bound_organization)
         ):
             raise PermissionDeniedError(
                 "workspace_token_mismatch", "Token belongs to another Workspace"
@@ -597,8 +607,9 @@ def _model(record: object) -> dict[str, object]:
     from dataclasses import fields, is_dataclass
     from typing import Any, cast
 
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
 
+    values: Iterable[tuple[str, Any]]
     if isinstance(record, Mapping):
         values = record.items()
     elif is_dataclass(record):

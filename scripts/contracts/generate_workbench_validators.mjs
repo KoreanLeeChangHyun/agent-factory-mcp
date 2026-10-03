@@ -39,7 +39,11 @@ const runtimeImports = [];
 const compiled = standaloneCode(ajv, exports).replace(
   /const (func\d+) = require\("([^"]+)"\)\.default;\n/g,
   (_, name, module) => {
-    runtimeImports.push(`import ${name} from ${JSON.stringify(`${module}.js`)};`);
+    // Ajv runtime helpers are CommonJS modules exporting `default`: Node's ESM loader binds the
+    // default import to the exports object, while bundlers unwrap it. Accept both shapes.
+    runtimeImports.push(
+      `import ${name}Module from ${JSON.stringify(`${module}.js`)};\nconst ${name} = ${name}Module.default ?? ${name}Module;`,
+    );
     return "";
   },
 );
